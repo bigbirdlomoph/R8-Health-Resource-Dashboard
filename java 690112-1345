@@ -1,0 +1,32 @@
+/**
+ * Master Version: v.690112-1345
+ * Full Recovery & Precise Multi-Level Sorting
+ */
+
+const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
+
+function doGet() {
+  const version = "690112-1345";
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('R8 Health Resource Dashboard (v.' + version + ')')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function getDashboardData() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheets = {
+      hospital: ss.getSheetByName('hospital').getDataRange().getValues(),
+      population: ss.getSheetByName('population').getDataRange().getValues(),
+      sap: ss.getSheetByName('sap_level').getDataRange().getValues(),
+      medical: ss.getSheetByName('medical').getDataRange().getValues(),
+      bed: ss.getSheetByName('bed').getDataRange().getValues(),
+      hospital_structure: ss.getSheetByName('hospital_structure').getDataRange().getValues()
+    };
+    return { status: 'success', data: sheets };
+  } catch (error) {
+    return { status: 'error', message: error.toString() };
+  }
+}
