@@ -1,207 +1,885 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <title>R8 Health Resource Dashboard</title>
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966334.png" type="image/png">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root { --primary-green: rgb(5, 104, 57); --primary-green-dark: rgb(3, 80, 44); }
-        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f5; color: #1e293b; scroll-behavior: smooth; }
-        .container-custom { width: 100%; max-width: 100%; padding: 2rem; }
-        .card { @apply bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6 transition-all; }
-        .chart-container { position: relative; height: 350px; width: 100%; }
-        table.dataTable { border-collapse: collapse !important; width: 100% !important; border: 1px solid #cbd5e1 !important; border-radius: 1rem; overflow: hidden; }
-        table.dataTable thead th { background-color: var(--primary-green) !important; color: white !important; padding: 12px !important; text-align: center !important; font-size: 13px; }
-        table.dataTable tbody td { padding: 10px !important; border: 1px solid #e2e8f0 !important; text-align: center; font-size: 14px; }
-        .zero-value { background-color: #fef08a !important; color: #854d0e !important; font-weight: bold; }
-        .doc-total-cell { background-color: #f0fdf4 !important; font-weight: bold; color: var(--primary-green-dark); }
-        .table-note { @apply text-xs text-slate-500 mt-2 italic pl-2; }
-        footer { background-color: var(--primary-green); color: white; @apply py-8 mt-12 text-center; }
-        #backToTop { @apply fixed bottom-10 right-10 bg-green-600 text-white p-5 rounded-full shadow-2xl border-4 border-white transition-all opacity-0 invisible z-[9999]; }
-        #backToTop.show { @apply opacity-100 visible; }
-        .loading-overlay { @apply fixed inset-0 bg-white/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center transition-opacity duration-300; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col">
+  <meta charset="UTF-8">
+  <title>R8 Health Resource Dashboard</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966334.png" type="image/png">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <div id="loader" class="loading-overlay">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700 mb-4"></div>
-        <p class="text-green-800 font-bold animate-pulse text-lg text-center">กำลังกู้คืนข้อมูลสรุปและจัดเรียงศักยภาพ... v.690112-1345</p>
+  <style>
+    :root { --primary-green: rgb(5, 104, 57); --primary-green-dark: rgb(3, 80, 44); }
+    body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f5; color: #1e293b; scroll-behavior: smooth; }
+    .container-custom { width: 100%; max-width: 100%; padding: 2rem; }
+
+    .card{
+      background:#fff;
+      border-radius:2rem;
+      border:1px solid #e2e8f0;
+      padding:1.5rem;
+      box-shadow:0 1px 2px rgba(0,0,0,.06);
+      transition:all .2s ease;
+    }
+    .chart-container { position: relative; height: 350px; width: 100%; }
+    table.dataTable { border-collapse: collapse !important; width: 100% !important; border: 1px solid #cbd5e1 !important; border-radius: 1rem; overflow: hidden; }
+    table.dataTable thead th { background-color: var(--primary-green) !important; color: white !important; padding: 12px !important; text-align: center !important; font-size: 13px; }
+    table.dataTable tbody td { padding: 10px !important; border: 1px solid #e2e8f0 !important; text-align: center; font-size: 14px; }
+    .zero-value { background-color: #fef08a !important; color: #854d0e !important; font-weight: bold; }
+    .doc-total-cell { background-color: #f0fdf4 !important; font-weight: bold; color: var(--primary-green-dark); }
+    .table-note { font-size:12px; color:#64748b; margin-top:.5rem; font-style:italic; padding-left:.5rem; }
+
+    footer { background-color: var(--primary-green); color: white; padding: 2rem 0; margin-top: 3rem; text-align:center; }
+    #backToTop{
+      position:fixed; right:2.5rem; bottom:2.5rem;
+      background:#16a34a; color:#fff; padding:1.25rem;
+      border-radius:9999px; box-shadow:0 25px 50px -12px rgba(0,0,0,.25);
+      border:4px solid #fff; opacity:0; visibility:hidden; z-index:9999;
+      transition:all .2s ease;
+    }
+    #backToTop.show { opacity:1; visibility:visible; }
+    .loading-overlay{
+      position:fixed; inset:0; background:rgba(255,255,255,.9);
+      backdrop-filter:blur(6px); z-index:100;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      transition:opacity .3s ease;
+    }
+
+    #toast{
+      position:fixed; top:1.25rem; right:1.25rem;
+      background:#0f172a; color:#fff;
+      padding:.75rem 1rem; border-radius:1rem;
+      box-shadow:0 25px 50px -12px rgba(0,0,0,.35);
+      opacity:0; transform:translateY(-6px);
+      transition:all .2s ease;
+      z-index:10000;
+      pointer-events:none;
+      font-size:13px;
+    }
+    #toast.show{ opacity:1; transform:translateY(0); }
+
+    /* KPI (หน่วยลงบรรทัดล่าง) */
+    .kpi-card { min-height: 150px; padding: 1.45rem 1.6rem; border-radius: 2.25rem; }
+    .kpi-title { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; opacity: .75; }
+    .kpi-value { line-height: 1; font-weight: 900; letter-spacing: -.02em; white-space: nowrap; }
+    .kpi-unit-below { margin-top: .45rem; font-size: 12px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; opacity: .70; }
+    .kpi-value-size { font-size: clamp(34px, 3.2vw, 56px); }
+    .kpi-value-size-pop { font-size: clamp(30px, 2.7vw, 54px); } /* ประชากร */
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+  <div id="toast"></div>
+
+  <div id="loader" class="loading-overlay">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700 mb-4"></div>
+    <p class="text-green-800 font-bold animate-pulse text-lg text-center">
+      กำลังโหลดข้อมูล... v.<?= version ?>
+    </p>
+  </div>
+
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="container-custom mx-auto px-8 h-24 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-green-50 p-2 rounded-2xl shadow-inner">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800 mb-1">R8 Health Resource Dashboard</h1>
+          <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">
+            Version: <span id="headerVersion"></span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-50 border border-slate-200 text-slate-700 py-2 px-4 rounded-2xl text-xs font-bold shadow-sm whitespace-nowrap">
+          Template: <span id="templateVersionBadge" class="text-slate-900">...</span>
+          <span class="mx-2 text-slate-300">|</span>
+          Server: <span id="serverVersion" class="text-slate-900">...</span>
+        </div>
+
+        <select id="provinceFilter" onchange="processAndRender()"
+          class="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-6 rounded-2xl text-sm font-bold shadow-sm cursor-pointer">
+          <option value="ALL">ทุกจังหวัดในเขตสุขภาพที่ 8</option>
+          <option value="บึงกาฬ">บึงกาฬ</option>
+          <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+          <option value="อุดรธานี">อุดรธานี</option>
+          <option value="เลย">เลย</option>
+          <option value="หนองคาย">หนองคาย</option>
+          <option value="สกลนคร">สกลนคร</option>
+          <option value="นครพนม">นครพนม</option>
+        </select>
+
+        <button id="refreshBtn" onclick="refreshNow()"
+          class="bg-green-700 hover:bg-green-800 text-white py-2.5 px-4 rounded-2xl text-sm font-bold shadow-sm flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14.828-2M4 16a8 8 0 0014.828 2" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="mainContent" class="container-custom space-y-10 px-12 flex-grow opacity-0">
+    <!-- TOP KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
+      <!-- 1) โรงพยาบาลรวม -->
+      <div class="kpi-card text-white border-none shadow-xl"
+        style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);">
+        <div class="flex items-center gap-5">
+          <div class="bg-white/20 p-5 rounded-[1.75rem] backdrop-blur-md">
+            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="kpi-title text-white/90">โรงพยาบาลรวม</div>
+            <div class="kpi-value kpi-value-size mt-2">
+              <span id="totalHospitals">0</span>
+            </div>
+            <div class="kpi-unit-below text-white/90">แห่ง</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2) ประชากรรวม -->
+      <div class="card kpi-card border-l-[10px] border-l-green-600">
+        <div class="flex items-center gap-5">
+          <div class="bg-green-50 p-5 rounded-[1.75rem] text-green-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="kpi-title text-slate-500">ประชากรรวม</div>
+            <div class="kpi-value kpi-value-size-pop mt-2 text-slate-900">
+              <span id="totalPopulation">0</span>
+            </div>
+            <div class="kpi-unit-below text-slate-500">คน</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3) แพทย์สาขาหลักรวม -->
+      <div class="card kpi-card border-l-[10px] border-l-blue-600">
+        <div class="flex items-center gap-5">
+          <div class="bg-blue-50 p-5 rounded-[1.75rem] text-blue-700">
+            <!-- Doctor icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 2a5 5 0 00-5 5v1a5 5 0 0010 0V7a5 5 0 00-5-5z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 15h8a4 4 0 014 4v2H4v-2a4 4 0 014-4z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 11v3m-1.5-1.5h3" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="kpi-title text-slate-500">แพทย์สาขาหลักรวม</div>
+            <div class="kpi-value kpi-value-size mt-2 text-slate-900">
+              <span id="totalCoreDoctors">0</span>
+            </div>
+            <div class="kpi-unit-below text-slate-500">คน</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4) เตียงจริงทั้งหมด -->
+      <div class="card kpi-card border-l-[10px] border-l-amber-600">
+        <div class="flex items-center gap-5">
+          <div class="bg-amber-50 p-5 rounded-[1.75rem] text-amber-700">
+            <!-- Bed icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 11V8a2 2 0 012-2h6a2 2 0 012 2v3" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 11h10a2 2 0 012 2v3H1v-3a2 2 0 012-2h8z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 16v4M21 16v4" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M7 9h2" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="kpi-title text-slate-500">เตียงจริงทั้งหมด</div>
+            <div class="kpi-value kpi-value-size mt-2 text-slate-900">
+              <span id="totalRealBeds">0</span>
+            </div>
+            <div class="kpi-unit-below text-slate-500">เตียง</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div class="container-custom mx-auto px-8 h-24 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-green-50 p-2 rounded-2xl shadow-inner"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></div>
-                <div><h1 class="text-2xl font-bold text-slate-800 mb-1">R8 Health Resource Dashboard</h1><p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Version: <span id="headerVersion"></span></p></div>
-            </div>
-            <select id="provinceFilter" onchange="processAndRender()" class="bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-6 rounded-2xl text-sm font-bold shadow-sm cursor-pointer"><option value="ALL">ทุกจังหวัดในเขตสุขภาพที่ 8</option><option value="บึงกาฬ">บึงกาฬ</option><option value="หนองบัวลำภู">หนองบัวลำภู</option><option value="อุดรธานี">อุดรธานี</option><option value="เลย">เลย</option><option value="หนองคาย">หนองคาย</option><option value="สกลนคร">สกลนคร</option><option value="นครพนม">นครพนม</option></select>
-        </div>
-    </nav>
+    <div id="hospitalCards" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6 border-b border-slate-100 pb-8"></div>
 
-    <main id="mainContent" class="container-custom space-y-10 px-12 flex-grow opacity-0">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="card text-white border-none flex items-center justify-between p-10 shadow-xl rounded-[2.5rem]" style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);"><div class="flex items-center gap-8"><div class="bg-white/20 p-6 rounded-[2rem] backdrop-blur-md"><svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" /></svg></div><div><p class="text-sm font-bold opacity-80 uppercase tracking-widest">โรงพยาบาลรวม</p><h2 class="text-6xl font-black text-white"><span id="totalHospitals">0</span> แห่ง</h2></div></div></div>
-            <div class="card flex items-center justify-between p-10 border-l-[12px] border-l-green-600 rounded-[2.5rem]"><div class="flex items-center gap-8"><div class="bg-green-50 p-6 rounded-[2rem] text-green-700"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div><div><p class="text-sm font-bold text-slate-400 uppercase tracking-widest">ประชากรรวม</p><h2 class="text-6xl font-black text-slate-800"><span id="totalPopulation">0</span> คน</h2></div></div></div>
-        </div>
+    <!-- จังหวัดเท่านั้น: 1) ประชากรแยกตามอำเภอ -->
+    <div id="distPopCard" class="card p-8 hidden">
+      <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
+        <div class="w-2 h-6 bg-blue-600 rounded-full"></div>
+        เจาะลึก: ประชากรแยกตามอำเภอ (<span id="selectedProvLabel"></span>)
+      </h3>
+      <div class="chart-container"><canvas id="distPopChart"></canvas></div>
+    </div>
 
-        <div id="hospitalCards" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6 border-b border-slate-100 pb-8"></div>
+    <!-- จังหวัดเท่านั้น: 2) Bar chart แพทย์แยกตามสาขาหลัก (ต่อจาก distPopCard) -->
+    <div id="docSpecCard" class="card p-8 hidden">
+      <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
+        <div class="w-2 h-6 bg-indigo-600 rounded-full"></div>
+        เจาะลึก: จำนวนแพทย์แยกตามสาขาหลัก (<span id="selectedProvLabel2"></span>)
+      </h3>
+      <div class="chart-container"><canvas id="docSpecChart"></canvas></div>
+      <div class="table-note">หมายเหตุ: รวมจำนวนแพทย์จากทุกโรงพยาบาลในจังหวัดที่เลือก (ตามคอลัมน์ในชีต medical)</div>
+    </div>
 
-        <div id="distPopCard" class="card p-8 hidden"><h3 class="text-xl font-bold mb-8 flex items-center gap-2"><div class="w-2 h-6 bg-blue-600 rounded-full"></div>เจาะลึก: ประชากรแยกตามอำเภอ (<span id="selectedProvLabel"></span>)</h3><div class="chart-container"><canvas id="distPopChart"></canvas></div></div>
-        <div class="card p-8"><h3 class="text-xl font-bold mb-8 flex items-center gap-2"><div class="w-2 h-6 bg-green-600 rounded-full"></div>จำนวนโรงพยาบาล จำแนกประเภท รพศ./รพท./รพช.</h3><div class="chart-container"><canvas id="hospTypeChart"></canvas></div></div>
+    <div class="card p-8">
+      <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
+        <div class="w-2 h-6 bg-green-600 rounded-full"></div>
+        จำนวนโรงพยาบาล จำแนกประเภท รพศ./รพท./รพช.
+      </h3>
+      <div class="chart-container"><canvas id="hospTypeChart"></canvas></div>
+    </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div class="card xl:col-span-1"><h3>ประชากรรายจังหวัด</h3><div class="chart-container"><canvas id="popChart"></canvas></div></div>
-            <div class="card xl:col-span-1"><h3>รวมแพทย์สาขาหลัก</h3><div class="chart-container"><canvas id="coreBarChart"></canvas></div></div>
-            <div class="card xl:col-span-1"><h3>ระดับ SAP</h3><div class="chart-container"><canvas id="sapChart"></canvas></div></div>
-        </div>
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div class="card xl:col-span-1">
+        <h3>ประชากรรายจังหวัด</h3>
+        <div class="chart-container"><canvas id="popChart"></canvas></div>
+      </div>
+      <div class="card xl:col-span-1">
+        <h3>รวมแพทย์สาขาหลัก</h3>
+        <div class="chart-container"><canvas id="coreBarChart"></canvas></div>
+      </div>
+      <div class="card xl:col-span-1">
+        <h3>ระดับ SAP</h3>
+        <div class="chart-container"><canvas id="sapChart"></canvas></div>
+      </div>
+    </div>
 
-        <div class="space-y-4"><h3 id="bedTitle" class="text-xl font-bold px-2">สรุปจำนวนเตียงแยกตามประเภท</h3><div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden"><table id="bedTable" class="display nowrap cell-border stripe"><thead><tr id="bedHeader"></tr></thead><tbody id="bedBody"></tbody></table></div><div class="table-note">หมายเหตุ: เตียง Palliative Care (รวมเตียงจริง), เตียงมินิธัญญารักษ์ (ไม่รวมจำนวนเตียงจริง)</div></div>
-        <div class="space-y-4"><h3 id="structureTitle" class="text-xl font-bold px-2">สรุปข้อมูลโครงสร้างและเครื่องมือแพทย์สำคัญ</h3><div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden"><table id="structureTable" class="display nowrap cell-border stripe"><thead><tr id="structureHeader"></tr></thead><tbody id="structureBody"></tbody></table></div><div class="table-note">หมายเหตุ: ห้องตรวจผู้ป่วยนอก (ห้อง) (ไม่นับรวมทันตกรรม,SMC,PMC)</div></div>
-        <div class="space-y-4"><h3 id="physicianTitle" class="text-xl font-bold px-2">สรุปจำนวนแพทย์สาขาหลักแยกตามความเชี่ยวชาญ</h3><div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden"><table id="physicianTable" class="display nowrap cell-border stripe"><thead><tr id="physicianHeader"></tr></thead><tbody id="physicianBody"></tbody></table></div></div>
-        <div class="space-y-4 pb-20"><h3 id="nurseTitle" class="text-xl font-bold px-2">สรุปจำนวนพยาบาลเฉพาะทางแยกตามสาขา</h3><div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden"><table id="nurseTable" class="display nowrap cell-border stripe"><thead><tr id="nurseHeader"></tr></thead><tbody id="nurseBody"></tbody></table></div></div>
-    </main>
+    <div class="space-y-4">
+      <h3 id="bedTitle" class="text-xl font-bold px-2">สรุปจำนวนเตียงแยกตามประเภท</h3>
+      <div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden">
+        <table id="bedTable" class="display nowrap cell-border stripe">
+          <thead><tr id="bedHeader"></tr></thead>
+          <tbody id="bedBody"></tbody>
+        </table>
+      </div>
+      <div class="table-note">หมายเหตุ: เตียง Palliative Care (รวมเตียงจริง), เตียงมินิธัญญารักษ์ (ไม่รวมจำนวนเตียงจริง)</div>
+    </div>
 
-    <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg></button>
-    <footer><p class="text-lg font-bold mb-1">สงวนลิขสิทธิ์ © 2569 - สสจ.เลย</p><p class="text-xs opacity-60 mb-3 italic">ข้อมูลอ้างอิงจาก Master Version v.690112-1345</p><div class="bg-white/10 py-1 px-4 rounded-full inline-block text-[11px] font-bold">อัปเดตล่าสุด: <span id="lastUpdated">...</span></div></footer>
+    <div class="space-y-4">
+      <h3 id="structureTitle" class="text-xl font-bold px-2">สรุปข้อมูลโครงสร้างและเครื่องมือแพทย์สำคัญ</h3>
+      <div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden">
+        <table id="structureTable" class="display nowrap cell-border stripe">
+          <thead><tr id="structureHeader"></tr></thead>
+          <tbody id="structureBody"></tbody>
+        </table>
+      </div>
+      <div class="table-note">หมายเหตุ: ห้องตรวจผู้ป่วยนอก (ห้อง) (ไม่นับรวมทันตกรรม,SMC,PMC)</div>
+    </div>
 
-    <script>
-        Chart.register(ChartDataLabels);
-        const DISTRICT_MAP = { '4201':'เมืองเลย','4202':'นาด้วง','4203':'เชียงคาน','4204':'ปากชม','4205':'ด่านซ้าย','4206':'นาแห้ว','4207':'ภูเรือ','4208':'ท่าลี่','4209':'วังสะพุง','4210':'ภูกระดึง','4211':'ภูหลวง','4212':'ผาขาว','4213':'เอราวัณ','4214':'หนองหิน','4101':'เมืองอุดรธานี','4102':'กุดจับ','4103':'หนองวัวซอ','4104':'กุมภวาปี','4105':'โนนสะอาด','4106':'หนองหาน','4107':'ทุ่งฝน','4108':'ไชยวาน','4109':'ศรีธาตุ','4110':'วังสามหมอ','4111':'บ้านดุง','4117':'บ้านผือ','4118':'น้ำโสม','4119':'เพ็ญ','4120':'สร้างคอม','4121':'หนองแสง','4122':'นายูง','4123':'พิบูลย์รักษ์','4124':'กู่แก้ว','4125':'ประจักษ์ศิลปาคม','4301':'เมืองหนองคาย','4302':'ท่าบ่อ','4305':'โพนพิสัย','4307':'ศรีเชียงใหม่','4308':'สังคม','4314':'สระใคร','4315':'เฝ้าไร่','4316':'รัตนวาปี','4317':'โพธิ์ตาก','3801':'เมืองบึงกาฬ','3802':'พรเจริญ','3803':'โซ่พิสัย','3804':'เซกา','3805':'ปากคาด','3806':'บึงโขงหลง','3807':'ศรีวิไล','3808':'บุ่งคล้า','4701':'เมืองสกลนคร','4702':'กุสุมาลย์','4703':'กุดบาก','4704':'พรรณานิคม','4705':'พังโคน','4706':'วาริชภูมิ','4707':'นิคมน้ำอูน','4708':'วานรนิวาส','4709':'คำตากล้า','4710':'บ้านม่วง','4711':'อากาศอำวย','4712':'สว่างแดนดิน','4713':'ส่องดาว','4714':'เต่างอย','4715':'โคกศรีสุพรรณ','4716':'เจริญศิลป์','4717':'โพนนาแก้ว','4718':'ภูพาน','4801':'เมืองนครพนม','4802':'ปลาปาก','4803':'ท่าอุเทน','4804':'บ้านแพง','4805':'ธาตุพนม','4806':'เรณูนคร','4807':'นาแก','4808':'ศรีสงคราม','4809':'นาหว้า','4810':'โพนสวรรค์','4811':'นาทม','4812':'วังยาง','3901':'เมืองหนองบัวลำภู','3902':'นากลาง','3903':'โนนสัง','3904':'ศรีบุญเรือง','3905':'สุวรรณคูหา','3906':'นาวัง' };
-        const ORIGINAL_ORDER = ['บึงกาฬ','หนองบัวลำภู','อุดรธานี','เลย','หนองคาย','สกลนคร','นครพนม'];
-        const TYPE_MAP = { 'โรงพยาบาลศูนย์':'รพศ.', 'โรงพยาบาลทั่วไป':'รพท.', 'โรงพยาบาลชุมชน':'รพช.' };
-        const T_PRIO = { 'โรงพยาบาลศูนย์': 1, 'โรงพยาบาลทั่วไป': 2, 'โรงพยาบาลชุมชน': 3 };
-        const S_PRIO = { 'P+': 1, 'P': 2, 'A+': 3, 'A': 4, 'S+': 5, 'S': 6 };
-        const PROV_COLORS = {'บึงกาฬ':'#056839','หนองบัวลำภู':'#38A169','อุดรธานี':'#2D3748','เลย':'#C05621','หนองคาย':'#2F855A','สกลนคร':'#276749','นครพนม':'#2C7A7B'};
-        
-        let rawData = {}; let charts = {}; let sortedProvinces = [];
+    <div class="space-y-4">
+      <h3 id="physicianTitle" class="text-xl font-bold px-2">สรุปจำนวนแพทย์สาขาหลักแยกตามความเชี่ยวชาญ</h3>
+      <div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden">
+        <table id="physicianTable" class="display nowrap cell-border stripe">
+          <thead><tr id="physicianHeader"></tr></thead>
+          <tbody id="physicianBody"></tbody>
+        </table>
+      </div>
+    </div>
 
-        function cleanNum(v) { if(!v || v==="-") return 0; return parseFloat(String(v).replace(/,/g,'')) || 0; }
-        function getValClass(v) { return cleanNum(v)===0 ? 'zero-value' : ''; }
+    <div class="space-y-4 pb-20">
+      <h3 id="nurseTitle" class="text-xl font-bold px-2">สรุปจำนวนพยาบาลเฉพาะทางแยกตามสาขา</h3>
+      <div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden">
+        <table id="nurseTable" class="display nowrap cell-border stripe">
+          <thead><tr id="nurseHeader"></tr></thead>
+          <tbody id="nurseBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
-        window.onload = function() {
-            const v = "690112-1345"; document.getElementById('headerVersion').innerText = v;
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run.withSuccessHandler(res => { if (res.status === 'success') { rawData = res.data; document.getElementById('lastUpdated').innerText = new Date().toLocaleString('th-TH'); processAndRender(); $("#loader").fadeOut(); } }).getDashboardData();
-            }
+  <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+    </svg>
+  </button>
+
+  <footer>
+    <p class="text-lg font-bold mb-1">สงวนลิขสิทธิ์ © 2569 - สสจ.เลย</p>
+    <p class="text-xs opacity-60 mb-3 italic">ข้อมูลอ้างอิงจาก Master Version v.<?= version ?></p>
+    <div class="bg-white/10 py-1 px-4 rounded-full inline-block text-[11px] font-bold">
+      อัปเดตล่าสุด: <span id="lastUpdated">...</span>
+    </div>
+  </footer>
+
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const VERSION = "<?= version ?>";
+    const SESSION_KEY = "R8_DASH_" + VERSION;
+
+    const DISTRICT_MAP = {
+      '4201':'เมืองเลย','4202':'นาด้วง','4203':'เชียงคาน','4204':'ปากชม','4205':'ด่านซ้าย','4206':'นาแห้ว','4207':'ภูเรือ','4208':'ท่าลี่','4209':'วังสะพุง','4210':'ภูกระดึง','4211':'ภูหลวง','4212':'ผาขาว','4213':'เอราวัณ','4214':'หนองหิน',
+      '4101':'เมืองอุดรธานี','4102':'กุดจับ','4103':'หนองวัวซอ','4104':'กุมภวาปี','4105':'โนนสะอาด','4106':'หนองหาน','4107':'ทุ่งฝน','4108':'ไชยวาน','4109':'ศรีธาตุ','4110':'วังสามหมอ','4111':'บ้านดุง','4117':'บ้านผือ','4118':'น้ำโสม','4119':'เพ็ญ','4120':'สร้างคอม','4121':'หนองแสง','4122':'นายูง','4123':'พิบูลย์รักษ์','4124':'กู่แก้ว','4125':'ประจักษ์ศิลปาคม',
+      '4301':'เมืองหนองคาย','4302':'ท่าบ่อ','4305':'โพนพิสัย','4307':'ศรีเชียงใหม่','4308':'สังคม','4314':'สระใคร','4315':'เฝ้าไร่','4316':'รัตนวาปี','4317':'โพธิ์ตาก',
+      '3801':'เมืองบึงกาฬ','3802':'พรเจริญ','3803':'โซ่พิสัย','3804':'เซกา','3805':'ปากคาด','3806':'บึงโขงหลง','3807':'ศรีวิไล','3808':'บุ่งคล้า',
+      '4701':'เมืองสกลนคร','4702':'กุสุมาลย์','4703':'กุดบาก','4704':'พรรณานิคม','4705':'พังโคน','4706':'วาริชภูมิ','4707':'นิคมน้ำอูน','4708':'วานรนิวาส','4709':'คำตากล้า','4710':'บ้านม่วง','4711':'อากาศอำนวย','4712':'สว่างแดนดิน','4713':'ส่องดาว','4714':'เต่างอย','4715':'โคกศรีสุพรรณ','4716':'เจริญศิลป์','4717':'โพนนาแก้ว','4718':'ภูพาน',
+      '4801':'เมืองนครพนม','4802':'ปลาปาก','4803':'ท่าอุเทน','4804':'บ้านแพง','4805':'ธาตุพนม','4806':'เรณูนคร','4807':'นาแก','4808':'ศรีสงคราม','4809':'นาหว้า','4810':'โพนสวรรค์','4811':'นาทม','4812':'วังยาง',
+      '3901':'เมืองหนองบัวลำภู','3902':'นากลาง','3903':'โนนสัง','3904':'ศรีบุญเรือง','3905':'สุวรรณคูหา','3906':'นาวัง'
+    };
+
+    const ORIGINAL_ORDER = ['บึงกาฬ','หนองบัวลำภู','อุดรธานี','เลย','หนองคาย','สกลนคร','นครพนม'];
+    const TYPE_MAP = { 'โรงพยาบาลศูนย์':'รพศ.', 'โรงพยาบาลทั่วไป':'รพท.', 'โรงพยาบาลชุมชน':'รพช.' };
+    const T_PRIO = { 'โรงพยาบาลศูนย์': 1, 'โรงพยาบาลทั่วไป': 2, 'โรงพยาบาลชุมชน': 3 };
+    const S_PRIO = { 'P+': 1, 'P': 2, 'A+': 3, 'A': 4, 'S+': 5, 'S': 6 };
+    const PROV_COLORS = {'บึงกาฬ':'#056839','หนองบัวลำภู':'#38A169','อุดรธานี':'#2D3748','เลย':'#C05621','หนองคาย':'#2F855A','สกลนคร':'#276749','นครพนม':'#2C7A7B'};
+
+    const KEYS = {
+      DOC: ["กุมารแพทย์","ศัลยแพทย์ OR","อายุรแพทย์ ICU","อายุรแพทย์ Stroke","อายุรแพทย์ HD"],
+      NURSE: ["พยาบาล NICU","พยาบาล OR ศัลยกรรม","พยาบาล ICU อายุรกรรม","พยาบาล Stroke อายุรกรรม","พยาบาล HD"],
+      BED: ["เตียงกรอบ","เตียงจริง","เตียง NICU","เตียง OR ศัลยกรรม","เตียง ICU","เตียง Stroke","เตียง HD","เตียง Palliative Care","เตียงมินิธัญญารักษ์"],
+      STRUCT: ["ห้องตรวจผู้ป่วยนอก (ห้อง)","ห้องตรวจผู้ป่วยนอก พิเศษ SMC","ห้องตรวจผู้ป่วยนอกพิเศษ PMC","จำนวนห้องผ่าตัด","เครื่องไตเทียม (รพ.)","CT Scan (รพ.)","MRI (รพ.)","รถ Ambulance"]
+    };
+
+    let rawData = {};
+    let MODEL = null;
+    const charts = {};
+    let lastTableMode = null;
+
+    function cleanNum(v) { if(!v || v==="-") return 0; return parseFloat(String(v).replace(/,/g,'')) || 0; }
+    function getValClass(v) { return cleanNum(v)===0 ? 'zero-value' : ''; }
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
+    function toast(msg){
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), 2200);
+    }
+    function showLoader(msg){
+      $("#loader").show();
+      $("#loader p").text(msg || ("กำลังโหลดข้อมูล... v." + VERSION));
+    }
+    function hideLoader(){ $("#loader").fadeOut(); }
+
+    function setLastUpdated(meta){
+      const last = meta && meta.lastUpdated ? new Date(meta.lastUpdated) : new Date();
+      document.getElementById('lastUpdated').innerText = last.toLocaleString('th-TH');
+
+      const sv = (meta && meta.version) ? String(meta.version) : '...';
+      const svEl = document.getElementById('serverVersion');
+      if (svEl) svEl.innerText = sv;
+
+      const hv = (typeof VERSION !== 'undefined') ? String(VERSION) : '';
+      if (svEl && hv && sv !== '...' && hv !== sv) {
+        svEl.classList.add('text-red-600');
+        svEl.title = `Template (${hv}) ไม่ตรงกับ Server meta.version (${sv})`;
+      } else if (svEl) {
+        svEl.classList.remove('text-red-600');
+        svEl.title = '';
+      }
+    }
+
+    function buildKeyIndex(sheetValues, keys){
+      const heads = sheetValues[0].map(h => String(h ?? ""));
+      const idx = {};
+      for (const k of keys) idx[k] = heads.findIndex(h => h.includes(k));
+      return idx;
+    }
+
+    function buildModelOnce() {
+      const idx = {
+        medicalDocs: buildKeyIndex(rawData.medical, KEYS.DOC),
+        medicalNurses: buildKeyIndex(rawData.medical, KEYS.NURSE),
+        bed: buildKeyIndex(rawData.bed, KEYS.BED),
+        structure: buildKeyIndex(rawData.hospital_structure, KEYS.STRUCT)
+      };
+
+      const rowByCode = { med: {}, bed: {}, str: {} };
+      rawData.medical.slice(1).forEach(r => rowByCode.med[String(r[6]).trim()] = r);
+      rawData.bed.slice(1).forEach(r => rowByCode.bed[String(r[6]).trim()] = r);
+      rawData.hospital_structure.slice(1).forEach(r => rowByCode.str[String(r[6]).trim()] = r);
+
+      const provPop = {};
+      const distPopByProv = {};
+      rawData.population.slice(1).forEach(r => {
+        const p = String(r[3] ?? "").trim();
+        if(!p) return;
+        const pop = cleanNum(r[11]);
+        provPop[p] = (provPop[p] || 0) + pop;
+
+        const dN = DISTRICT_MAP[r[4]] || r[4];
+        distPopByProv[p] ||= {};
+        distPopByProv[p][dN] = (distPopByProv[p][dN] || 0) + pop;
+      });
+
+      const sortedProvinces = Object.keys(provPop).sort((a,b) => (provPop[b]||0) - (provPop[a]||0));
+
+      const statsByProv = {};
+      for (const p of sortedProvinces) {
+        statsByProv[p] = {
+          count: 0,
+          pop: provPop[p] || 0,
+          sap: {},
+          types: {รพศ:0,รพท:0,รพช:0},
+          distPops: distPopByProv[p] || {},
+          docs: Object.fromEntries(KEYS.DOC.map(k=>[k,0])),
+          nurses: Object.fromEntries(KEYS.NURSE.map(k=>[k,0])),
+          beds: Object.fromEntries(KEYS.BED.map(k=>[k,0])),
+          structure: Object.fromEntries(KEYS.STRUCT.map(k=>[k,0]))
         };
+      }
 
-        function processAndRender() {
-            const filter = document.getElementById('provinceFilter').value;
-            const stats = {}; const provPop = {};
-            rawData.population.slice(1).forEach(r => { if(r[3]) provPop[r[3]] = (provPop[r[3]] || 0) + cleanNum(r[11]); });
-            sortedProvinces = Object.keys(provPop).sort((a,b) => provPop[b] - provPop[a]);
-            sortedProvinces.forEach(p => { stats[p] = { count:0, pop:provPop[p], docs:{peds:0,surg:0,icu:0,stroke:0,hd:0}, sap:{}, nurses:{}, types:{รพศ:0,รพท:0,รพช:0}, distPops:{}, beds:{}, structure:{} }; });
+      const hospByProv = {};
+      rawData.hospital.slice(1).forEach(r => {
+        const p = String(r[3] ?? "").trim();
+        if(!statsByProv[p]) return;
 
-            const medIdx = {}; const bedIdx = {}; const strIdx = {};
-            rawData.medical.slice(1).forEach(r => { medIdx[r[6]] = r; });
-            rawData.bed.slice(1).forEach(r => { bedIdx[r[6]] = r; });
-            rawData.hospital_structure.slice(1).forEach(r => { strIdx[r[6]] = r; });
+        const grade = String(r[10] ?? "").trim().toUpperCase();
+        statsByProv[p].count++;
 
-            const hospByProv = {};
-            rawData.hospital.slice(1).forEach(r => {
-                const p = String(r[3]).trim(); if(!stats[p]) return;
-                const grade = String(r[10]).trim().toUpperCase();
-                stats[p].count++;
-                if (grade === "P+") { if (p==="อุดรธานี"||p==="สกลนคร") stats[p].types.รพศ++; else stats[p].types.รพท++; }
-                else if (grade === "P") { if (p==="เลย"||p==="นครพนม"||p==="สกลนคร") stats[p].types.รพท++; else stats[p].types.รพช++; }
-                else if (grade === "A+") stats[p].types.รพท++; else stats[p].types.รพช++;
-                stats[p].sap[grade] = (stats[p].sap[grade] || 0) + 1;
-                if(!hospByProv[p]) hospByProv[p] = [];
-                hospByProv[p].push({ name:r[7], code5:r[6], type:r[8].trim(), oldLvl:r[9], sapLvl:grade, node:String(r[1]).trim() });
-            });
+        if (grade === "P+") { if (p==="อุดรธานี"||p==="สกลนคร") statsByProv[p].types.รพศ++; else statsByProv[p].types.รพท++; }
+        else if (grade === "P") { if (p==="เลย"||p==="นครพนม"||p==="สกลนคร") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++; }
+        else if (grade === "A+") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++;
 
-            const sortHospitals = (list) => list.sort((a,b) => {
-                const tA = T_PRIO[a.type] || 99; const tB = T_PRIO[b.type] || 99;
-                if(tA !== tB) return tA - tB;
-                if(a.type === 'โรงพยาบาลชุมชน') {
-                    const nA = (a.node.toLowerCase()==='yes') ? 0 : 1; const nB = (b.node.toLowerCase()==='yes') ? 0 : 1;
-                    if(nA !== nB) return nA - nB;
-                }
-                return (S_PRIO[a.sapLvl] || 99) - (S_PRIO[b.sapLvl] || 99);
-            });
+        statsByProv[p].sap[grade] = (statsByProv[p].sap[grade] || 0) + 1;
 
-            const agg = (sn, keys, subObj) => {
-                const s = rawData[sn]; const heads = s[0];
-                s.slice(1).forEach(r => { if(stats[r[3]]) keys.forEach(k => { const i = heads.findIndex(h=>h.includes(k)); if(i>-1) stats[r[3]][subObj][k] = (stats[r[3]][subObj][k]||0) + cleanNum(r[i]); }); });
-            };
-            agg('medical', ["กุมารแพทย์","ศัลยแพทย์ OR","อายุรแพทย์ ICU","อายุรแพทย์ Stroke","อายุรแพทย์ HD"], 'docs');
-            agg('medical', ["พยาบาล NICU","พยาบาล OR ศัลยกรรม","พยาบาล ICU อายุรกรรม","พยาบาล Stroke อายุรกรรม","พยาบาล HD"], 'nurses');
-            agg('bed', ["เตียงกรอบ","เตียงจริง","เตียง NICU","เตียง OR ศัลยกรรม","เตียง ICU","เตียง Stroke","เตียง HD","เตียง Palliative Care","เตียงมินิธัญญารักษ์"], 'beds');
-            agg('hospital_structure', ["ห้องตรวจผู้ป่วยนอก (ห้อง)","ห้องตรวจผู้ป่วยนอก พิเศษ SMC","ห้องตรวจผู้ป่วยนอกพิเศษ PMC","จำนวนห้องผ่าตัด","เครื่องไตเทียม (รพ.)","CT Scan (รพ.)","MRI (รพ.)","รถ Ambulance"], 'structure');
+        hospByProv[p] ||= [];
+        hospByProv[p].push({
+          name: r[7],
+          code5: String(r[6]).trim(),
+          type: String(r[8] ?? "").trim(),
+          oldLvl: r[9],
+          sapLvl: grade,
+          node: String(r[1] ?? "").trim()
+        });
+      });
 
-            let hospList = filter !== 'ALL' ? sortHospitals(hospByProv[filter] || []) : [];
-            if(filter !== 'ALL') rawData.population.slice(1).forEach(r => { if(r[3]===filter) { const dN = DISTRICT_MAP[r[4]] || r[4]; stats[filter].distPops[dN] = (stats[filter].distPops[dN]||0) + cleanNum(r[11]); } });
+      function aggProv(sheetName, keys, idxMap, field) {
+        const sheet = rawData[sheetName];
+        sheet.slice(1).forEach(r => {
+          const p = String(r[3] ?? "").trim();
+          if(!statsByProv[p]) return;
+          for (const k of keys) {
+            const i = idxMap[k];
+            if (i > -1) statsByProv[p][field][k] += cleanNum(r[i]);
+          }
+        });
+      }
+      aggProv('medical', KEYS.DOC, idx.medicalDocs, 'docs');
+      aggProv('medical', KEYS.NURSE, idx.medicalNurses, 'nurses');
+      aggProv('bed', KEYS.BED, idx.bed, 'beds');
+      aggProv('hospital_structure', KEYS.STRUCT, idx.structure, 'structure');
 
-            updateUI(stats, filter, hospList, {med:medIdx, bed:bedIdx, str:strIdx});
+      function sortHospitals(list) {
+        return list.sort((a,b) => {
+          const tA = T_PRIO[a.type] || 99;
+          const tB = T_PRIO[b.type] || 99;
+          if(tA !== tB) return tA - tB;
+          if(a.type === 'โรงพยาบาลชุมชน') {
+            const nA = (String(a.node).toLowerCase()==='yes') ? 0 : 1;
+            const nB = (String(b.node).toLowerCase()==='yes') ? 0 : 1;
+            if(nA !== nB) return nA - nB;
+          }
+          return (S_PRIO[a.sapLvl] || 99) - (S_PRIO[b.sapLvl] || 99);
+        });
+      }
+      for (const p of Object.keys(hospByProv)) sortHospitals(hospByProv[p]);
+
+      return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv };
+    }
+
+    function upsertChart(key, ctx, config) {
+      if (!charts[key]) { charts[key] = new Chart(ctx, config); return; }
+      charts[key].config.type = config.type;
+      charts[key].data = config.data;
+      charts[key].options = config.options;
+      charts[key].update();
+    }
+    function destroyChart(key) {
+      if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+    }
+
+    function loadData({force=false} = {}) {
+      return new Promise((resolve, reject) => {
+        if (!force) {
+          const cached = sessionStorage.getItem(SESSION_KEY);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              rawData = parsed.data;
+              setLastUpdated(parsed.meta);
+              resolve({from:"session", meta: parsed.meta});
+              return;
+            } catch(e) { sessionStorage.removeItem(SESSION_KEY); }
+          }
         }
 
-        function updateUI(stats, filter, hospList, idxs) {
-            const list = filter === 'ALL' ? sortedProvinces : [filter];
-            document.getElementById('totalHospitals').innerText = list.reduce((s, p) => s + stats[p].count, 0);
-            document.getElementById('totalPopulation').innerText = Math.round(list.reduce((s, p) => s + stats[p].pop, 0)).toLocaleString();
-
-            document.getElementById('hospitalCards').innerHTML = ORIGINAL_ORDER.map(p => {
-                const isDim = filter !== 'ALL' && filter !== p;
-                return `<div class="p-4 flex flex-col items-center transition-all ${isDim?'opacity-30 grayscale':''}"><div class="w-3 h-3 rounded-full mb-2" style="background-color:${PROV_COLORS[p]}"></div><span class="text-[15px] font-bold text-slate-700">${p}</span><span class="text-2xl font-black text-slate-800">${stats[p]?stats[p].count:0}</span><span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hospitals</span></div>`;
-            }).join('');
-
-            const distCard = document.getElementById('distPopCard');
-            if (filter !== 'ALL') { distCard.classList.remove('hidden'); document.getElementById('selectedProvLabel').innerText = filter; } else { distCard.classList.add('hidden'); }
-
-            renderTables(stats, filter, hospList, idxs);
-            drawCharts(stats, list, filter);
-            document.getElementById('mainContent').style.opacity = '1';
+        if (typeof google === 'undefined' || !google.script) {
+          reject(new Error("google.script is not available"));
+          return;
         }
 
-        function renderTables(stats, filter, hospList, idxs) {
-            const isAll = filter === 'ALL'; const suffix = isAll ? " (ภาพรวมรายจังหวัดเรียงตามประชากร)" : ` (${filter})`;
-            const tables = ['#bedTable','#structureTable','#physicianTable','#nurseTable'];
-            tables.forEach(t => { if($.fn.DataTable.isDataTable(t)) $(t).DataTable().destroy(); });
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.status === 'success') {
+              rawData = res.data;
+              setLastUpdated(res.meta);
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data: rawData, meta: res.meta }));
+              resolve({from:"server", meta: res.meta});
+            } else reject(new Error(res.message || "Unknown error"));
+          })
+          .withFailureHandler(err => reject(err))
+          .getDashboardData();
+      });
+    }
 
-            const bedK = ["เตียงกรอบ","เตียงจริง","เตียง NICU","เตียง OR ศัลยกรรม","เตียง ICU","เตียง Stroke","เตียง HD","เตียง Palliative Care","เตียงมินิธัญญารักษ์"];
-            const structK = ["ห้องตรวจผู้ป่วยนอก (ห้อง)","ห้องตรวจผู้ป่วยนอก พิเศษ SMC","ห้องตรวจผู้ป่วยนอกพิเศษ PMC","จำนวนห้องผ่าตัด","เครื่องไตเทียม (รพ.)","CT Scan (รพ.)","MRI (รพ.)","รถ Ambulance"];
-            const nurseK = ["พยาบาล NICU","พยาบาล OR ศัลยกรรม","พยาบาล ICU อายุรกรรม","พยาบาล Stroke อายุรกรรม","พยาบาล HD"];
-            const docK = ["กุมารแพทย์","ศัลยแพทย์ OR","อายุรแพทย์ ICU","อายุรแพทย์ Stroke","อายุรแพทย์ HD"];
+    async function refreshNow(){
+      if (typeof google === 'undefined' || !google.script) return;
 
-            const renderT = (id, keys, statsS, idxS, rawSN) => {
-                const headerLead = isAll ? `<th>จังหวัด</th>` : `<th>โรงพยาบาล</th><th>ประเภท</th><th>ระดับเดิม</th><th>ระดับ SAP</th>`;
-                document.getElementById(id+'Header').innerHTML = `${headerLead}${keys.map(k=>`<th>${k}</th>`).join('')}${id==='structure'?'':'<th>รวม</th>'}`;
-                document.getElementById(id+'Body').innerHTML = (isAll ? sortedProvinces : hospList).map(item => {
-                    let rD; if(isAll) { rD = stats[item][statsS]; } 
-                    else { const row = idxs[idxS][item.code5] || []; rD = keys.reduce((o,k)=>{ const i = rawData[rawSN][0].findIndex(h=>h.includes(k)); o[k]=cleanNum(row[i]); return o; },{}); }
-                    const cells = keys.map(k => `<td class="${getValClass(rD[k])}">${rD[k].toLocaleString()}</td>`).join('');
-                    const totalC = id==='structure' ? '' : `<td class="doc-total-cell">${keys.reduce((a,b)=>a+rD[b],0).toLocaleString()}</td>`;
-                    if(isAll) return `<tr><td>${item}</td>${cells}${totalC}</tr>`;
-                    return `<tr><td>${item.name}</td><td>${TYPE_MAP[item.type]||item.type}</td><td>${item.oldLvl}</td><td>${item.sapLvl}</td>${cells}${totalC}</tr>`;
-                }).join('');
-            };
-            renderT('bed', bedK, 'beds', 'bed', 'bed');
-            renderT('structure', structK, 'structure', 'str', 'hospital_structure');
-            renderT('physician', docK, 'docs', 'med', 'medical');
-            renderT('nurse', nurseK, 'nurses', 'med', 'medical');
-            tables.forEach(t => $(t).DataTable({ paging: false, info: false, searching: false, scrollX: true }));
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.classList.add('opacity-70');
+      showLoader("กำลังรีเฟรชและล้างแคช... v." + VERSION);
+
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+
+        await new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(() => resolve())
+            .withFailureHandler(err => reject(err))
+            .clearDashboardCache();
+        });
+
+        await loadData({force:true});
+        MODEL = buildModelOnce();
+        processAndRender(true);
+
+        toast("รีเฟรชข้อมูลล่าสุดเรียบร้อย");
+      } catch (e) {
+        console.error(e);
+        toast("รีเฟรชไม่สำเร็จ: " + (e.message || e));
+      } finally {
+        hideLoader();
+        btn.disabled = false;
+        btn.classList.remove('opacity-70');
+      }
+    }
+
+    function initTablesAfterDOM() {
+      ['#bedTable','#structureTable','#physicianTable','#nurseTable'].forEach(t => {
+        if ($.fn.DataTable.isDataTable(t)) $(t).DataTable().destroy();
+        $(t).DataTable({
+          paging: false,
+          info: false,
+          searching: false,
+          scrollX: true,
+          deferRender: true,
+          autoWidth: false
+        });
+      });
+    }
+
+    function processAndRender(full=false) {
+      if (!MODEL) return;
+
+      const filter = document.getElementById('provinceFilter').value;
+      const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
+      const modeChanged = (mode !== lastTableMode);
+
+      updateTopStatsAndCards(filter);
+      updateProvDrilldownCards(filter);
+
+      renderTables(filter, modeChanged || full);
+      drawCharts(filter);
+
+      document.getElementById('mainContent').style.opacity = '1';
+      lastTableMode = mode;
+    }
+
+    function updateTopStatsAndCards(filter) {
+      const stats = MODEL.statsByProv;
+      const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+
+      const totalHosp = list.reduce((s, p) => s + (stats[p]?.count || 0), 0);
+      const totalPop  = Math.round(list.reduce((s, p) => s + (stats[p]?.pop || 0), 0));
+
+      const totalCoreDocs = Math.round(
+        list.reduce((sumProv, p) => {
+          const provDocs = KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0), 0);
+          return sumProv + provDocs;
+        }, 0)
+      );
+
+      const totalRealBeds = Math.round(
+        list.reduce((s, p) => s + (stats[p]?.beds?.["เตียงจริง"] || 0), 0)
+      );
+
+      document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
+      document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
+
+      const cd = document.getElementById('totalCoreDoctors');
+      if (cd) cd.innerText = totalCoreDocs.toLocaleString();
+
+      const rb = document.getElementById('totalRealBeds');
+      if (rb) rb.innerText = totalRealBeds.toLocaleString();
+
+      document.getElementById('hospitalCards').innerHTML = ORIGINAL_ORDER.map(p => {
+        const isDim = filter !== 'ALL' && filter !== p;
+        return `<div class="p-4 flex flex-col items-center transition-all ${isDim?'opacity-30 grayscale':''}">
+          <div class="w-3 h-3 rounded-full mb-2" style="background-color:${PROV_COLORS[p]}"></div>
+          <span class="text-[15px] font-bold text-slate-700">${escapeHtml(p)}</span>
+          <span class="text-2xl font-black text-slate-800">${stats[p]?stats[p].count:0}</span>
+          <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hospitals</span>
+        </div>`;
+      }).join('');
+    }
+
+    // SHOW/HIDE drilldown cards + labels (จังหวัดเท่านั้น)
+    function updateProvDrilldownCards(filter) {
+      const distCard = document.getElementById('distPopCard');
+      const docCard  = document.getElementById('docSpecCard');
+
+      if (filter !== 'ALL') {
+        distCard.classList.remove('hidden');
+        docCard.classList.remove('hidden');
+        document.getElementById('selectedProvLabel').innerText = filter;
+        document.getElementById('selectedProvLabel2').innerText = filter;
+      } else {
+        distCard.classList.add('hidden');
+        docCard.classList.add('hidden');
+      }
+    }
+
+    function renderTables(filter, rebuildHeaders) {
+      const isAll = (filter === 'ALL');
+      const stats = MODEL.statsByProv;
+      const hospList = isAll ? [] : (MODEL.hospByProv[filter] || []);
+      const rowByCode = MODEL.rowByCode;
+      const idx = MODEL.idx;
+
+      if (rebuildHeaders) {
+        const leadAll = `<th>จังหวัด</th>`;
+        const leadProv = `<th>โรงพยาบาล</th><th>ประเภท</th><th>ระดับเดิม</th><th>ระดับ SAP</th>`;
+        const headerLead = isAll ? leadAll : leadProv;
+
+        document.getElementById('bedHeader').innerHTML =
+          `${headerLead}${KEYS.BED.map(k=>`<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+        document.getElementById('structureHeader').innerHTML =
+          `${headerLead}${KEYS.STRUCT.map(k=>`<th>${escapeHtml(k)}</th>`).join('')}`;
+        document.getElementById('physicianHeader').innerHTML =
+          `${headerLead}${KEYS.DOC.map(k=>`<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+        document.getElementById('nurseHeader').innerHTML =
+          `${headerLead}${KEYS.NURSE.map(k=>`<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+      }
+
+      const list = isAll ? MODEL.sortedProvinces : hospList;
+
+      document.getElementById('bedBody').innerHTML = list.map(item => {
+        let cells = '', total = 0;
+        if (isAll) {
+          const p = item;
+          for (const k of KEYS.BED) { const v = stats[p].beds[k] || 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(p)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
+        } else {
+          const r = rowByCode.bed[item.code5] || [];
+          for (const k of KEYS.BED) { const i = idx.bed[k]; const v = (i>-1) ? cleanNum(r[i]) : 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type]||item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
         }
+      }).join('');
 
-        function drawCharts(stats, labels, filter) {
-            const ctxArr = ['hospTypeChart','popChart','coreBarChart','sapChart','distPopChart'].map(id => document.getElementById(id).getContext('2d'));
-            Object.values(charts).forEach(c => c.destroy());
-            const optB = { responsive:true, maintainAspectRatio:false, plugins: { legend:{position:'bottom'}, datalabels:{color:'#fff', font:{weight:'bold',size:11}, formatter:(v)=>v>0?v.toLocaleString():'', align:'center', anchor:'center'} } };
-            if (filter !== 'ALL') charts.dist = new Chart(ctxArr[4], { type:'bar', data:{labels:Object.keys(stats[filter].distPops), datasets:[{label:'ประชากรรายอำเภอ', data:Object.values(stats[filter].distPops), backgroundColor:'#3b82f6'}]}, options: optB });
-            charts.hType = new Chart(ctxArr[0], { type:'bar', data:{labels, datasets:[{label:'รพศ.',data:labels.map(l=>stats[l].types.รพศ),backgroundColor:'#056839'},{label:'รพท.',data:labels.map(l=>stats[l].types.รพท),backgroundColor:'#3b82f6'},{label:'รพช.',data:labels.map(l=>stats[l].types.รพช),backgroundColor:'#ea580c'}]}, options:{...optB, scales:{x:{stacked:filter==='ALL'}, y:{stacked:filter==='ALL'}}}});
-            const optO = {...optB, plugins:{...optB.plugins, datalabels:{...optB.plugins.datalabels, align:'end', anchor:'end', color:'#1e293b'}}};
-            charts.pop = new Chart(ctxArr[1], { type:'bar', data:{labels, datasets:[{label:'ประชากร', data:labels.map(l=>stats[l].pop), backgroundColor:'#056839'}]}, options: optO });
-            charts.core = new Chart(ctxArr[2], { type:'bar', data:{labels, datasets:[{label:'รวมแพทย์', data:labels.map(l=>Object.values(stats[l].docs).reduce((a,b)=>a+b,0)), backgroundColor:'#16a34a'}]}, options: optO });
-            charts.sap = new Chart(ctxArr[3], { type:'bar', data:{labels, datasets:['S+','S','A+','A','P+','P'].map(g=>({label:g, data:labels.map(l=>stats[l].sap[g]||0), backgroundColor: {'S+':'#056839','S':'#16a34a','A+':'#1d4ed8','A':'#3b82f6','P+':'#ea580c','P':'#f59e0b'}[g]}))}, options:{...optB, scales:{x:{stacked:true},y:{stacked:true}}}});
+      document.getElementById('structureBody').innerHTML = list.map(item => {
+        let cells = '';
+        if (isAll) {
+          const p = item;
+          for (const k of KEYS.STRUCT) { const v = stats[p].structure[k] || 0; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(p)}</td>${cells}</tr>`;
+        } else {
+          const r = rowByCode.str[item.code5] || [];
+          for (const k of KEYS.STRUCT) { const i = idx.structure[k]; const v = (i>-1) ? cleanNum(r[i]) : 0; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type]||item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}</tr>`;
         }
-        window.onscroll = function() { const btn = document.getElementById("backToTop"); if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show"); };
-    </script>
+      }).join('');
+
+      document.getElementById('physicianBody').innerHTML = list.map(item => {
+        let cells = '', total = 0;
+        if (isAll) {
+          const p = item;
+          for (const k of KEYS.DOC) { const v = stats[p].docs[k] || 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(p)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
+        } else {
+          const r = rowByCode.med[item.code5] || [];
+          for (const k of KEYS.DOC) { const i = idx.medicalDocs[k]; const v = (i>-1) ? cleanNum(r[i]) : 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type]||item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
+        }
+      }).join('');
+
+      document.getElementById('nurseBody').innerHTML = list.map(item => {
+        let cells = '', total = 0;
+        if (isAll) {
+          const p = item;
+          for (const k of KEYS.NURSE) { const v = stats[p].nurses[k] || 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(p)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
+        } else {
+          const r = rowByCode.med[item.code5] || [];
+          for (const k of KEYS.NURSE) { const i = idx.medicalNurses[k]; const v = (i>-1) ? cleanNum(r[i]) : 0; total += v; cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`; }
+          return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type]||item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}<td class="doc-total-cell">${total.toLocaleString()}</td></tr>`;
+        }
+      }).join('');
+
+      initTablesAfterDOM();
+    }
+
+    function drawCharts(filter) {
+      const stats = MODEL.statsByProv;
+      const labels = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+
+      const optB = {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend:{position:'bottom'},
+          datalabels:{color:'#fff', font:{weight:'bold',size:11}, formatter:(v)=>v>0?v.toLocaleString():'', align:'center', anchor:'center'}
+        }
+      };
+      const optO = {
+        ...optB,
+        plugins: {...optB.plugins, datalabels:{...optB.plugins.datalabels, align:'end', anchor:'end', color:'#1e293b'}}
+      };
+
+      // 1) ประชากรแยกตามอำเภอ (เฉพาะจังหวัด)
+      const distCtx = document.getElementById('distPopChart').getContext('2d');
+      if (filter !== 'ALL') {
+        const distObj = stats[filter]?.distPops || {};
+        upsertChart('dist', distCtx, {
+          type:'bar',
+          data:{labels:Object.keys(distObj), datasets:[{label:'ประชากรรายอำเภอ', data:Object.values(distObj), backgroundColor:'#3b82f6'}]},
+          options: optB
+        });
+      } else destroyChart('dist');
+
+      // 2) แพทย์แยกตามสาขาหลัก (เฉพาะจังหวัด) — ต่อจากกราฟประชากรแยกตามอำเภอ
+      const docCtx = document.getElementById('docSpecChart').getContext('2d');
+      if (filter !== 'ALL') {
+        const vals = KEYS.DOC.map(k => stats[filter]?.docs?.[k] || 0);
+        upsertChart('docSpec', docCtx, {
+          type:'bar',
+          data:{
+            labels: KEYS.DOC,
+            datasets: [{
+              label: 'จำนวนแพทย์ (คน)',
+              data: vals,
+              backgroundColor: '#4f46e5'
+            }]
+          },
+          options: {
+            ...optO,
+            plugins: { ...optO.plugins, legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: 0, minRotation: 0 } },
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      } else destroyChart('docSpec');
+
+      // HOSPITAL TYPE
+      const ctx0 = document.getElementById('hospTypeChart').getContext('2d');
+      upsertChart('hType', ctx0, {
+        type:'bar',
+        data:{
+          labels,
+          datasets:[
+            {label:'รพศ.',data:labels.map(l=>stats[l]?.types.รพศ||0),backgroundColor:'#056839'},
+            {label:'รพท.',data:labels.map(l=>stats[l]?.types.รพท||0),backgroundColor:'#3b82f6'},
+            {label:'รพช.',data:labels.map(l=>stats[l]?.types.รพช||0),backgroundColor:'#ea580c'}
+          ]
+        },
+        options:{...optB, scales:{x:{stacked:filter==='ALL'}, y:{stacked:filter==='ALL'}}}
+      });
+
+      // POP BY PROV
+      const ctx1 = document.getElementById('popChart').getContext('2d');
+      upsertChart('pop', ctx1, {
+        type:'bar',
+        data:{labels, datasets:[{label:'ประชากร', data:labels.map(l=>stats[l]?.pop||0), backgroundColor:'#056839'}]},
+        options: optO
+      });
+
+      // CORE DOC TOTAL BY PROV
+      const ctx2 = document.getElementById('coreBarChart').getContext('2d');
+      upsertChart('core', ctx2, {
+        type:'bar',
+        data:{
+          labels,
+          datasets:[{
+            label:'รวมแพทย์',
+            data:labels.map(l=> KEYS.DOC.reduce((s,k)=>s+(stats[l]?.docs[k]||0),0)),
+            backgroundColor:'#16a34a'
+          }]
+        },
+        options: optO
+      });
+
+      // SAP STACKED
+      const ctx3 = document.getElementById('sapChart').getContext('2d');
+      upsertChart('sap', ctx3, {
+        type:'bar',
+        data:{
+          labels,
+          datasets:['S+','S','A+','A','P+','P'].map(g=>({
+            label:g,
+            data:labels.map(l=>stats[l]?.sap[g]||0),
+            backgroundColor: {'S+':'#056839','S':'#16a34a','A+':'#1d4ed8','A':'#3b82f6','P+':'#ea580c','P':'#f59e0b'}[g]
+          }))
+        },
+        options:{...optB, scales:{x:{stacked:true},y:{stacked:true}}}
+      });
+    }
+
+    window.onscroll = function() {
+      const btn = document.getElementById("backToTop");
+      if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show");
+    };
+
+    window.onload = async function() {
+      const hv = String(VERSION);
+      document.getElementById('headerVersion').innerText = hv;
+      const tvb = document.getElementById('templateVersionBadge');
+      if (tvb) tvb.innerText = hv;
+
+      showLoader("กำลังโหลดข้อมูล... v." + VERSION);
+
+      try {
+        await loadData({force:false});
+        MODEL = buildModelOnce();
+        processAndRender(true);
+        hideLoader();
+      } catch (e) {
+        console.error(e);
+        toast("โหลดข้อมูลไม่สำเร็จ: " + (e.message || e));
+      }
+    };
+  </script>
 </body>
 </html>
