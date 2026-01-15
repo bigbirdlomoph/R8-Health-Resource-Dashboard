@@ -6,7 +6,8 @@
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
 
 // เปลี่ยนเลขเวอร์ชันที่นี่ที่เดียว
-const VERSION = '690114-1538';
+const VERSION = '690115-1333'; // ตัวเลขจาก Logger
+
 
 // ปรับได้ตามรอบอัปเดตข้อมูลจริง (สำหรับ 100+ concurrent แนะนำ 60–300s)
 const CACHE_TTL_SEC = 180;
@@ -138,3 +139,23 @@ function clearDashboardCache() {
     .forEach(k => cache.remove(prefix + k));
   return { status: 'success' };
 }
+
+// Helper: generate stable VERSION format "YYMMDD-HHMM" in Buddhist year (2 digits)
+function genStableVersion_(dateObj) {
+  const tz = Session.getScriptTimeZone() || "Asia/Bangkok";
+  const d = dateObj || new Date();
+
+  const buddhistYY = String(d.getFullYear() + 543).slice(-2);
+  const mmdd = Utilities.formatDate(d, tz, "MMdd");
+  const hhmm = Utilities.formatDate(d, tz, "HHmm");
+
+  return `${buddhistYY}${mmdd}-${hhmm}`;
+}
+
+// Run this when you're ready to deploy stable, then copy the output into const VERSION
+function printNextStableVersion() {
+  const v = genStableVersion_(new Date());
+  Logger.log("NEXT_STABLE_VERSION = " + v);
+  return v;
+}
+
