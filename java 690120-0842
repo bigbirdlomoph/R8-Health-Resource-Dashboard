@@ -6,7 +6,7 @@
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
 
 // เปลี่ยนเลขเวอร์ชันที่นี่ที่เดียว
-const VERSION = '690115-1333'; // ตัวเลขจาก Logger
+const VERSION = '690120-0842'; // ตัวเลขจาก Logger
 
 
 // ปรับได้ตามรอบอัปเดตข้อมูลจริง (สำหรับ 100+ concurrent แนะนำ 60–300s)
