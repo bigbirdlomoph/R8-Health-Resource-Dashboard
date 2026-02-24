@@ -13,149 +13,163 @@ const VERSION = '690120-0842'; // ตัวเลขจาก Logger
 const CACHE_TTL_SEC = 180;
 
 function doGet() {
-  const t = HtmlService.createTemplateFromFile('index');
-  t.version = VERSION;
+    const t = HtmlService.createTemplateFromFile('index');
+    t.version = VERSION;
 
-  return t.evaluate()
-    .setTitle('R8 Health Resource Dashboard (v.' + VERSION + ')')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return t.evaluate()
+        .setTitle('R8 Health Resource Dashboard (v.' + VERSION + ')')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function getDashboardData() {
-  const cache = CacheService.getScriptCache();
+    const cache = CacheService.getScriptCache();
 
-  const keys = {
-    hospital: `R8:${VERSION}:hospital`,
-    population: `R8:${VERSION}:population`,
-    sap: `R8:${VERSION}:sap_level`,
-    medical: `R8:${VERSION}:medical`,
-    bed: `R8:${VERSION}:bed`,
-    hospital_structure: `R8:${VERSION}:hospital_structure`,
-    meta: `R8:${VERSION}:meta`
-  };
-
-  // Fast path
-  const cachedMeta = cache.get(keys.meta);
-  const cachedAll =
-    cachedMeta &&
-    cache.get(keys.hospital) &&
-    cache.get(keys.population) &&
-    cache.get(keys.sap) &&
-    cache.get(keys.medical) &&
-    cache.get(keys.bed) &&
-    cache.get(keys.hospital_structure);
-
-  if (cachedAll) {
-    return {
-      status: 'success',
-      data: {
-        hospital: JSON.parse(cache.get(keys.hospital)),
-        population: JSON.parse(cache.get(keys.population)),
-        sap: JSON.parse(cache.get(keys.sap)),
-        medical: JSON.parse(cache.get(keys.medical)),
-        bed: JSON.parse(cache.get(keys.bed)),
-        hospital_structure: JSON.parse(cache.get(keys.hospital_structure))
-      },
-      meta: JSON.parse(cachedMeta)
+    const keys = {
+        hospital: `R8:${VERSION}:hospital`,
+        population: `R8:${VERSION}:population`,
+        sap: `R8:${VERSION}:sap_level`,
+        medical: `R8:${VERSION}:medical`,
+        bed: `R8:${VERSION}:bed`,
+        hospital_structure: `R8:${VERSION}:hospital_structure`,
+        meqsp: `R8:${VERSION}:m_eq_sp`,
+        msp: `R8:${VERSION}:m_sp`,
+        meta: `R8:${VERSION}:meta`
     };
-  }
 
-  // Prevent cache stampede
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+    // Fast path
+    const cachedMeta = cache.get(keys.meta);
+    const cachedAll =
+        cachedMeta &&
+        cache.get(keys.hospital) &&
+        cache.get(keys.population) &&
+        cache.get(keys.sap) &&
+        cache.get(keys.medical) &&
+        cache.get(keys.bed) &&
+        cache.get(keys.hospital_structure) &&
+        cache.get(keys.meqsp) &&
+        cache.get(keys.msp);
 
-  try {
-    // Double-check after lock
-    const cachedMeta2 = cache.get(keys.meta);
-    const cachedAll2 =
-      cachedMeta2 &&
-      cache.get(keys.hospital) &&
-      cache.get(keys.population) &&
-      cache.get(keys.sap) &&
-      cache.get(keys.medical) &&
-      cache.get(keys.bed) &&
-      cache.get(keys.hospital_structure);
-
-    if (cachedAll2) {
-      return {
-        status: 'success',
-        data: {
-          hospital: JSON.parse(cache.get(keys.hospital)),
-          population: JSON.parse(cache.get(keys.population)),
-          sap: JSON.parse(cache.get(keys.sap)),
-          medical: JSON.parse(cache.get(keys.medical)),
-          bed: JSON.parse(cache.get(keys.bed)),
-          hospital_structure: JSON.parse(cache.get(keys.hospital_structure))
-        },
-        meta: JSON.parse(cachedMeta2)
-      };
+    if (cachedAll) {
+        return {
+            status: 'success',
+            data: {
+                hospital: JSON.parse(cache.get(keys.hospital)),
+                population: JSON.parse(cache.get(keys.population)),
+                sap: JSON.parse(cache.get(keys.sap)),
+                medical: JSON.parse(cache.get(keys.medical)),
+                bed: JSON.parse(cache.get(keys.bed)),
+                hospital_structure: JSON.parse(cache.get(keys.hospital_structure)),
+                meqsp: JSON.parse(cache.get(keys.meqsp)),
+                msp: JSON.parse(cache.get(keys.msp))
+            },
+            meta: JSON.parse(cachedMeta)
+        };
     }
 
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    // Prevent cache stampede
+    const lock = LockService.getScriptLock();
+    lock.waitLock(20000);
 
-    const hospital = ss.getSheetByName('hospital').getDataRange().getValues();
-    const population = ss.getSheetByName('population').getDataRange().getValues();
-    const sap = ss.getSheetByName('sap_level').getDataRange().getValues();
-    const medical = ss.getSheetByName('medical').getDataRange().getValues();
-    const bed = ss.getSheetByName('bed').getDataRange().getValues();
-    const hospital_structure = ss.getSheetByName('hospital_structure').getDataRange().getValues();
-
-    // lastUpdated
-    let lastUpdatedISO = new Date().toISOString();
     try {
-      lastUpdatedISO = DriveApp.getFileById(SPREADSHEET_ID).getLastUpdated().toISOString();
-    } catch (e) {}
+        // Double-check after lock
+        const cachedMeta2 = cache.get(keys.meta);
+        const cachedAll2 =
+            cachedMeta2 &&
+            cache.get(keys.hospital) &&
+            cache.get(keys.population) &&
+            cache.get(keys.sap) &&
+            cache.get(keys.medical) &&
+            cache.get(keys.bed) &&
+            cache.get(keys.hospital_structure) &&
+            cache.get(keys.meqsp) &&
+            cache.get(keys.msp);
 
-    const meta = { version: VERSION, lastUpdated: lastUpdatedISO };
+        if (cachedAll2) {
+            return {
+                status: 'success',
+                data: {
+                    hospital: JSON.parse(cache.get(keys.hospital)),
+                    population: JSON.parse(cache.get(keys.population)),
+                    sap: JSON.parse(cache.get(keys.sap)),
+                    medical: JSON.parse(cache.get(keys.medical)),
+                    bed: JSON.parse(cache.get(keys.bed)),
+                    hospital_structure: JSON.parse(cache.get(keys.hospital_structure)),
+                    meqsp: JSON.parse(cache.get(keys.meqsp)),
+                    msp: JSON.parse(cache.get(keys.msp))
+                },
+                meta: JSON.parse(cachedMeta2)
+            };
+        }
 
-    // Put to cache (split keys)
-    cache.put(keys.hospital, JSON.stringify(hospital), CACHE_TTL_SEC);
-    cache.put(keys.population, JSON.stringify(population), CACHE_TTL_SEC);
-    cache.put(keys.sap, JSON.stringify(sap), CACHE_TTL_SEC);
-    cache.put(keys.medical, JSON.stringify(medical), CACHE_TTL_SEC);
-    cache.put(keys.bed, JSON.stringify(bed), CACHE_TTL_SEC);
-    cache.put(keys.hospital_structure, JSON.stringify(hospital_structure), CACHE_TTL_SEC);
-    cache.put(keys.meta, JSON.stringify(meta), CACHE_TTL_SEC);
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    return {
-      status: 'success',
-      data: { hospital, population, sap, medical, bed, hospital_structure },
-      meta
-    };
+        const hospital = ss.getSheetByName('hospital').getDataRange().getValues();
+        const population = ss.getSheetByName('population').getDataRange().getValues();
+        const sap = ss.getSheetByName('sap_level').getDataRange().getValues();
+        const medical = ss.getSheetByName('medical').getDataRange().getValues();
+        const bed = ss.getSheetByName('bed').getDataRange().getValues();
+        const hospital_structure = ss.getSheetByName('hospital_structure').getDataRange().getValues();
+        const meqsp = ss.getSheetByName('m_eq_sp').getDataRange().getValues();
+        const msp = ss.getSheetByName('m_sp').getDataRange().getValues();
 
-  } catch (error) {
-    return { status: 'error', message: error.toString() };
-  } finally {
-    lock.releaseLock();
-  }
+        // lastUpdated
+        let lastUpdatedISO = new Date().toISOString();
+        try {
+            lastUpdatedISO = DriveApp.getFileById(SPREADSHEET_ID).getLastUpdated().toISOString();
+        } catch (e) { }
+
+        const meta = { version: VERSION, lastUpdated: lastUpdatedISO };
+
+        // Put to cache (split keys)
+        cache.put(keys.hospital, JSON.stringify(hospital), CACHE_TTL_SEC);
+        cache.put(keys.population, JSON.stringify(population), CACHE_TTL_SEC);
+        cache.put(keys.sap, JSON.stringify(sap), CACHE_TTL_SEC);
+        cache.put(keys.medical, JSON.stringify(medical), CACHE_TTL_SEC);
+        cache.put(keys.bed, JSON.stringify(bed), CACHE_TTL_SEC);
+        cache.put(keys.hospital_structure, JSON.stringify(hospital_structure), CACHE_TTL_SEC);
+        cache.put(keys.meqsp, JSON.stringify(meqsp), CACHE_TTL_SEC);
+        cache.put(keys.msp, JSON.stringify(msp), CACHE_TTL_SEC);
+        cache.put(keys.meta, JSON.stringify(meta), CACHE_TTL_SEC);
+
+        return {
+            status: 'success',
+            data: { hospital, population, sap, medical, bed, hospital_structure, meqsp, msp },
+            meta
+        };
+
+    } catch (error) {
+        return { status: 'error', message: error.toString() };
+    } finally {
+        lock.releaseLock();
+    }
 }
 
 // Admin: Clear server cache immediately (used by navbar refresh button)
 function clearDashboardCache() {
-  const cache = CacheService.getScriptCache();
-  const prefix = `R8:${VERSION}:`;
-  ['hospital','population','sap_level','medical','bed','hospital_structure','meta']
-    .forEach(k => cache.remove(prefix + k));
-  return { status: 'success' };
+    const cache = CacheService.getScriptCache();
+    const prefix = `R8:${VERSION}:`;
+    ['hospital', 'population', 'sap_level', 'medical', 'bed', 'hospital_structure', 'm_eq_sp', 'm_sp', 'meta']
+        .forEach(k => cache.remove(prefix + k));
+    return { status: 'success' };
 }
 
 // Helper: generate stable VERSION format "YYMMDD-HHMM" in Buddhist year (2 digits)
 function genStableVersion_(dateObj) {
-  const tz = Session.getScriptTimeZone() || "Asia/Bangkok";
-  const d = dateObj || new Date();
+    const tz = Session.getScriptTimeZone() || "Asia/Bangkok";
+    const d = dateObj || new Date();
 
-  const buddhistYY = String(d.getFullYear() + 543).slice(-2);
-  const mmdd = Utilities.formatDate(d, tz, "MMdd");
-  const hhmm = Utilities.formatDate(d, tz, "HHmm");
+    const buddhistYY = String(d.getFullYear() + 543).slice(-2);
+    const mmdd = Utilities.formatDate(d, tz, "MMdd");
+    const hhmm = Utilities.formatDate(d, tz, "HHmm");
 
-  return `${buddhistYY}${mmdd}-${hhmm}`;
+    return `${buddhistYY}${mmdd}-${hhmm}`;
 }
 
 // Run this when you're ready to deploy stable, then copy the output into const VERSION
 function printNextStableVersion() {
-  const v = genStableVersion_(new Date());
-  Logger.log("NEXT_STABLE_VERSION = " + v);
-  return v;
+    const v = genStableVersion_(new Date());
+    Logger.log("NEXT_STABLE_VERSION = " + v);
+    return v;
 }
 
