@@ -15,200 +15,20 @@
     <script type="text/javascript" charset="utf8"
         src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
 
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <style>
-        :root {
-            --primary-green: rgb(5, 104, 57);
-            --primary-green-dark: rgb(3, 80, 44);
-        }
-
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f4f7f5;
-            color: #1e293b;
-            scroll-behavior: smooth;
-        }
-
-        .container-custom {
-            width: 100%;
-            max-width: 100%;
-            padding: 2rem;
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 2rem;
-            border: 1px solid #e2e8f0;
-            padding: 1.5rem;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
-            transition: all .2s ease;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 350px;
-            width: 100%;
-        }
-
-        table.dataTable {
-            border-collapse: collapse !important;
-            width: 100% !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 1rem;
-            overflow: hidden;
-        }
-
-        table.dataTable thead th {
-            background-color: var(--primary-green) !important;
-            color: white !important;
-            padding: 12px !important;
-            text-align: center !important;
-            font-size: 13px;
-        }
-
-        table.dataTable tbody td {
-            padding: 10px !important;
-            border: 1px solid #e2e8f0 !important;
-            text-align: left;
-            font-size: 14px;
-        }
-
-        .zero-value {
-            background-color: #fef08a !important;
-            color: #854d0e !important;
-            font-weight: bold;
-        }
-
-        .doc-total-cell {
-            background-color: #f0fdf4 !important;
-            font-weight: bold;
-            color: var(--primary-green-dark);
-        }
-
-        .table-note {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: .5rem;
-            font-style: italic;
-            padding-left: .5rem;
-        }
-
-        footer {
-            background-color: var(--primary-green);
-            color: white;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            text-align: center;
-        }
-
-        #backToTop {
-            position: fixed;
-            right: 2.5rem;
-            bottom: 2.5rem;
-            background: #16a34a;
-            color: #fff;
-            padding: 1.25rem;
-            border-radius: 9999px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
-            border: 4px solid #fff;
-            opacity: 0;
-            visibility: hidden;
-            z-index: 9999;
-            transition: all .2s ease;
-        }
-
-        #backToTop.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255, 255, 255, .92);
-            backdrop-filter: blur(6px);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity .3s ease;
-        }
-
-        .error-box {
-            margin-top: 16px;
-            max-width: 780px;
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            padding: 12px 14px;
-            border-radius: 16px;
-            color: #9f1239;
-            font-size: 13px;
-            white-space: pre-wrap;
-        }
-
-        #toast {
-            position: fixed;
-            top: 1.25rem;
-            right: 1.25rem;
-            background: #0f172a;
-            color: #fff;
-            padding: .75rem 1rem;
-            border-radius: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .35);
-            opacity: 0;
-            transform: translateY(-6px);
-            transition: all .2s ease;
-            z-index: 10000;
-            pointer-events: none;
-            font-size: 13px;
-        }
-
-        #toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .kpi-card {
-            min-height: 150px;
-            padding: 1.45rem 1.6rem;
-            border-radius: 2.25rem;
-        }
-
-        .kpi-title {
-            font-size: 12px;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            font-weight: 800;
-            opacity: .75;
-        }
-
-        .kpi-value {
-            line-height: 1;
-            font-weight: 900;
-            letter-spacing: -.02em;
-            white-space: nowrap;
-        }
-
-        .kpi-unit-below {
-            margin-top: .45rem;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .18em;
-            text-transform: uppercase;
-            opacity: .70;
-        }
-
-        .kpi-value-size {
-            font-size: clamp(34px, 3.2vw, 56px);
-        }
-
-        .kpi-value-size-pop {
-            font-size: clamp(30px, 2.7vw, 54px);
-        }
-    </style>
+    <?!= include('Style'); ?>
 </head>
 
 <body class="min-h-screen flex flex-col">
@@ -284,6 +104,10 @@
             <button id="tabEqBtn" onclick="switchTab('eq')"
                 class="py-4 border-b-4 border-transparent text-slate-500 hover:text-slate-800 font-bold text-lg transition-colors">
                 ข้อมูลครุภัณฑ์ Service Plan
+            </button>
+            <button id="tabGisBtn" onclick="switchTab('gis')"
+                class="py-4 border-b-4 border-transparent text-slate-500 hover:text-slate-800 font-bold text-lg transition-colors">
+                GIS ครุภัณฑ์
             </button>
         </div>
     </div>
@@ -464,49 +288,59 @@
     <!-- EQ Tab: New Equipment Dashboard -->
     <main id="eqContent" class="container-custom space-y-8 px-12 py-10 flex-grow opacity-0 hidden">
         <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE PLAN</label>
-                    <select id="spBranchFilter" onchange="renderEqTable()"
-                        class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm font-bold focus:ring-2 focus:ring-green-500 outline-none">
-                        <option value="ALL">ทุกสาขา</option>
-                    </select>
+            <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label>
+                        <select id="eqYearFilter" onchange="renderEqTable()" class="w-full select2-filter">
+                            <option value="ALL">ทุกปีงบ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE PLAN</label>
+                        <select id="spBranchFilter" onchange="renderEqTable()" class="w-full select2-filter">
+                            <option value="ALL">ทุกสาขา</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2">ค้นหาคำศัพท์</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="eqSearchInput" onkeyup="renderEqTable()"
+                                placeholder="ชื่อรายการ, รพ. ..."
+                                class="flex-1 w-full bg-slate-50 border border-slate-200 text-slate-700 py-[9px] px-4 rounded-xl text-sm font-bold outline-none ring-0">
+                            <button onclick="clearEqFilters()"
+                                class="py-[9px] px-4 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 shadow-sm whitespace-nowrap">
+                                ล้างค่า
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-slate-500 mb-2">ค้นหาคำศัพท์</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="eqSearchInput" onkeyup="renderEqTable()" placeholder="ชื่อรายการ..."
-                            class="flex-1 w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm font-bold focus:ring-2 focus:ring-green-500 outline-none">
-                        <button
-                            onclick="document.getElementById('eqSearchInput').value=''; document.getElementById('spBranchFilter').value='ALL'; renderEqTable();"
-                            class="py-3 px-6 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 shadow-sm whitespace-nowrap">
-                            ล้างค่า
-                        </button>
-                    </div>
+                    <button onclick="openAddEqModal()"
+                        class="w-full md:w-auto py-[11px] px-8 bg-green-700 hover:bg-green-800 text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 transition-colors">
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        เพิ่มรายการ
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
-                <div class="text-[11px] font-bold text-blue-800 mb-1">จำนวนครุภัณฑ์ (รายการ)</div>
-                <div class="text-3xl font-black text-blue-700" id="eqTotItems">0</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center shadow-sm">
+                <div class="text-sm font-bold text-blue-800 mb-2">จำนวนครุภัณฑ์ (รายการ)</div>
+                <div class="text-4xl font-black text-blue-700" id="eqTotItems">0</div>
             </div>
-            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
-                <div class="text-[11px] font-bold text-amber-800 mb-1">ปีงบ 2571 (บาท)</div>
-                <div class="text-2xl font-black text-amber-700" id="eqTot71">0.00</div>
+            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-center shadow-sm">
+                <div class="text-sm font-bold text-amber-800 mb-2">จำนวนหน่วย (ชิ้น)</div>
+                <div class="text-4xl font-black text-amber-700" id="eqTotUnits">0</div>
             </div>
-            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
-                <div class="text-[11px] font-bold text-amber-800 mb-1">ปีงบ 2572 (บาท)</div>
-                <div class="text-2xl font-black text-amber-700" id="eqTot72">0.00</div>
-            </div>
-            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
-                <div class="text-[11px] font-bold text-amber-800 mb-1">ปีงบ 2573 (บาท)</div>
-                <div class="text-2xl font-black text-amber-700" id="eqTot73">0.00</div>
-            </div>
-            <div class="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
-                <div class="text-[11px] font-bold text-green-800 mb-1">วงเงินรวม (บาท)</div>
-                <div class="text-2xl font-black text-green-700" id="eqTotAmt">0.00</div>
+            <div class="bg-green-50 border border-green-100 rounded-2xl p-6 text-center shadow-sm">
+                <div class="text-sm font-bold text-green-800 mb-2" id="eqTotAmtTitle">วงเงินรวม (บาท)</div>
+                <div class="text-4xl font-black text-green-700" id="eqTotAmt">0.00</div>
             </div>
         </div>
 
@@ -521,19 +355,65 @@
             <table id="eqTable" class="display cell-border stripe w-full text-sm">
                 <thead>
                     <tr>
+                        <th style="width: 8%; text-align: center !important;">ลำดับความสำคัญ</th>
+                        <th style="width: 10%; text-align: center !important;">ความสำคัญจังหวัด</th>
+                        <th style="width: 8%; text-align: center !important;">ปีงบประมาณ</th>
                         <th style="width: 12%; text-align: center !important;">สาขา SP</th>
-                        <th style="width: 12%; text-align: center !important;">หน่วยบริการ</th>
-                        <th style="width: 25%; text-align: center !important;">ชื่อรายการ</th>
-                        <th style="width: 11%; text-align: center !important;">ราคาต่อหน่วย</th>
-                        <th style="width: 6%; text-align: center !important;">ปีงบ 2571</th>
-                        <th style="width: 6%; text-align: center !important;">ปีงบ 2572</th>
-                        <th style="width: 6%; text-align: center !important;">ปีงบ 2573</th>
-                        <th style="width: 7%; text-align: center !important;">รวมจำนวน</th>
-                        <th style="width: 15%; text-align: center !important;">วงเงินรวม</th>
+                        <th style="width: 15%; text-align: center !important;">หน่วยบริการ</th>
+                        <th style="width: 20%; text-align: center !important;">ชื่อรายการ</th>
+                        <th style="width: 10%; text-align: center !important;">แหล่งงบประมาณ</th>
+                        <th style="width: 13%; text-align: right !important; padding-right: 1.5rem !important;">
+                            ราคาต่อหน่วย</th>
+
+                        <th style="width: 7%; text-align: center !important;">จำนวน</th>
+                        <th style="width: 15%; text-align: right !important; padding-right: 1.5rem !important;">
+                            วงเงินรวม</th>
+                        <th style="width: 5%; text-align: center !important;">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="eqBody"></tbody>
             </table>
+        </div>
+    </main>
+
+    <!-- GIS Tab: Equipment Map Dashboard -->
+    <main id="gisContent" class="container-custom space-y-8 px-12 py-10 flex-grow opacity-0 hidden">
+        <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl mb-6">
+            <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label>
+                        <select id="gisYearFilter" onchange="renderGisMap()" class="w-full select2-filter">
+                            <option value="ALL">ทุกปีงบ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE PLAN</label>
+                        <select id="gisSpFilter" onchange="renderGisMap()" class="w-full select2-filter">
+                            <option value="ALL">ทุกสาขา</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center shadow-sm">
+                <div class="text-sm font-bold text-blue-800 mb-2">รวมจำนวนชิ้นในพื้นที่ทั้งหมด</div>
+                <div class="text-4xl font-black text-blue-700" id="gisTotUnits">0</div>
+            </div>
+            <div class="bg-green-50 border border-green-100 rounded-2xl p-6 text-center shadow-sm">
+                <div class="text-sm font-bold text-green-800 mb-2">วงเงินรวมในพื้นที่ทั้งหมด (บาท)</div>
+                <div class="text-4xl font-black text-green-700" id="gisTotAmt">0.00</div>
+            </div>
+        </div>
+
+        <div class="card p-0 shadow-sm border border-slate-200 rounded-3xl overflow-hidden relative">
+            <div id="spGisMap" style="height: 650px; width: 100%; z-index: 1;"></div>
+            <div id="gisMapOverlay"
+                class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-green-700"></div>
+            </div>
         </div>
     </main>
 
@@ -543,6 +423,139 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
         </svg>
     </button>
+
+    <!-- Add Equipment Modal -->
+    <div id="addEqModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-11/12 max-w-[1024px] max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300"
+            id="addEqModalBody">
+            <div
+                class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-3xl shadow-sm">
+                <h2 class="text-xl font-bold flex items-center gap-3 text-green-800">
+                    <div class="p-2 bg-green-100 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </div>
+                    <span id="addEqModalTitle">เพิ่มรายการครุภัณฑ์ใหม่</span>
+                </h2>
+                <button onclick="closeAddEqModal()"
+                    class="text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors p-2 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="addEqForm" onsubmit="submitAddEqMode(event)" class="p-8 space-y-8">
+                <!-- Hidden inputs for Edit mode -->
+                <input type="hidden" id="modalRowIdx" value="">
+                <input type="hidden" id="modalMode" value="add">
+
+                <!-- Row 1: จังหวัด, หน่วยบริการ, สาขา SP -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">จังหวัด <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalProv" required class="w-full modal-select2"
+                            onchange="updateModalHospDropdown()">
+                            <option value="">เลือกจังหวัด...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">หน่วยบริการ <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalHosp" required class="w-full modal-select2">
+                            <option value="">เลือกหน่วยบริการ...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">สาขา SP <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalSp" required class="w-full modal-select2">
+                            <option value="">เลือกสาขา SP...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: ชื่อรายการ -->
+                <div>
+                    <label class="block text-base font-bold text-slate-700 mb-3">ชื่อรายการ <span
+                            class="text-red-500">*</span></label>
+                    <select id="modalItem" required class="w-full modal-select2" onchange="autoFillPrice()">
+                        <option value="">ค้นหาหรือเลือกชื่อรายการ...</option>
+                    </select>
+                </div>
+
+                <!-- Row 3: ราคา, จำนวน, วงเงินรวม -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">ราคาต่อหน่วย (บาท)</label>
+                        <input type="number" step="0.01" id="modalPrice" required readonly
+                            class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-[12px] px-4 rounded-xl text-base outline-none cursor-not-allowed text-right font-mono font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">จำนวน <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" id="modalQty" required min="1" step="1" value="1"
+                            oninput="calculateTotalAmt()"
+                            class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none text-right font-mono font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">วงเงินรวม (บาท)</label>
+                        <input type="number" step="0.01" id="modalAmt" required readonly
+                            class="w-full bg-green-50 border border-green-200 text-green-700 py-[12px] px-4 rounded-xl text-base outline-none cursor-not-allowed text-right font-mono font-black">
+                    </div>
+                </div>
+
+                <!-- Row 4: แหล่งงบฯ, ปีงบฯ, ความสำคัญ, ความสำคัญ(จังหวัด) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">แหล่งงบประมาณ <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="modalFund" required placeholder="เช่น งบค่าเสื่อม..."
+                            class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">ปีงบประมาณ <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalYear" required class="w-full modal-select2">
+                            <option value="">เลือกปีงบประมาณ...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">ลำดับความสำคัญ</label>
+                        <input type="number" id="modalPriority" placeholder="ระบุตัวเลข..."
+                            class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-base font-bold text-slate-700 mb-3">ความสำคัญ(จังหวัด)</label>
+                        <input type="text" id="modalProvPriority" placeholder="ระบุความสำคัญ..."
+                            class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                </div>
+
+
+
+                <div class="pt-6 flex gap-4 justify-end border-t border-slate-100 mt-6">
+                    <button type="button" onclick="closeAddEqModal()"
+                        class="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">ยกเลิก</button>
+                    <button type="submit" id="submitEqBtn"
+                        class="py-3 px-8 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer>
         <p class="text-lg font-bold mb-1">สงวนลิขสิทธิ์ © 2569 - สสจ.เลย</p>
@@ -555,591 +568,9 @@
     </footer>
 
     <script>
-        function showFatal(msg) {
-            const box = document.getElementById('fatalError');
-            if (!box) return;
-            box.classList.remove('hidden');
-            box.textContent = msg;
-            console.error(msg);
-        }
-        window.onerror = function (message, source, lineno, colno, error) {
-            showFatal(`JS Error: ${message}\n${source}:${lineno}:${colno}`);
-            return false;
-        };
-
-        Chart.register(ChartDataLabels);
         const VERSION = "<?= version ?>";
-        const SESSION_KEY = "R8_DASH_" + VERSION;
-
-        const DISTRICT_MAP = { '4201': 'เมืองเลย', '4202': 'นาด้วง', '4203': 'เชียงคาน', '4204': 'ปากชม', '4205': 'ด่านซ้าย', '4206': 'นาแห้ว', '4207': 'ภูเรือ', '4208': 'ท่าลี่', '4209': 'วังสะพุง', '4210': 'ภูกระดึง', '4211': 'ภูหลวง', '4212': 'ผาขาว', '4213': 'เอราวัณ', '4214': 'หนองหิน', '4101': 'เมืองอุดรธานี', '4102': 'กุดจับ', '4103': 'หนองวัวซอ', '4104': 'กุมภวาปี', '4105': 'โนนสะอาด', '4106': 'หนองหาน', '4107': 'ทุ่งฝน', '4108': 'ไชยวาน', '4109': 'ศรีธาตุ', '4110': 'วังสามหมอ', '4111': 'บ้านดุง', '4117': 'บ้านผือ', '4118': 'น้ำโสม', '4119': 'เพ็ญ', '4120': 'สร้างคอม', '4121': 'หนองแสง', '4122': 'นายูง', '4123': 'พิบูลย์รักษ์', '4124': 'กู่แก้ว', '4125': 'ประจักษ์ศิลปาคม', '4301': 'เมืองหนองคาย', '4302': 'ท่าบ่อ', '4305': 'โพนพิสัย', '4307': 'ศรีเชียงใหม่', '4308': 'สังคม', '4314': 'สระใคร', '4315': 'เฝ้าไร่', '4316': 'รัตนวาปี', '4317': 'โพธิ์ตาก', '3801': 'เมืองบึงกาฬ', '3802': 'พรเจริญ', '3803': 'โซ่พิสัย', '3804': 'เซกา', '3805': 'ปากคาด', '3806': 'บึงโขงหลง', '3807': 'ศรีวิไล', '3808': 'บุ่งคล้า', '4701': 'เมืองสกลนคร', '4702': 'กุสุมาลย์', '4703': 'กุดบาก', '4704': 'พรรณานิคม', '4705': 'พังโคน', '4706': 'วาริชภูมิ', '4707': 'นิคมน้ำอูน', '4708': 'วานรนิวาส', '4709': 'คำตากล้า', '4710': 'บ้านม่วง', '4711': 'อากาศอำนวย', '4712': 'สว่างแดนดิน', '4713': 'ส่องดาว', '4714': 'เต่างอย', '4715': 'โคกศรีสุพรรณ', '4716': 'เจริญศิลป์', '4717': 'โพนนาแก้ว', '4718': 'ภูพาน', '4801': 'เมืองนครพนม', '4802': 'ปลาปาก', '4803': 'ท่าอุเทน', '4804': 'บ้านแพง', '4805': 'ธาตุพนม', '4806': 'เรณูนคร', '4807': 'นาแก', '4808': 'ศรีสงคราม', '4809': 'นาหว้า', '4810': 'โพนสวรรค์', '4811': 'นาทม', '4812': 'วังยาง', '3901': 'เมืองหนองบัวลำภู', '3902': 'นากลาง', '3903': 'โนนสัง', '3904': 'ศรีบุญเรือง', '3905': 'สุวรรณคูหา', '3906': 'นาวัง' };
-
-        // [ZONE STRUCTURE]
-        const ZONES = {
-            'Zone 8.1': ['อุดรธานี', 'เลย', 'หนองบัวลำภู'],
-            'Zone 8.2': ['หนองคาย', 'บึงกาฬ'],
-            'Zone 8.3': ['สกลนคร', 'นครพนม']
-        };
-
-        const ORIGINAL_ORDER = ['อุดรธานี', 'สกลนคร', 'นครพนม', 'เลย', 'หนองคาย', 'หนองบัวลำภู', 'บึงกาฬ'];
-        const TYPE_MAP = { 'โรงพยาบาลศูนย์': 'รพศ.', 'โรงพยาบาลทั่วไป': 'รพท.', 'โรงพยาบาลชุมชน': 'รพช.' };
-        const T_PRIO = { 'โรงพยาบาลศูนย์': 1, 'โรงพยาบาลทั่วไป': 2, 'โรงพยาบาลชุมชน': 3 };
-        const S_PRIO = { 'P+': 1, 'P': 2, 'A+': 3, 'A': 4, 'S+': 5, 'S': 6 };
-        const PROV_COLORS = { 'บึงกาฬ': '#056839', 'หนองบัวลำภู': '#38A169', 'อุดรธานี': '#2D3748', 'เลย': '#C05621', 'หนองคาย': '#2F855A', 'สกลนคร': '#276749', 'นครพนม': '#2C7A7B' };
-
-        const KEYS = {
-            DOC: ["กุมารแพทย์", "ศัลยแพทย์ OR", "อายุรแพทย์ ICU", "อายุรแพทย์ Stroke", "อายุรแพทย์ HD"],
-            NURSE: ["พยาบาล NICU", "พยาบาล OR ศัลยกรรม", "พยาบาล ICU อายุรกรรม", "พยาบาล Stroke อายุรกรรม", "พยาบาล HD"],
-            BED: ["เตียงกรอบ", "เตียงจริง", "เตียง NICU", "เตียง OR ศัลยกรรม", "เตียง ICU", "เตียง Stroke", "เตียง HD", "เตียง Palliative Care", "เตียงมินิธัญญารักษ์"],
-            STRUCT: ["ห้องตรวจผู้ป่วยนอก (ห้อง)", "ห้องตรวจผู้ป่วยนอก พิเศษ SMC", "ห้องตรวจผู้ป่วยนอกพิเศษ PMC", "จำนวนห้องผ่าตัด", "เครื่องไตเทียม (รพ.)", "CT Scan (รพ.)", "MRI (รพ.)", "รถ Ambulance"]
-        };
-
-        let rawData = {};
-        let MODEL = null;
-        const charts = {};
-        let lastTableMode = null;
-
-        function cleanNum(v) { if (!v || v === "-") return 0; return parseFloat(String(v).replace(/,/g, '')) || 0; }
-        function getValClass(v) { return cleanNum(v) === 0 ? 'zero-value' : ''; }
-        function escapeHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
-        function normProv(p) { return String(p ?? "").trim(); }
-
-        function toast(msg) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            t.textContent = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2200);
-        }
-        function showLoader(msg) { $("#loader").show(); $("#loader p").text(msg || ("กำลังโหลดข้อมูล... v." + VERSION)); }
-        function hideLoader() { $("#loader").fadeOut(); }
-
-        function setLastUpdated(meta) {
-            const last = meta && meta.lastUpdated ? new Date(meta.lastUpdated) : new Date();
-            document.getElementById('lastUpdated').innerText = last.toLocaleString('th-TH');
-            document.getElementById('serverVersion').innerText = meta?.version || '...';
-        }
-
-        function buildKeyIndex(sheetValues, keys) {
-            const heads = (sheetValues && sheetValues[0] ? sheetValues[0] : []).map(h => String(h ?? ""));
-            const idx = {};
-            for (const k of keys) idx[k] = heads.findIndex(h => h.includes(k));
-            return idx;
-        }
-
-        function buildModelOnce() {
-            if (!rawData || !rawData.hospital) return null;
-
-            const provSet = new Set();
-            (rawData.hospital || []).slice(1).forEach(r => { const p = normProv(r[3]); if (p) provSet.add(p); });
-            (rawData.population || []).slice(1).forEach(r => { const p = normProv(r[3]); if (p) provSet.add(p); });
-
-            const idx = {
-                medicalDocs: buildKeyIndex(rawData.medical, KEYS.DOC),
-                medicalNurses: buildKeyIndex(rawData.medical, KEYS.NURSE),
-                bed: buildKeyIndex(rawData.bed, KEYS.BED),
-                structure: buildKeyIndex(rawData.hospital_structure, KEYS.STRUCT)
-            };
-
-            const rowByCode = { med: {}, bed: {}, str: {} };
-            (rawData.medical || []).slice(1).forEach(r => { if (r[6]) rowByCode.med[String(r[6]).trim()] = r; });
-            (rawData.bed || []).slice(1).forEach(r => { if (r[6]) rowByCode.bed[String(r[6]).trim()] = r; });
-            (rawData.hospital_structure || []).slice(1).forEach(r => { if (r[6]) rowByCode.str[String(r[6]).trim()] = r; });
-
-            // Process m_eq_sp data
-            let eqData = [];
-            if (rawData.meqsp && rawData.meqsp.length > 1) {
-                const eqHeaders = rawData.meqsp[0];
-                const spIdx = eqHeaders.indexOf('สาขา SP');
-                const hospIdx = eqHeaders.indexOf('หน่วยบริการ');
-                const itemIdx = eqHeaders.indexOf('ชื่อรายการ');
-                const priceIdx = eqHeaders.indexOf('ราคาต่อหน่วย');
-                const y71Idx = eqHeaders.findIndex(h => String(h).includes('2571'));
-                const y72Idx = eqHeaders.findIndex(h => String(h).includes('2572'));
-                const y73Idx = eqHeaders.findIndex(h => String(h).includes('2573'));
-
-                eqData = rawData.meqsp.slice(1).map(r => ({
-                    sp: String(r[spIdx] || '').trim(),
-                    hosp: String(r[hospIdx] || '').trim(),
-                    item: String(r[itemIdx] || '').trim(),
-                    price: cleanNum(r[priceIdx]),
-                    y71: cleanNum(r[y71Idx]),
-                    y72: cleanNum(r[y72Idx]),
-                    y73: cleanNum(r[y73Idx])
-                }));
-            }
-
-            // Extract SP List from eqData instead of m_sp to ensure we only have options with data
-            const spSet = new Set();
-            eqData.forEach(item => { if (item.sp) spSet.add(item.sp); });
-            const spList = Array.from(spSet).sort();
-
-            const provPop = {};
-            const distPopByProv = {};
-            (rawData.population || []).slice(1).forEach(r => {
-                const p = normProv(r[3]); if (!p) return;
-                const pop = cleanNum(r[11]);
-                provPop[p] = (provPop[p] || 0) + pop;
-                const dN = DISTRICT_MAP[r[4]] || r[4];
-                distPopByProv[p] ||= {};
-                distPopByProv[p][dN] = (distPopByProv[p][dN] || 0) + pop;
-            });
-
-            const provList = Array.from(provSet);
-            const inOriginal = ORIGINAL_ORDER.filter(p => provSet.has(p));
-            const rest = provList.filter(p => !inOriginal.includes(p)).sort((a, b) => (provPop[b] || 0) - (provPop[a] || 0));
-            const sortedProvinces = [...inOriginal, ...rest];
-
-            const statsByProv = {};
-            for (const p of sortedProvinces) {
-                statsByProv[p] = {
-                    count: 0,
-                    pop: provPop[p] || 0,
-                    sap: {},
-                    types: { รพศ: 0, รพท: 0, รพช: 0 },
-                    distPops: distPopByProv[p] || {},
-                    docs: Object.fromEntries(KEYS.DOC.map(k => [k, 0])),
-                    nurses: Object.fromEntries(KEYS.NURSE.map(k => [k, 0])),
-                    beds: Object.fromEntries(KEYS.BED.map(k => [k, 0])),
-                    structure: Object.fromEntries(KEYS.STRUCT.map(k => [k, 0]))
-                };
-            }
-
-            const hospByProv = {};
-            for (const p of sortedProvinces) hospByProv[p] = [];
-
-            (rawData.hospital || []).slice(1).forEach(r => {
-                const p = normProv(r[3]); if (!p || !statsByProv[p]) return;
-                const grade = String(r[10] ?? "").trim().toUpperCase();
-                statsByProv[p].count++;
-                if (grade === "P+") { if (p === "อุดรธานี" || p === "สกลนคร") statsByProv[p].types.รพศ++; else statsByProv[p].types.รพท++; }
-                else if (grade === "P") { if (p === "เลย" || p === "นครพนม" || p === "สกลนคร") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++; }
-                else if (grade === "A+") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++;
-                statsByProv[p].sap[grade] = (statsByProv[p].sap[grade] || 0) + 1;
-                hospByProv[p].push({
-                    name: r[7], code5: String(r[6]).trim(), type: String(r[8] ?? "").trim(), oldLvl: r[9], sapLvl: grade, node: String(r[1] ?? "").trim()
-                });
-            });
-
-            function sortHospitals(list) {
-                return list.sort((a, b) => {
-                    const tA = T_PRIO[a.type] || 99; const tB = T_PRIO[b.type] || 99;
-                    if (tA !== tB) return tA - tB;
-                    if (a.type === 'โรงพยาบาลชุมชน') {
-                        const nA = (String(a.node).toLowerCase() === 'yes') ? 0 : 1;
-                        const nB = (String(b.node).toLowerCase() === 'yes') ? 0 : 1;
-                        if (nA !== nB) return nA - nB;
-                    }
-                    return (S_PRIO[a.sapLvl] || 99) - (S_PRIO[b.sapLvl] || 99);
-                });
-            }
-            for (const p of Object.keys(hospByProv)) sortHospitals(hospByProv[p]);
-
-            function aggProv(sheetName, keys, idxMap, field) {
-                const sheet = rawData[sheetName];
-                if (!sheet) return;
-                sheet.slice(1).forEach(r => {
-                    const p = normProv(r[3]);
-                    if (!statsByProv[p]) return;
-                    for (const k of keys) {
-                        const i = idxMap[k];
-                        if (i > -1) statsByProv[p][field][k] += cleanNum(r[i]);
-                    }
-                });
-            }
-            aggProv('medical', KEYS.DOC, idx.medicalDocs, 'docs');
-            aggProv('medical', KEYS.NURSE, idx.medicalNurses, 'nurses');
-            aggProv('bed', KEYS.BED, idx.bed, 'beds');
-            aggProv('hospital_structure', KEYS.STRUCT, idx.structure, 'structure');
-
-            return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv, eqData, spList };
-        }
-
-        function loadData({ force = false } = {}) {
-            return new Promise((resolve, reject) => {
-                if (!force) {
-                    const cached = sessionStorage.getItem(SESSION_KEY);
-                    if (cached) {
-                        try {
-                            const parsed = JSON.parse(cached);
-                            rawData = parsed.data;
-                            setLastUpdated(parsed.meta);
-                            resolve({ from: "session", meta: parsed.meta });
-                            return;
-                        } catch (e) { sessionStorage.removeItem(SESSION_KEY); }
-                    }
-                }
-                if (typeof google === 'undefined' || !google.script) {
-                    reject(new Error("google.script is not available"));
-                    return;
-                }
-                google.script.run.withSuccessHandler(res => {
-                    if (res.status === 'success') {
-                        rawData = res.data;
-                        setLastUpdated(res.meta);
-                        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data: rawData, meta: res.meta }));
-                        resolve({ from: "server", meta: res.meta });
-                    } else reject(new Error(res.message || "Unknown error"));
-                }).withFailureHandler(err => reject(err)).getDashboardData();
-            });
-        }
-
-        async function refreshNow() {
-            if (typeof google === 'undefined' || !google.script) return;
-            const btn = document.getElementById('refreshBtn');
-            btn.disabled = true;
-            btn.classList.add('opacity-70');
-            showLoader("กำลังรีเฟรชและล้างแคช... v." + VERSION);
-            try {
-                sessionStorage.removeItem(SESSION_KEY);
-                await new Promise((resolve, reject) => {
-                    google.script.run.withSuccessHandler(() => resolve()).withFailureHandler(err => reject(err)).clearDashboardCache();
-                });
-                await loadData({ force: true });
-                MODEL = buildModelOnce();
-                processAndRender(true);
-                toast("รีเฟรชข้อมูลล่าสุดเรียบร้อย");
-            } catch (e) { showFatal("Refresh failed: " + e.message); toast("รีเฟรชไม่สำเร็จ"); }
-            finally { hideLoader(); btn.disabled = false; btn.classList.remove('opacity-70'); }
-        }
-
-        function destroyTables() {
-            const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable', '#eqTable'];
-            tables.forEach(t => {
-                if ($.fn.DataTable.isDataTable(t)) {
-                    $(t).DataTable().destroy();
-                }
-            });
-        }
-
-        function initTables() {
-            const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable'];
-            tables.forEach(t => {
-                $(t).DataTable({
-                    paging: false, info: false, searching: false,
-                    scrollX: true, deferRender: true, autoWidth: false, destroy: true
-                });
-            });
-        }
-
-        function upsertChart(key, canvasId, config) {
-            const el = document.getElementById(canvasId);
-            if (!el) return;
-            const ctx = el.getContext('2d');
-            if (!ctx) return;
-            if (!charts[key]) { charts[key] = new Chart(ctx, config); return; }
-            charts[key].config.type = config.type;
-            charts[key].data = config.data;
-            charts[key].options = config.options;
-            charts[key].update();
-        }
-        function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
-
-        function updateTopStatsAndCards(filter) {
-            const stats = MODEL.statsByProv;
-            const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
-            const totalHosp = list.reduce((s, p) => s + (stats[p]?.count || 0), 0);
-            const totalPop = Math.round(list.reduce((s, p) => s + (stats[p]?.pop || 0), 0));
-            const totalCoreDocs = Math.round(list.reduce((sum, p) => sum + KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0), 0), 0));
-            const totalRealBeds = Math.round(list.reduce((s, p) => s + (stats[p]?.beds?.["เตียงจริง"] || 0), 0));
-
-            document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
-            document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
-            document.getElementById('totalCoreDoctors').innerText = totalCoreDocs.toLocaleString();
-            document.getElementById('totalRealBeds').innerText = totalRealBeds.toLocaleString();
-
-            // [UPDATE] Zone Grouping Logic with Total Calculation
-            let html = '';
-            for (const [zoneName, provs] of Object.entries(ZONES)) {
-                // Calculate Zone Total
-                let zoneSum = 0;
-                provs.forEach(p => zoneSum += (stats[p]?.count || 0));
-
-                html += `<div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 flex flex-col items-center">
-          <div class="mb-4 flex items-center gap-2">
-            <span class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">${zoneName}</span>
-            <span class="text-xs font-black text-green-700">รวม ${zoneSum} แห่ง</span>
-          </div>
-          <div class="flex flex-wrap justify-center gap-6 w-full">`;
-
-                provs.forEach(p => {
-                    const isDim = filter !== 'ALL' && filter !== p;
-                    const count = stats[p]?.count ?? 0;
-                    html += `<div class="flex flex-col items-center transition-all ${isDim ? 'opacity-20 grayscale' : ''}">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:${PROV_COLORS[p] || '#94a3b8'}">
-              <path stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
-            </svg>
-            <span class="text-[13px] font-bold text-slate-700">${escapeHtml(p)}</span>
-            <span class="text-xl font-black text-slate-800">${count}</span>
-            <span class="text-[10px] font-bold text-slate-400 mt-1">แห่ง</span>
-          </div>`;
-                });
-
-                html += `</div></div>`;
-            }
-            document.getElementById('hospitalCards').innerHTML = html;
-        }
-
-        function updateProvDrilldownCards(filter) {
-            const distCard = document.getElementById('distPopCard');
-            const docCard = document.getElementById('docSpecCard');
-            if (filter !== 'ALL') {
-                if (distCard) distCard.classList.remove('hidden');
-                if (docCard) docCard.classList.remove('hidden');
-                if (document.getElementById('selectedProvLabel')) document.getElementById('selectedProvLabel').innerText = filter;
-                if (document.getElementById('selectedProvLabel2')) document.getElementById('selectedProvLabel2').innerText = filter;
-            } else {
-                if (distCard) distCard.classList.add('hidden');
-                if (docCard) docCard.classList.add('hidden');
-            }
-        }
-
-        function renderTables(filter, rebuildHeaders) {
-            const isAll = (filter === 'ALL');
-            const stats = MODEL.statsByProv;
-            const hospList = isAll ? [] : (MODEL.hospByProv[filter] || []);
-            const rowByCode = MODEL.rowByCode;
-            const idx = MODEL.idx;
-
-            destroyTables();
-
-            if (rebuildHeaders) {
-                const headerLead = isAll ? `<th>จังหวัด</th>` : `<th>โรงพยาบาล</th><th>ประเภท</th><th>ระดับเดิม</th><th>ระดับ SAP</th>`;
-                if (document.getElementById('bedHeader')) document.getElementById('bedHeader').innerHTML = `${headerLead}${KEYS.BED.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
-                if (document.getElementById('structureHeader')) document.getElementById('structureHeader').innerHTML = `${headerLead}${KEYS.STRUCT.map(k => `<th>${escapeHtml(k)}</th>`).join('')}`;
-                if (document.getElementById('physicianHeader')) document.getElementById('physicianHeader').innerHTML = `${headerLead}${KEYS.DOC.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
-                if (document.getElementById('nurseHeader')) document.getElementById('nurseHeader').innerHTML = `${headerLead}${KEYS.NURSE.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
-            }
-
-            const list = isAll ? MODEL.sortedProvinces : hospList;
-
-            const renderRow = (item, keys, codeRowMap, statsField) => {
-                let cells = '', total = 0;
-                if (isAll) {
-                    const p = item;
-                    for (const k of keys) {
-                        const v = stats[p]?.[statsField]?.[k] || 0;
-                        total += v;
-                        cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
-                    }
-                    return `<tr><td>${escapeHtml(p)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">${total.toLocaleString()}</td>` : ''}</tr>`;
-                } else {
-                    const r = codeRowMap[item.code5] || [];
-                    const keyIdx = statsField === 'docs' ? idx.medicalDocs : (statsField === 'nurses' ? idx.medicalNurses : (statsField === 'beds' ? idx.bed : idx.structure));
-                    for (const k of keys) {
-                        const i = keyIdx[k];
-                        const v = (i > -1) ? cleanNum(r[i]) : 0;
-                        total += v;
-                        cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
-                    }
-                    return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type] || item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">${total.toLocaleString()}</td>` : ''}</tr>`;
-                }
-            };
-
-            if (document.getElementById('bedBody')) document.getElementById('bedBody').innerHTML = list.map(i => renderRow(i, KEYS.BED, rowByCode.bed, 'beds')).join('');
-            if (document.getElementById('structureBody')) document.getElementById('structureBody').innerHTML = list.map(i => renderRow(i, KEYS.STRUCT, rowByCode.str, 'structure')).join('');
-            if (document.getElementById('physicianBody')) document.getElementById('physicianBody').innerHTML = list.map(i => renderRow(i, KEYS.DOC, rowByCode.med, 'docs')).join('');
-            if (document.getElementById('nurseBody')) document.getElementById('nurseBody').innerHTML = list.map(i => renderRow(i, KEYS.NURSE, rowByCode.med, 'nurses')).join('');
-
-            initTables();
-        }
-
-        function drawCharts(filter) {
-            const stats = MODEL.statsByProv;
-            const labels = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
-            const optB = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v) => v > 0 ? v.toLocaleString() : '', align: 'center', anchor: 'center' } } };
-            const optO = { ...optB, plugins: { ...optB.plugins, datalabels: { ...optB.plugins.datalabels, align: 'end', anchor: 'end', color: '#1e293b' } } };
-
-            if (filter !== 'ALL') {
-                const distObj = stats[filter]?.distPops || {};
-                upsertChart('dist', 'distPopChart', { type: 'bar', data: { labels: Object.keys(distObj), datasets: [{ label: 'ประชากรรายอำเภอ', data: Object.values(distObj), backgroundColor: '#3b82f6' }] }, options: optB });
-                const vals = KEYS.DOC.map(k => stats[filter]?.docs?.[k] || 0);
-                upsertChart('docSpec', 'docSpecChart', { type: 'bar', data: { labels: KEYS.DOC, datasets: [{ label: 'จำนวนแพทย์ (คน)', data: vals, backgroundColor: '#4f46e5' }] }, options: { ...optO, plugins: { ...optO.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
-            } else { destroyChart('dist'); destroyChart('docSpec'); }
-
-            upsertChart('hType', 'hospTypeChart', {
-                type: 'bar', data: {
-                    labels, datasets: [
-                        { label: 'รพศ.', data: labels.map(l => stats[l]?.types?.รพศ || 0), backgroundColor: '#056839' },
-                        { label: 'รพท.', data: labels.map(l => stats[l]?.types?.รพท || 0), backgroundColor: '#3b82f6' },
-                        { label: 'รพช.', data: labels.map(l => stats[l]?.types?.รพช || 0), backgroundColor: '#ea580c' }
-                    ]
-                }, options: { ...optB, scales: { x: { stacked: filter === 'ALL' }, y: { stacked: filter === 'ALL' } } }
-            });
-
-            upsertChart('pop', 'popChart', { type: 'bar', data: { labels, datasets: [{ label: 'ประชากร', data: labels.map(l => stats[l]?.pop || 0), backgroundColor: '#056839' }] }, options: optO });
-            upsertChart('core', 'coreBarChart', { type: 'bar', data: { labels, datasets: [{ label: 'รวมแพทย์', data: labels.map(l => KEYS.DOC.reduce((s, k) => s + (stats[l]?.docs?.[k] || 0), 0)), backgroundColor: '#16a34a' }] }, options: optO });
-            upsertChart('sap', 'sapChart', { type: 'bar', data: { labels, datasets: ['S+', 'S', 'A+', 'A', 'P+', 'P'].map(g => ({ label: g, data: labels.map(l => stats[l]?.sap?.[g] || 0), backgroundColor: { 'S+': '#056839', 'S': '#16a34a', 'A+': '#1d4ed8', 'A': '#3b82f6', 'P+': '#ea580c', 'P': '#f59e0b' }[g] })) }, options: { ...optB, scales: { x: { stacked: true }, y: { stacked: true } } } });
-        }
-
-        // Tab Switching Logic
-        function switchTab(tabId) {
-            const mainContent = document.getElementById('mainContent');
-            const eqContent = document.getElementById('eqContent');
-            const mainBtn = document.getElementById('tabMainBtn');
-            const eqBtn = document.getElementById('tabEqBtn');
-
-            const activeClass = ['border-green-700', 'text-green-700'];
-            const inactiveClass = ['border-transparent', 'text-slate-500', 'hover:text-slate-800'];
-
-            if (tabId === 'main') {
-                mainContent.classList.remove('hidden');
-                setTimeout(() => mainContent.style.opacity = '1', 50);
-                eqContent.classList.add('hidden');
-                eqContent.style.opacity = '0';
-
-                mainBtn.classList.remove(...inactiveClass);
-                mainBtn.classList.add(...activeClass);
-                eqBtn.classList.remove(...activeClass);
-                eqBtn.classList.add(...inactiveClass);
-            } else if (tabId === 'eq') {
-                eqContent.classList.remove('hidden');
-                setTimeout(() => eqContent.style.opacity = '1', 50);
-                mainContent.classList.add('hidden');
-                mainContent.style.opacity = '0';
-
-                eqBtn.classList.remove(...inactiveClass);
-                eqBtn.classList.add(...activeClass);
-                mainBtn.classList.remove(...activeClass);
-                mainBtn.classList.add(...inactiveClass);
-
-                // Initial render for EQ if empty
-                if (document.getElementById('spBranchFilter').options.length <= 1 && MODEL) {
-                    populateEqDropdown();
-                    renderEqTable();
-                }
-            }
-        }
-
-        function populateEqDropdown() {
-            const select = document.getElementById('spBranchFilter');
-            select.innerHTML = '<option value="ALL">ทุกสาขา</option>';
-            if (MODEL && MODEL.spList) {
-                MODEL.spList.forEach(sp => {
-                    select.innerHTML += `<option value="${escapeHtml(sp)}">${escapeHtml(sp)}</option>`;
-                });
-            }
-        }
-
-        function formatMoney(amount) {
-            return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function renderEqTable() {
-            if (!MODEL || !MODEL.eqData) return;
-
-            const spFilter = document.getElementById('spBranchFilter').value;
-            const searchStr = document.getElementById('eqSearchInput').value.toLowerCase();
-
-            // Filter Data
-            let filtered = MODEL.eqData;
-            if (spFilter !== 'ALL') {
-                filtered = filtered.filter(row => row.sp === spFilter);
-            }
-            if (searchStr.trim() !== '') {
-                filtered = filtered.filter(row =>
-                    row.item.toLowerCase().includes(searchStr) ||
-                    row.hosp.toLowerCase().includes(searchStr)
-                );
-            }
-
-            // Calculate Totals
-            let tItems = 0, t71 = 0, t72 = 0, t73 = 0, tAmt = 0;
-
-            const tbodyHtml = filtered.map(r => {
-                const totalQty = (r.y71 || 0) + (r.y72 || 0) + (r.y73 || 0);
-                const totalRowAmt = totalQty * (r.price || 0);
-
-                const row71Amt = (r.y71 || 0) * (r.price || 0);
-                const row72Amt = (r.y72 || 0) * (r.price || 0);
-                const row73Amt = (r.y73 || 0) * (r.price || 0);
-
-                tItems += 1; // Count as 1 row/item matching criteria
-                t71 += row71Amt;
-                t72 += row72Amt;
-                t73 += row73Amt;
-                tAmt += totalRowAmt;
-
-                return `
-                    <tr>
-                        <td class="font-bold text-green-800 text-left align-middle break-words">${escapeHtml(r.sp)}</td>
-                        <td class="text-left align-middle break-words">${escapeHtml(r.hosp)}</td>
-                        <td class="text-left align-middle font-medium break-words">${escapeHtml(r.item)}</td>
-                        <td class="text-left align-middle">${formatMoney(r.price)}</td>
-                        <td class="text-center align-middle ${r.y71 ? 'text-slate-800 font-bold' : 'text-slate-300'}">${r.y71 ? String(r.y71) : '-'}</td>
-                        <td class="text-center align-middle ${r.y72 ? 'text-slate-800 font-bold' : 'text-slate-300'}">${r.y72 ? String(r.y72) : '-'}</td>
-                        <td class="text-center align-middle ${r.y73 ? 'text-slate-800 font-bold' : 'text-slate-300'}">${r.y73 ? String(r.y73) : '-'}</td>
-                        <td class="text-center align-middle font-bold text-slate-800">${totalQty > 0 ? String(totalQty) : '-'}</td>
-                        <td class="text-left align-middle text-slate-800 font-bold">${totalRowAmt > 0 ? formatMoney(totalRowAmt) : '-'}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Datatable redraw logic
-            if ($.fn.DataTable.isDataTable('#eqTable')) {
-                $('#eqTable').DataTable().destroy();
-            }
-
-            document.getElementById('eqBody').innerHTML = tbodyHtml;
-            document.getElementById('eqTotItems').innerText = tItems.toLocaleString();
-            document.getElementById('eqTot71').innerText = formatMoney(t71);
-            document.getElementById('eqTot72').innerText = formatMoney(t72);
-            document.getElementById('eqTot73').innerText = formatMoney(t73);
-            document.getElementById('eqTotAmt').innerText = formatMoney(tAmt);
-
-            $('#eqTable').DataTable({
-                paging: true,
-                info: true,
-                searching: false, // Custom search used instead
-                ordering: true, // Allow column sorting
-                autoWidth: false,
-                pageLength: 10,
-                lengthMenu: [10, 25, 50, 100],
-                dom: '<"flex flex-col md:flex-row justify-between items-center mb-4"<"w-full md:w-auto mb-2 md:mb-0"l><"w-full md:w-auto flex items-center justify-end gap-4 text-sm text-slate-500"pi>>rt',
-                language: {
-                    lengthMenu: "แสดง _MENU_ รายการ",
-                    info: "หน้า _PAGE_ / _PAGES_ (รวม _TOTAL_ รายการ)",
-                    infoEmpty: "ไม่พบข้อมูล",
-                    paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "»", previous: "«" }
-                }
-            });
-        }
-
-        function processAndRender(forceRebuild = false) {
-            if (!MODEL) return;
-            const filterEl = document.getElementById('provinceFilter');
-            const filter = filterEl ? filterEl.value : 'ALL';
-            const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
-            const modeChanged = (mode !== lastTableMode);
-            updateTopStatsAndCards(filter);
-            updateProvDrilldownCards(filter);
-            renderTables(filter, modeChanged || forceRebuild);
-            drawCharts(filter);
-            const main = document.getElementById('mainContent');
-            if (main) main.style.opacity = '1';
-            lastTableMode = mode;
-        }
-
-        window.onscroll = function () {
-            const btn = document.getElementById("backToTop");
-            if (btn) {
-                if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show");
-            }
-        };
-
-        window.onload = async function () {
-            try {
-                if (document.getElementById('headerVersion')) document.getElementById('headerVersion').innerText = String(VERSION);
-                if (document.getElementById('templateVersionBadge')) document.getElementById('templateVersionBadge').innerText = String(VERSION);
-                showLoader("กำลังโหลดข้อมูล... v." + VERSION);
-                await loadData({ force: false });
-                MODEL = buildModelOnce();
-                if (MODEL) processAndRender(true);
-                hideLoader();
-            } catch (e) {
-                showFatal("Load failed: " + (e.message || e));
-            }
-        };
     </script>
+    <?!= include('Script'); ?>
 </body>
 
 </html>
