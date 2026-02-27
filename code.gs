@@ -6,7 +6,7 @@
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
 
 // เปลี่ยนเลขเวอร์ชันที่นี่ที่เดียว
-const VERSION = '690120-0842'; // ตัวเลขจาก Logger
+const VERSION = '690227-1030'; // อัปเดตเพื่อล้างแคชให้ข้อมูล SP ใหม่ปรากฏ
 
 
 // ปรับได้ตามรอบอัปเดตข้อมูลจริง (สำหรับ 100+ concurrent แนะนำ 60–300s)
@@ -22,50 +22,40 @@ function doGet() {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// Add include function for script/style injection
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
 function getDashboardData() {
     const cache = CacheService.getScriptCache();
+    const bundleKey = `R8:${VERSION}:bundle`;
 
-    const keys = {
-        hospital: `R8:${VERSION}:hospital`,
-        population: `R8:${VERSION}:population`,
-        sap: `R8:${VERSION}:sap_level`,
-        medical: `R8:${VERSION}:medical`,
-        bed: `R8:${VERSION}:bed`,
-        hospital_structure: `R8:${VERSION}:hospital_structure`,
-        meqsp: `R8:${VERSION}:m_eq_sp`,
-        msp: `R8:${VERSION}:m_sp`,
-        meta: `R8:${VERSION}:meta`
-    };
+    // Fast Path Helper
+    function getBundledData() {
+        try {
+            const chunkCountStr = cache.get(`${bundleKey}:count`);
+            if (!chunkCountStr) return null;
 
-    // Fast path
-    const cachedMeta = cache.get(keys.meta);
-    const cachedAll =
-        cachedMeta &&
-        cache.get(keys.hospital) &&
-        cache.get(keys.population) &&
-        cache.get(keys.sap) &&
-        cache.get(keys.medical) &&
-        cache.get(keys.bed) &&
-        cache.get(keys.hospital_structure) &&
-        cache.get(keys.meqsp) &&
-        cache.get(keys.msp);
+            const numChunks = parseInt(chunkCountStr, 10);
+            const keysToGet = [];
+            for (let i = 0; i < numChunks; i++) keysToGet.push(`${bundleKey}:${i}`);
 
-    if (cachedAll) {
-        return {
-            status: 'success',
-            data: {
-                hospital: JSON.parse(cache.get(keys.hospital)),
-                population: JSON.parse(cache.get(keys.population)),
-                sap: JSON.parse(cache.get(keys.sap)),
-                medical: JSON.parse(cache.get(keys.medical)),
-                bed: JSON.parse(cache.get(keys.bed)),
-                hospital_structure: JSON.parse(cache.get(keys.hospital_structure)),
-                meqsp: JSON.parse(cache.get(keys.meqsp)),
-                msp: JSON.parse(cache.get(keys.msp))
-            },
-            meta: JSON.parse(cachedMeta)
-        };
+            const chunksObj = cache.getAll(keysToGet);
+            let fullStr = '';
+            for (let i = 0; i < numChunks; i++) {
+                const part = chunksObj[`${bundleKey}:${i}`];
+                if (!part) return null; // Cache incomplete
+                fullStr += part;
+            }
+            return JSON.parse(fullStr);
+        } catch (e) {
+            return null;
+        }
     }
+
+    const cachedPayload = getBundledData();
+    if (cachedPayload) return cachedPayload;
 
     // Prevent cache stampede
     const lock = LockService.getScriptLock();
@@ -73,34 +63,8 @@ function getDashboardData() {
 
     try {
         // Double-check after lock
-        const cachedMeta2 = cache.get(keys.meta);
-        const cachedAll2 =
-            cachedMeta2 &&
-            cache.get(keys.hospital) &&
-            cache.get(keys.population) &&
-            cache.get(keys.sap) &&
-            cache.get(keys.medical) &&
-            cache.get(keys.bed) &&
-            cache.get(keys.hospital_structure) &&
-            cache.get(keys.meqsp) &&
-            cache.get(keys.msp);
-
-        if (cachedAll2) {
-            return {
-                status: 'success',
-                data: {
-                    hospital: JSON.parse(cache.get(keys.hospital)),
-                    population: JSON.parse(cache.get(keys.population)),
-                    sap: JSON.parse(cache.get(keys.sap)),
-                    medical: JSON.parse(cache.get(keys.medical)),
-                    bed: JSON.parse(cache.get(keys.bed)),
-                    hospital_structure: JSON.parse(cache.get(keys.hospital_structure)),
-                    meqsp: JSON.parse(cache.get(keys.meqsp)),
-                    msp: JSON.parse(cache.get(keys.msp))
-                },
-                meta: JSON.parse(cachedMeta2)
-            };
-        }
+        const cachedPayload2 = getBundledData();
+        if (cachedPayload2) return cachedPayload2;
 
         const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
@@ -113,30 +77,35 @@ function getDashboardData() {
         const meqsp = ss.getSheetByName('m_eq_sp').getDataRange().getValues();
         const msp = ss.getSheetByName('m_sp').getDataRange().getValues();
 
+        // OPTIMIZE: Only keep necessary columns from meqmoph to save payload size (D, E, & G)
+        const meqmophRaw = ss.getSheetByName('m_eq_moph').getDataRange().getValues();
+        const meqmoph = meqmophRaw.map(r => [null, null, null, r[3], r[4], null, r[6]]);
+
         // lastUpdated
         let lastUpdatedISO = new Date().toISOString();
-        try {
-            lastUpdatedISO = DriveApp.getFileById(SPREADSHEET_ID).getLastUpdated().toISOString();
-        } catch (e) { }
+        try { lastUpdatedISO = DriveApp.getFileById(SPREADSHEET_ID).getLastUpdated().toISOString(); } catch (e) { }
 
-        const meta = { version: VERSION, lastUpdated: lastUpdatedISO };
-
-        // Put to cache (split keys)
-        cache.put(keys.hospital, JSON.stringify(hospital), CACHE_TTL_SEC);
-        cache.put(keys.population, JSON.stringify(population), CACHE_TTL_SEC);
-        cache.put(keys.sap, JSON.stringify(sap), CACHE_TTL_SEC);
-        cache.put(keys.medical, JSON.stringify(medical), CACHE_TTL_SEC);
-        cache.put(keys.bed, JSON.stringify(bed), CACHE_TTL_SEC);
-        cache.put(keys.hospital_structure, JSON.stringify(hospital_structure), CACHE_TTL_SEC);
-        cache.put(keys.meqsp, JSON.stringify(meqsp), CACHE_TTL_SEC);
-        cache.put(keys.msp, JSON.stringify(msp), CACHE_TTL_SEC);
-        cache.put(keys.meta, JSON.stringify(meta), CACHE_TTL_SEC);
-
-        return {
+        const payload = {
             status: 'success',
-            data: { hospital, population, sap, medical, bed, hospital_structure, meqsp, msp },
-            meta
+            data: { hospital, population, sap, medical, bed, hospital_structure, meqsp, msp, meqmoph },
+            meta: { version: VERSION, lastUpdated: lastUpdatedISO }
         };
+
+        // Put to cache using chunks
+        try {
+            const payloadStr = JSON.stringify(payload);
+            const chunkSize = 90000;
+            const numChunks = Math.ceil(payloadStr.length / chunkSize);
+
+            const toCache = {};
+            toCache[`${bundleKey}:count`] = numChunks.toString();
+            for (let i = 0; i < numChunks; i++) {
+                toCache[`${bundleKey}:${i}`] = payloadStr.substring(i * chunkSize, (i + 1) * chunkSize);
+            }
+            cache.putAll(toCache, CACHE_TTL_SEC);
+        } catch (e) { /* ignore cache errors */ }
+
+        return payload;
 
     } catch (error) {
         return { status: 'error', message: error.toString() };
@@ -148,10 +117,76 @@ function getDashboardData() {
 // Admin: Clear server cache immediately (used by navbar refresh button)
 function clearDashboardCache() {
     const cache = CacheService.getScriptCache();
-    const prefix = `R8:${VERSION}:`;
-    ['hospital', 'population', 'sap_level', 'medical', 'bed', 'hospital_structure', 'm_eq_sp', 'm_sp', 'meta']
-        .forEach(k => cache.remove(prefix + k));
+    cache.remove(`R8:${VERSION}:bundle:count`);
     return { status: 'success' };
+}
+
+// Function to add new equipment record
+function addEquipmentRecord(record) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        const sheet = ss.getSheetByName('m_eq_sp');
+
+        sheet.appendRow([
+            record.year,
+            record.sp,
+            record.prov,
+            record.hosp,
+            record.item,
+            record.price,
+            record.qty,
+            record.amt,
+            record.fundSrc,
+            record.itemCode,
+            record.priority,
+            record.provPriority
+        ]);
+
+        clearDashboardCache();
+        return { status: 'success' };
+    } catch (e) {
+        return { status: 'error', message: e.toString() };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+// Function to edit existing equipment record
+function editEquipmentRecord(record) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        const sheet = ss.getSheetByName('m_eq_sp');
+
+        const rowIdx = parseInt(record.rowIdx, 10);
+        if (!rowIdx || rowIdx < 2) throw new Error("Invalid Row Index");
+
+        const range = sheet.getRange(rowIdx, 1, 1, 12); // Assuming Col A to L
+        range.setValues([[
+            record.year,
+            record.sp,
+            record.prov,
+            record.hosp,
+            record.item,
+            record.price,
+            record.qty,
+            record.amt,
+            record.fundSrc,
+            record.itemCode,
+            record.priority,
+            record.provPriority
+        ]]);
+
+        clearDashboardCache();
+        return { status: 'success' };
+    } catch (e) {
+        return { status: 'error', message: e.toString() };
+    } finally {
+        lock.releaseLock();
+    }
 }
 
 // Helper: generate stable VERSION format "YYMMDD-HHMM" in Buddhist year (2 digits)
