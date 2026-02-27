@@ -1,0 +1,1361 @@
+<script>
+    function showFatal(msg) {
+        const box = document.getElementById('fatalError');
+        if (!box) return;
+        box.classList.remove('hidden');
+        box.textContent = msg;
+        console.error(msg);
+    }
+    window.onerror = function (message, source, lineno, colno, error) {
+        showFatal(`JS Error: ${message}\n${source}:${lineno}:${colno}`);
+        return false;
+    };
+
+    Chart.register(ChartDataLabels);
+    const SESSION_KEY = "R8_DASH_" + VERSION;
+
+    const DISTRICT_MAP = {
+        '4201': 'เมืองเลย', '4202': 'นาด้วง', '4203': 'เชียงคาน', '4204': 'ปากชม', '4205': 'ด่านซ้าย',
+        '4206': 'นาแห้ว', '4207': 'ภูเรือ', '4208': 'ท่าลี่', '4209': 'วังสะพุง', '4210': 'ภูกระดึง', '4211': 'ภูหลวง', '4212':
+            'ผาขาว', '4213': 'เอราวัณ', '4214': 'หนองหิน', '4101': 'เมืองอุดรธานี', '4102': 'กุดจับ', '4103': 'หนองวัวซอ', '4104':
+            'กุมภวาปี', '4105': 'โนนสะอาด', '4106': 'หนองหาน', '4107': 'ทุ่งฝน', '4108': 'ไชยวาน', '4109': 'ศรีธาตุ', '4110':
+            'วังสามหมอ', '4111': 'บ้านดุง', '4117': 'บ้านผือ', '4118': 'น้ำโสม', '4119': 'เพ็ญ', '4120': 'สร้างคอม', '4121':
+            'หนองแสง', '4122': 'นายูง', '4123': 'พิบูลย์รักษ์', '4124': 'กู่แก้ว', '4125': 'ประจักษ์ศิลปาคม', '4301':
+            'เมืองหนองคาย', '4302': 'ท่าบ่อ', '4305': 'โพนพิสัย', '4307': 'ศรีเชียงใหม่', '4308': 'สังคม', '4314': 'สระใคร', '4315':
+            'เฝ้าไร่', '4316': 'รัตนวาปี', '4317': 'โพธิ์ตาก', '3801': 'เมืองบึงกาฬ', '3802': 'พรเจริญ', '3803': 'โซ่พิสัย', '3804':
+            'เซกา', '3805': 'ปากคาด', '3806': 'บึงโขงหลง', '3807': 'ศรีวิไล', '3808': 'บุ่งคล้า', '4701': 'เมืองสกลนคร', '4702':
+            'กุสุมาลย์', '4703': 'กุดบาก', '4704': 'พรรณานิคม', '4705': 'พังโคน', '4706': 'วาริชภูมิ', '4707': 'นิคมน้ำอูน', '4708':
+            'วานรนิวาส', '4709': 'คำตากล้า', '4710': 'บ้านม่วง', '4711': 'อากาศอำนวย', '4712': 'สว่างแดนดิน', '4713': 'ส่องดาว',
+        '4714': 'เต่างอย', '4715': 'โคกศรีสุพรรณ', '4716': 'เจริญศิลป์', '4717': 'โพนนาแก้ว', '4718': 'ภูพาน', '4801':
+            'เมืองนครพนม', '4802': 'ปลาปาก', '4803': 'ท่าอุเทน', '4804': 'บ้านแพง', '4805': 'ธาตุพนม', '4806': 'เรณูนคร', '4807':
+            'นาแก', '4808': 'ศรีสงคราม', '4809': 'นาหว้า', '4810': 'โพนสวรรค์', '4811': 'นาทม', '4812': 'วังยาง', '3901':
+            'เมืองหนองบัวลำภู', '3902': 'นากลาง', '3903': 'โนนสัง', '3904': 'ศรีบุญเรือง', '3905': 'สุวรรณคูหา', '3906': 'นาวัง'
+    };
+
+    // [ZONE STRUCTURE]
+    const ZONES = {
+        'Zone 8.1': ['อุดรธานี', 'เลย', 'หนองบัวลำภู'],
+        'Zone 8.2': ['หนองคาย', 'บึงกาฬ'],
+        'Zone 8.3': ['สกลนคร', 'นครพนม']
+    };
+
+    const ORIGINAL_ORDER = ['อุดรธานี', 'สกลนคร', 'นครพนม', 'เลย', 'หนองคาย', 'หนองบัวลำภู', 'บึงกาฬ'];
+    const TYPE_MAP = { 'โรงพยาบาลศูนย์': 'รพศ.', 'โรงพยาบาลทั่วไป': 'รพท.', 'โรงพยาบาลชุมชน': 'รพช.' };
+    const T_PRIO = { 'โรงพยาบาลศูนย์': 1, 'โรงพยาบาลทั่วไป': 2, 'โรงพยาบาลชุมชน': 3 };
+    const S_PRIO = { 'P+': 1, 'P': 2, 'A+': 3, 'A': 4, 'S+': 5, 'S': 6 };
+    const PROV_COLORS = {
+        'บึงกาฬ': '#056839', 'หนองบัวลำภู': '#38A169', 'อุดรธานี': '#2D3748', 'เลย': '#C05621', 'หนองคาย':
+            '#2F855A', 'สกลนคร': '#276749', 'นครพนม': '#2C7A7B'
+    };
+
+    const KEYS = {
+        DOC: ["กุมารแพทย์", "ศัลยแพทย์ OR", "อายุรแพทย์ ICU", "อายุรแพทย์ Stroke", "อายุรแพทย์ HD"],
+        NURSE: ["พยาบาล NICU", "พยาบาล OR ศัลยกรรม", "พยาบาล ICU อายุรกรรม", "พยาบาล Stroke อายุรกรรม", "พยาบาล HD"],
+        BED: ["เตียงกรอบ", "เตียงจริง", "เตียง NICU", "เตียง OR ศัลยกรรม", "เตียง ICU", "เตียง Stroke", "เตียง HD", "เตียง Palliative Care", "เตียงมินิธัญญารักษ์"],
+        STRUCT: ["ห้องตรวจผู้ป่วยนอก (ห้อง)", "ห้องตรวจผู้ป่วยนอก พิเศษ SMC", "ห้องตรวจผู้ป่วยนอกพิเศษ PMC", "จำนวนห้องผ่าตัด", "เครื่องไตเทียม (รพ.)", "CT Scan (รพ.)", "MRI (รพ.)", "รถ Ambulance"]
+    };
+
+    let rawData = {};
+    let MODEL = null;
+    const charts = {};
+    let lastTableMode = null;
+
+    function cleanNum(v) { if (!v || v === "-") return 0; return parseFloat(String(v).replace(/,/g, '')) || 0; }
+    function getValClass(v) { return cleanNum(v) === 0 ? 'zero-value' : ''; }
+    function escapeHtml(s) {
+        return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g,
+            "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+    function normProv(p) { return String(p ?? "").trim(); }
+
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        if (!t) return;
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2200);
+    }
+    function showLoader(msg) { $("#loader").show(); $("#loader p").text(msg || ("กำลังโหลดข้อมูล... v." + VERSION)); }
+    function hideLoader() { $("#loader").fadeOut(); }
+
+    function setLastUpdated(meta) {
+        const last = meta && meta.lastUpdated ? new Date(meta.lastUpdated) : new Date();
+        document.getElementById('lastUpdated').innerText = last.toLocaleString('th-TH');
+        document.getElementById('serverVersion').innerText = meta?.version || '...';
+    }
+
+    function buildKeyIndex(sheetValues, keys) {
+        const heads = (sheetValues && sheetValues[0] ? sheetValues[0] : []).map(h => String(h ?? ""));
+        const idx = {};
+        for (const k of keys) idx[k] = heads.findIndex(h => h.includes(k));
+        return idx;
+    }
+
+    function buildModelOnce() {
+        if (!rawData || !rawData.hospital) return null;
+
+        const provSet = new Set();
+        const hospProvMap = {};
+        (rawData.hospital || []).slice(1).forEach(r => {
+            const p = normProv(r[3]);
+            if (p) {
+                provSet.add(p);
+                const hName = String(r[7] || '').trim();
+                if (hName) hospProvMap[hName] = p;
+            }
+        });
+        (rawData.population || []).slice(1).forEach(r => { const p = normProv(r[3]); if (p) provSet.add(p); });
+
+        const idx = {
+            medicalDocs: buildKeyIndex(rawData.medical, KEYS.DOC),
+            medicalNurses: buildKeyIndex(rawData.medical, KEYS.NURSE),
+            bed: buildKeyIndex(rawData.bed, KEYS.BED),
+            structure: buildKeyIndex(rawData.hospital_structure, KEYS.STRUCT)
+        };
+
+        const rowByCode = { med: {}, bed: {}, str: {} };
+        (rawData.medical || []).slice(1).forEach(r => { if (r[6]) rowByCode.med[String(r[6]).trim()] = r; });
+        (rawData.bed || []).slice(1).forEach(r => { if (r[6]) rowByCode.bed[String(r[6]).trim()] = r; });
+        (rawData.hospital_structure || []).slice(1).forEach(r => { if (r[6]) rowByCode.str[String(r[6]).trim()] = r; });
+
+        // Process m_eq_sp data
+        let eqData = [];
+        if (rawData.meqsp && rawData.meqsp.length > 1) {
+            const eqHeaders = rawData.meqsp[0];
+            const spIdx = eqHeaders.findIndex(h => h && h.includes('สาขา')); // "สาขา SP" หรือ "สาขา"
+            const hospIdx = eqHeaders.findIndex(h => h && h.includes('หน่วยบริการ'));
+            const itemIdx = eqHeaders.findIndex(h => h && h.includes('ชื่อรายการ'));
+            const priceIdx = eqHeaders.findIndex(h => h && h.includes('ราคาต่อหน่วย'));
+            const yearIdx = eqHeaders.findIndex(h => h && h.includes('ปีงบประมาณ'));
+            const qtyIdx = eqHeaders.findIndex(h => h && h.includes('จำนวน'));
+            const amtIdx = eqHeaders.findIndex(h => h && h.includes('วงเงินรวม'));
+            const srcIdx = eqHeaders.findIndex(h => h && (h.includes('แหล่งงบประมาณ') || h.includes('แหล่งงบ')));
+
+            eqData = rawData.meqsp.slice(1).map((r, idx) => {
+                const hName = String(r[hospIdx] || '').trim();
+                return {
+                    rowIdx: idx + 2, // Row in Google Sheet (header is row 1, data starts at row 2)
+                    year: yearIdx > -1 ? String(r[yearIdx] || '').trim() : '',
+                    sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
+                    hosp: hName,
+                    prov: hospProvMap[hName] || '',
+                    item: itemIdx > -1 ? String(r[itemIdx] || '').trim() : '',
+                    fundSrc: srcIdx > -1 ? String(r[srcIdx] || '').trim() : '',
+                    price: priceIdx > -1 ? cleanNum(r[priceIdx]) : 0,
+                    qty: qtyIdx > -1 ? cleanNum(r[qtyIdx]) : 0,
+                    amt: amtIdx > -1 ? cleanNum(r[amtIdx]) : 0,
+                    itemCode: String(r[9] || '').trim(), // Col J
+                    priority: String(r[10] || '').trim(), // Col K
+                    provPriority: String(r[11] || '').trim() // Col L
+                };
+            });
+        }
+
+        // Extract SP List from eqData
+        const spSet = new Set();
+        const yearSet = new Set();
+        eqData.forEach(item => {
+            if (item.sp) spSet.add(item.sp);
+            if (item.year) yearSet.add(item.year);
+        });
+        const spList = Array.from(spSet).sort();
+        const yearList = Array.from(yearSet).sort((a, b) => b.toString().localeCompare(a.toString()));
+        const allHospList = Array.from(new Set(Object.keys(hospProvMap))).map(h => ({ val: h, text: `[${hospProvMap[h]}] ${h}` })).sort((a, b) => a.text.localeCompare(b.text, 'th'));
+        let mspListSource = []; // For dropdown options
+        if (rawData.msp && rawData.msp.length > 1) {
+            mspListSource = Array.from(new Set(rawData.msp.slice(1).map(r => String(r[0] || '').trim()).filter(s => s !== ''))).sort();
+        }
+
+        let meqmophList = [];
+        if (rawData.meqmoph && rawData.meqmoph.length > 1) {
+            meqmophList = rawData.meqmoph.slice(1).map(r => ({
+                code: String(r[3] || '').trim(), // Col D
+                name: String(r[4] || '').trim(), // Col E
+                price: cleanNum(r[6]) // Col G
+            })).filter(i => i.name !== '');
+            // Unique by name (in case of duplicates)
+            const mapUnique = new Map();
+            meqmophList.forEach(i => { if (!mapUnique.has(i.name)) mapUnique.set(i.name, i); });
+            meqmophList = Array.from(mapUnique.values()).sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        }
+
+        const provPop = {};
+        const distPopByProv = {};
+        (rawData.population || []).slice(1).forEach(r => {
+            const p = normProv(r[3]); if (!p) return;
+            const pop = cleanNum(r[11]);
+            provPop[p] = (provPop[p] || 0) + pop;
+            const dN = DISTRICT_MAP[r[4]] || r[4];
+            distPopByProv[p] ||= {};
+            distPopByProv[p][dN] = (distPopByProv[p][dN] || 0) + pop;
+        });
+
+        const provList = Array.from(provSet);
+        const inOriginal = ORIGINAL_ORDER.filter(p => provSet.has(p));
+        const rest = provList.filter(p => !inOriginal.includes(p)).sort((a, b) => (provPop[b] || 0) - (provPop[a] || 0));
+        const sortedProvinces = [...inOriginal, ...rest];
+
+        const statsByProv = {};
+        for (const p of sortedProvinces) {
+            statsByProv[p] = {
+                count: 0,
+                pop: provPop[p] || 0,
+                sap: {},
+                types: { รพศ: 0, รพท: 0, รพช: 0 },
+                distPops: distPopByProv[p] || {},
+                docs: Object.fromEntries(KEYS.DOC.map(k => [k, 0])),
+                nurses: Object.fromEntries(KEYS.NURSE.map(k => [k, 0])),
+                beds: Object.fromEntries(KEYS.BED.map(k => [k, 0])),
+                structure: Object.fromEntries(KEYS.STRUCT.map(k => [k, 0]))
+            };
+        }
+
+        const hospByProv = {};
+        for (const p of sortedProvinces) hospByProv[p] = [];
+
+        (rawData.hospital || []).slice(1).forEach(r => {
+            const p = normProv(r[3]); if (!p || !statsByProv[p]) return;
+            const grade = String(r[10] ?? "").trim().toUpperCase();
+            statsByProv[p].count++;
+            if (grade === "P+") {
+                if (p === "อุดรธานี" || p === "สกลนคร") statsByProv[p].types.รพศ++; else
+                    statsByProv[p].types.รพท++;
+            }
+            else if (grade === "P") {
+                if (p === "เลย" || p === "นครพนม" || p === "สกลนคร") statsByProv[p].types.รพท++; else
+                    statsByProv[p].types.รพช++;
+            }
+            else if (grade === "A+") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++;
+            statsByProv[p].sap[grade] = (statsByProv[p].sap[grade] || 0) + 1;
+            hospByProv[p].push({
+                name: r[7], code5: String(r[6]).trim(), type: String(r[8] ?? "").trim(), oldLvl: r[9], sapLvl: grade, node: String(r[1]
+                    ?? "").trim()
+            });
+        });
+
+        function sortHospitals(list) {
+            return list.sort((a, b) => {
+                const tA = T_PRIO[a.type] || 99; const tB = T_PRIO[b.type] || 99;
+                if (tA !== tB) return tA - tB;
+                if (a.type === 'โรงพยาบาลชุมชน') {
+                    const nA = (String(a.node).toLowerCase() === 'yes') ? 0 : 1;
+                    const nB = (String(b.node).toLowerCase() === 'yes') ? 0 : 1;
+                    if (nA !== nB) return nA - nB;
+                }
+                return (S_PRIO[a.sapLvl] || 99) - (S_PRIO[b.sapLvl] || 99);
+            });
+        }
+        for (const p of Object.keys(hospByProv)) sortHospitals(hospByProv[p]);
+
+        function aggProv(sheetName, keys, idxMap, field) {
+            const sheet = rawData[sheetName];
+            if (!sheet) return;
+            sheet.slice(1).forEach(r => {
+                const p = normProv(r[3]);
+                if (!statsByProv[p]) return;
+                for (const k of keys) {
+                    const i = idxMap[k];
+                    if (i > -1) statsByProv[p][field][k] += cleanNum(r[i]);
+                }
+            });
+        }
+        aggProv('medical', KEYS.DOC, idx.medicalDocs, 'docs');
+        aggProv('medical', KEYS.NURSE, idx.medicalNurses, 'nurses');
+        aggProv('bed', KEYS.BED, idx.bed, 'beds');
+        aggProv('hospital_structure', KEYS.STRUCT, idx.structure, 'structure');
+
+        return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv, eqData, spList, yearList, allHospList, meqmophList, mspListSource };
+    }
+
+    function loadData({ force = false } = {}) {
+        return new Promise((resolve, reject) => {
+            if (!force) {
+                const cached = sessionStorage.getItem(SESSION_KEY);
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        rawData = parsed.data;
+                        setLastUpdated(parsed.meta);
+                        resolve({ from: "session", meta: parsed.meta });
+                        return;
+                    } catch (e) { sessionStorage.removeItem(SESSION_KEY); }
+                }
+            }
+            if (typeof google === 'undefined' || !google.script) {
+                reject(new Error("google.script is not available"));
+                return;
+            }
+            google.script.run.withSuccessHandler(res => {
+                if (res.status === 'success') {
+                    rawData = res.data;
+                    setLastUpdated(res.meta);
+                    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data: rawData, meta: res.meta }));
+                    resolve({ from: "server", meta: res.meta });
+                } else reject(new Error(res.message || "Unknown error"));
+            }).withFailureHandler(err => reject(err)).getDashboardData();
+        });
+    }
+
+    async function refreshNow() {
+        if (typeof google === 'undefined' || !google.script) return;
+        const btn = document.getElementById('refreshBtn');
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        showLoader("กำลังรีเฟรชและล้างแคช... v." + VERSION);
+        try {
+            sessionStorage.removeItem(SESSION_KEY);
+            await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(() => resolve()).withFailureHandler(err => reject(err)).clearDashboardCache();
+            });
+            await loadData({ force: true });
+            MODEL = buildModelOnce();
+            processAndRender(true);
+            toast("รีเฟรชข้อมูลล่าสุดเรียบร้อย");
+        } catch (e) { showFatal("Refresh failed: " + e.message); toast("รีเฟรชไม่สำเร็จ"); }
+        finally { hideLoader(); btn.disabled = false; btn.classList.remove('opacity-70'); }
+    }
+
+    function destroyTables() {
+        const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable', '#eqTable'];
+        tables.forEach(t => {
+            if ($.fn.DataTable.isDataTable(t)) {
+                $(t).DataTable().destroy();
+            }
+        });
+    }
+
+    function initTables() {
+        const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable'];
+        tables.forEach(t => {
+            $(t).DataTable({
+                paging: false, info: false, searching: false,
+                scrollX: true, deferRender: true, autoWidth: false, destroy: true
+            });
+        });
+    }
+
+    function upsertChart(key, canvasId, config) {
+        const el = document.getElementById(canvasId);
+        if (!el) return;
+        const ctx = el.getContext('2d');
+        if (!ctx) return;
+        if (!charts[key]) { charts[key] = new Chart(ctx, config); return; }
+        charts[key].config.type = config.type;
+        charts[key].data = config.data;
+        charts[key].options = config.options;
+        charts[key].update();
+    }
+    function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
+
+    function updateTopStatsAndCards(filter) {
+        const stats = MODEL.statsByProv;
+        const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+        const totalHosp = list.reduce((s, p) => s + (stats[p]?.count || 0), 0);
+        const totalPop = Math.round(list.reduce((s, p) => s + (stats[p]?.pop || 0), 0));
+        const totalCoreDocs = Math.round(list.reduce((sum, p) => sum + KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0),
+            0), 0));
+        const totalRealBeds = Math.round(list.reduce((s, p) => s + (stats[p]?.beds?.["เตียงจริง"] || 0), 0));
+
+        document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
+        document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
+        document.getElementById('totalCoreDoctors').innerText = totalCoreDocs.toLocaleString();
+        document.getElementById('totalRealBeds').innerText = totalRealBeds.toLocaleString();
+
+        // [UPDATE] Zone Grouping Logic with Total Calculation
+        let html = '';
+        for (const [zoneName, provs] of Object.entries(ZONES)) {
+            // Calculate Zone Total
+            let zoneSum = 0;
+            provs.forEach(p => zoneSum += (stats[p]?.count || 0));
+
+            html += `<div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 flex flex-col items-center">
+    <div class="mb-4 flex items-center gap-2">
+        <span
+            class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">${zoneName}</span>
+        <span class="text-xs font-black text-green-700">รวม ${zoneSum} แห่ง</span>
+    </div>
+    <div class="flex flex-wrap justify-center gap-6 w-full">`;
+
+            provs.forEach(p => {
+                const isDim = filter !== 'ALL' && filter !== p;
+                const count = stats[p]?.count ?? 0;
+                html += `<div class="flex flex-col items-center transition-all ${isDim ? 'opacity-20 grayscale' : ''}">
+            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                style="color:${PROV_COLORS[p] || '#94a3b8'}">
+                <path stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
+            </svg>
+            <span class="text-[13px] font-bold text-slate-700">${escapeHtml(p)}</span>
+            <span class="text-xl font-black text-slate-800">${count}</span>
+            <span class="text-[10px] font-bold text-slate-400 mt-1">แห่ง</span>
+        </div>`;
+            });
+
+            html += `</div>
+</div>`;
+        }
+        document.getElementById('hospitalCards').innerHTML = html;
+    }
+
+    function updateProvDrilldownCards(filter) {
+        const distCard = document.getElementById('distPopCard');
+        const docCard = document.getElementById('docSpecCard');
+        if (filter !== 'ALL') {
+            if (distCard) distCard.classList.remove('hidden');
+            if (docCard) docCard.classList.remove('hidden');
+            if (document.getElementById('selectedProvLabel')) document.getElementById('selectedProvLabel').innerText = filter;
+            if (document.getElementById('selectedProvLabel2')) document.getElementById('selectedProvLabel2').innerText = filter;
+        } else {
+            if (distCard) distCard.classList.add('hidden');
+            if (docCard) docCard.classList.add('hidden');
+        }
+    }
+
+    function renderTables(filter, rebuildHeaders) {
+        const isAll = (filter === 'ALL');
+        const stats = MODEL.statsByProv;
+        const hospList = isAll ? [] : (MODEL.hospByProv[filter] || []);
+        const rowByCode = MODEL.rowByCode;
+        const idx = MODEL.idx;
+
+        destroyTables();
+
+        if (rebuildHeaders) {
+            const headerLead = isAll ? `<th>จังหวัด</th>` : `<th>โรงพยาบาล</th>
+<th>ประเภท</th>
+<th>ระดับเดิม</th>
+<th>ระดับ SAP</th>`;
+            if (document.getElementById('bedHeader')) document.getElementById('bedHeader').innerHTML =
+                `${headerLead}${KEYS.BED.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+            if (document.getElementById('structureHeader')) document.getElementById('structureHeader').innerHTML =
+                `${headerLead}${KEYS.STRUCT.map(k => `<th>${escapeHtml(k)}</th>`).join('')}`;
+            if (document.getElementById('physicianHeader')) document.getElementById('physicianHeader').innerHTML =
+                `${headerLead}${KEYS.DOC.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+            if (document.getElementById('nurseHeader')) document.getElementById('nurseHeader').innerHTML =
+                `${headerLead}${KEYS.NURSE.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+        }
+
+        const list = isAll ? MODEL.sortedProvinces : hospList;
+
+        const renderRow = (item, keys, codeRowMap, statsField) => {
+            let cells = '', total = 0;
+            if (isAll) {
+                const p = item;
+                for (const k of keys) {
+                    const v = stats[p]?.[statsField]?.[k] || 0;
+                    total += v;
+                    cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
+                }
+                return `<tr>
+    <td>${escapeHtml(p)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">
+        ${total.toLocaleString()}</td>` : ''}
+</tr>`;
+            } else {
+                const r = codeRowMap[item.code5] || [];
+                const keyIdx = statsField === 'docs' ? idx.medicalDocs : (statsField === 'nurses' ? idx.medicalNurses : (statsField ===
+                    'beds' ? idx.bed : idx.structure));
+                for (const k of keys) {
+                    const i = keyIdx[k];
+                    const v = (i > -1) ? cleanNum(r[i]) : 0;
+                    total += v;
+                    cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
+                }
+                return `<tr>
+    <td>${escapeHtml(item.name)}</td>
+    <td>${escapeHtml(TYPE_MAP[item.type] || item.type)}</td>
+    <td>${escapeHtml(item.oldLvl)}</td>
+    <td>${escapeHtml(item.sapLvl)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">
+        ${total.toLocaleString()}</td>` : ''}
+</tr>`;
+            }
+        };
+
+        if (document.getElementById('bedBody')) document.getElementById('bedBody').innerHTML = list.map(i => renderRow(i,
+            KEYS.BED, rowByCode.bed, 'beds')).join('');
+        if (document.getElementById('structureBody')) document.getElementById('structureBody').innerHTML = list.map(i =>
+            renderRow(i, KEYS.STRUCT, rowByCode.str, 'structure')).join('');
+        if (document.getElementById('physicianBody')) document.getElementById('physicianBody').innerHTML = list.map(i =>
+            renderRow(i, KEYS.DOC, rowByCode.med, 'docs')).join('');
+        if (document.getElementById('nurseBody')) document.getElementById('nurseBody').innerHTML = list.map(i => renderRow(i,
+            KEYS.NURSE, rowByCode.med, 'nurses')).join('');
+
+        initTables();
+    }
+
+    function drawCharts(filter) {
+        const stats = MODEL.statsByProv;
+        const labels = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+        const optB = {
+            responsive: true, maintainAspectRatio: false, plugins: {
+                legend: { position: 'bottom' }, datalabels: {
+                    color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v) => v > 0 ? v.toLocaleString() : '', align: 'center',
+                    anchor: 'center'
+                }
+            }
+        };
+        const optO = {
+            ...optB, plugins: {
+                ...optB.plugins, datalabels: {
+                    ...optB.plugins.datalabels, align: 'end', anchor:
+                        'end', color: '#1e293b'
+                }
+            }
+        };
+
+        if (filter !== 'ALL') {
+            const distObj = stats[filter]?.distPops || {};
+            upsertChart('dist', 'distPopChart', {
+                type: 'bar', data: {
+                    labels: Object.keys(distObj), datasets: [{
+                        label:
+                            'ประชากรรายอำเภอ', data: Object.values(distObj), backgroundColor: '#3b82f6'
+                    }]
+                }, options: optB
+            });
+            const vals = KEYS.DOC.map(k => stats[filter]?.docs?.[k] || 0);
+            upsertChart('docSpec', 'docSpecChart', {
+                type: 'bar', data: {
+                    labels: KEYS.DOC, datasets: [{
+                        label: 'จำนวนแพทย์ (คน)',
+                        data: vals, backgroundColor: '#4f46e5'
+                    }]
+                }, options: {
+                    ...optO, plugins: {
+                        ...optO.plugins, legend: { display: false }
+                    }, scales: { y: { beginAtZero: true } }
+                }
+            });
+        } else { destroyChart('dist'); destroyChart('docSpec'); }
+
+        upsertChart('hType', 'hospTypeChart', {
+            type: 'bar', data: {
+                labels, datasets: [
+                    { label: 'รพศ.', data: labels.map(l => stats[l]?.types?.รพศ || 0), backgroundColor: '#056839' },
+                    { label: 'รพท.', data: labels.map(l => stats[l]?.types?.รพท || 0), backgroundColor: '#3b82f6' },
+                    { label: 'รพช.', data: labels.map(l => stats[l]?.types?.รพช || 0), backgroundColor: '#ea580c' }
+                ]
+            }, options: { ...optB, scales: { x: { stacked: filter === 'ALL' }, y: { stacked: filter === 'ALL' } } }
+        });
+
+        upsertChart('pop', 'popChart', {
+            type: 'bar', data: {
+                labels, datasets: [{
+                    label: 'ประชากร', data: labels.map(l =>
+                        stats[l]?.pop || 0), backgroundColor: '#056839'
+                }]
+            }, options: optO
+        });
+        upsertChart('core', 'coreBarChart', {
+            type: 'bar', data: {
+                labels, datasets: [{
+                    label: 'รวมแพทย์', data: labels.map(l =>
+                        KEYS.DOC.reduce((s, k) => s + (stats[l]?.docs?.[k] || 0), 0)), backgroundColor: '#16a34a'
+                }]
+            }, options: optO
+        });
+        upsertChart('sap', 'sapChart', {
+            type: 'bar', data: {
+                labels, datasets: ['S+', 'S', 'A+', 'A', 'P+', 'P'].map(g => ({
+                    label: g, data: labels.map(l => stats[l]?.sap?.[g] || 0), backgroundColor: {
+                        'S+': '#056839', 'S': '#16a34a', 'A+':
+                            '#1d4ed8', 'A': '#3b82f6', 'P+': '#ea580c', 'P': '#f59e0b'
+                    }[g]
+                }))
+            }, options: {
+                ...optB, scales: {
+                    x: {
+                        stacked: true
+                    }, y: { stacked: true }
+                }
+            }
+        });
+    }
+
+    // Tab Switching Logic
+    function switchTab(tabId) {
+        const mainContent = document.getElementById('mainContent');
+        const eqContent = document.getElementById('eqContent');
+        const mainBtn = document.getElementById('tabMainBtn');
+        const eqBtn = document.getElementById('tabEqBtn');
+
+        const activeClass = ['border-green-700', 'text-green-700'];
+        const inactiveClass = ['border-transparent', 'text-slate-500', 'hover:text-slate-800'];
+
+        if (tabId === 'main') {
+            mainContent.classList.remove('hidden');
+            setTimeout(() => mainContent.style.opacity = '1', 50);
+            eqContent.classList.add('hidden');
+            eqContent.style.opacity = '0';
+
+            mainBtn.classList.remove(...inactiveClass);
+            mainBtn.classList.add(...activeClass);
+            eqBtn.classList.remove(...activeClass);
+            eqBtn.classList.add(...inactiveClass);
+
+            const gisBtn = document.getElementById('tabGisBtn');
+            if (gisBtn) {
+                gisBtn.classList.remove(...activeClass);
+                gisBtn.classList.add(...inactiveClass);
+            }
+        } else if (tabId === 'eq') {
+            eqContent.classList.remove('hidden');
+            setTimeout(() => eqContent.style.opacity = '1', 50);
+            mainContent.classList.add('hidden');
+            mainContent.style.opacity = '0';
+
+            const gisContent = document.getElementById('gisContent');
+            if (gisContent) {
+                gisContent.classList.add('hidden');
+                gisContent.style.opacity = '0';
+            }
+
+            eqBtn.classList.remove(...inactiveClass);
+            eqBtn.classList.add(...activeClass);
+            mainBtn.classList.remove(...activeClass);
+            mainBtn.classList.add(...inactiveClass);
+
+            const gisBtn = document.getElementById('tabGisBtn');
+            if (gisBtn) {
+                gisBtn.classList.remove(...activeClass);
+                gisBtn.classList.add(...inactiveClass);
+            }
+
+            // Initial render for EQ if empty
+            if (document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
+        } else if (tabId === 'gis') {
+            const gisContent = document.getElementById('gisContent');
+            const gisBtn = document.getElementById('tabGisBtn');
+
+            if (gisContent) {
+                gisContent.classList.remove('hidden');
+                setTimeout(() => gisContent.style.opacity = '1', 50);
+            }
+
+            mainContent.classList.add('hidden');
+            mainContent.style.opacity = '0';
+            eqContent.classList.add('hidden');
+            eqContent.style.opacity = '0';
+
+            if (gisBtn) {
+                gisBtn.classList.remove(...inactiveClass);
+                gisBtn.classList.add(...activeClass);
+            }
+            mainBtn.classList.remove(...activeClass);
+            mainBtn.classList.add(...inactiveClass);
+            eqBtn.classList.remove(...activeClass);
+            eqBtn.classList.add(...inactiveClass);
+
+            // Init filter
+            if (document.getElementById('gisSpFilter').options.length <= 1 && MODEL) {
+                populateGisDropdown();
+            }
+
+            setTimeout(async () => {
+                if (!gisMap) {
+                    await initGisMap();
+                } else {
+                    gisMap.invalidateSize();
+                }
+                renderGisMap();
+            }, 200);
+        }
+    }
+
+    let gisMap = null;
+    let gisGeoJsonLayer = null;
+    let r8GeoJsonData = null;
+    let gisInfoControl = null;
+    let gisLegendControl = null;
+
+    function populateGisDropdown() {
+        if (!MODEL) return;
+        const spSelect = $('#gisSpFilter');
+        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
+        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
+        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
+
+        const yrSelect = $('#gisYearFilter');
+        yrSelect.empty().append('<option value="ALL">ทุกปีงบประมาณ</option>');
+        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
+
+        $('#gisSpFilter, #gisYearFilter').select2({ minimumResultsForSearch: 10 });
+    }
+
+    // Custom Color Scale based on total amount
+    function getMapColor(d, maxVal) {
+        if (!maxVal || maxVal === 0) maxVal = 1;
+        const pct = d / maxVal;
+        return pct > 0.8 ? '#00441b' :
+            pct > 0.6 ? '#006d2c' :
+                pct > 0.4 ? '#238b45' :
+                    pct > 0.2 ? '#41ab5d' :
+                        pct > 0.05 ? '#74c476' :
+                            pct > 0 ? '#a1d99b' :
+                                '#f7fcf5';
+    }
+
+    async function initGisMap() {
+        // Initialize Leaflet Map
+        const mapDiv = document.getElementById('spGisMap');
+        if (!mapDiv) return;
+
+        // Disable scroll zoom initially until clicked/focused to avoid capturing user page scroll
+        gisMap = L.map('spGisMap', { scrollWheelZoom: false }).setView([17.5, 103.5], 8);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(gisMap);
+
+        gisMap.on('focus', function () { gisMap.scrollWheelZoom.enable(); });
+        gisMap.on('blur', function () { gisMap.scrollWheelZoom.disable(); });
+
+        // Add Custom Info Control
+        gisInfoControl = L.control();
+        gisInfoControl.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        gisInfoControl.update = function (props) {
+            this._div.innerHTML = '<h4>ข้อมูลแยกตามพื้นที่</h4>' + (props ?
+                '<b>อ.' + props.AMP_TH + ' จ.' + props.PROV_TH + '</b><br />' +
+                (props.gis_data ?
+                    'จำนวน: ' + props.gis_data.qty.toLocaleString() + ' ชิ้น<br />' +
+                    'งบประมาณ: ฿' + formatMoney(props.gis_data.amt)
+                    : 'ไม่มีข้อมูลครุภัณฑ์')
+                : 'เลื่อนเมาส์ไปที่พื้นที่');
+        };
+        gisInfoControl.addTo(gisMap);
+
+        gisLegendControl = L.control({ position: 'bottomright' });
+        gisLegendControl.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info legend');
+            return this._div;
+        };
+        gisLegendControl.addTo(gisMap);
+
+        // Fetch District Polygon for Region 8 (Thailand)
+        // Public source of Thailand districts GeoJSON via JSDelivr to bypass Apps Script CORS blocks
+        try {
+            document.getElementById('gisMapOverlay').classList.remove('hidden');
+            const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+            const thGeoJson = await response.json();
+
+            // Filter only Region 8 Provinces
+            // 43: หนองคาย, 38: บึงกาฬ, 41: อุดรธานี, 42: เลย, 39: หนองบัวลำภู, 47: สกลนคร, 48: นครพนม
+            const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
+            r8GeoJsonData = {
+                type: "FeatureCollection",
+                features: thGeoJson.features.filter(f => {
+                    const code = String(f.properties.pro_code || f.properties.PRO_CODE || '');
+                    return r8Codes.includes(code);
+                })
+            };
+            console.log("Filtered R8 GeoJSON Features:", r8GeoJsonData.features.length);
+
+            // We map the legacy properties to standard names
+            r8GeoJsonData.features.forEach(f => {
+                f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || '';
+                f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || '';
+            });
+
+        } catch (err) {
+            console.error("Failed to load map boundaries", err);
+            toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
+        } finally {
+            document.getElementById('gisMapOverlay').classList.add('hidden');
+        }
+    }
+
+    function renderGisMap() {
+        if (!MODEL || !MODEL.eqData || !r8GeoJsonData || !gisMap) return;
+
+        const spFilter = document.getElementById('gisSpFilter').value;
+        const yearFilter = document.getElementById('gisYearFilter').value;
+
+        let filtered = MODEL.eqData;
+        if (spFilter !== 'ALL') {
+            filtered = filtered.filter(row => row.sp === spFilter);
+        }
+        if (yearFilter !== 'ALL') {
+            filtered = filtered.filter(row => String(row.year) === String(yearFilter));
+        }
+
+        // Aggregate by Province and then District (Hospital name matching)
+        // Since we don't have exact district codes for hospitals, we use a simple text match or map
+        // to a default district (เมือง) if not matched.
+        let distStats = {};
+        let tAmt = 0;
+        let tUnits = 0;
+
+        filtered.forEach(r => {
+            const calculatedAmt = r.amt > 0 ? r.amt : (r.price > 0 && r.qty > 0 ? (r.price * r.qty) : 0);
+            const qty = r.qty || 0;
+
+            let rawProv = r.prov !== undefined && r.prov !== null ? String(r.prov).trim() : '';
+            if (rawProv === 'undefined' || rawProv === 'null') rawProv = '';
+            let prov = rawProv.replace('จ.', '').trim();
+
+            // Fallback for province if empty and we can guess from hospital
+            if (!prov && r.hosp) {
+                if (r.hosp.includes('อุดร')) prov = 'อุดรธานี';
+                else if (r.hosp.includes('เลย')) prov = 'เลย';
+                else if (r.hosp.includes('สกล')) prov = 'สกลนคร';
+                else if (r.hosp.includes('นครพนม')) prov = 'นครพนม';
+                else if (r.hosp.includes('หนองคาย')) prov = 'หนองคาย';
+                else if (r.hosp.includes('บึงกาฬ')) prov = 'บึงกาฬ';
+                else if (r.hosp.includes('บัวลำภู')) prov = 'หนองบัวลำภู';
+            }
+            if (!prov) return;
+
+            // Try to match district from hospital name, else assign to "เมือง<Province>"
+            let distTarget = 'เมือง' + prov;
+
+            if (r.hosp === 'รพ.สกลนคร') distTarget = 'เมืองสกลนคร';
+            else if (r.hosp === 'รพ.อุดรธานี') distTarget = 'เมืองอุดรธานี';
+            // Simple heuristic to extract district
+            else {
+                for (let code in DISTRICT_MAP) {
+                    if (DISTRICT_MAP[code].includes('เมือง') && !distTarget.includes('เมือง')) continue;
+
+                    const distName = DISTRICT_MAP[code].replace('เมือง', ''); // "เมืองเลย" -> "เลย" to match รพ.เลย
+                    if (r.hosp.includes(DISTRICT_MAP[code]) || r.hosp.includes(distName)) {
+                        // verify it belongs to correct province
+                        // In real production, hospitals should have exact district ID mapping. For now, rely on names.
+                        distTarget = DISTRICT_MAP[code];
+                        break;
+                    }
+                }
+            }
+
+            const key = prov + "_" + distTarget;
+            if (!distStats[key]) distStats[key] = { amt: 0, qty: 0 };
+            distStats[key].amt += calculatedAmt;
+            distStats[key].qty += qty;
+
+            tAmt += calculatedAmt;
+            tUnits += qty;
+        });
+        console.log("distStats Map Aggregation:", distStats);
+        console.log("tAmt:", tAmt, "tUnits:", tUnits);
+
+        // Update top cards
+        document.getElementById('gisTotUnits').innerText = tUnits.toLocaleString();
+        document.getElementById('gisTotAmt').innerText = formatMoney(tAmt);
+
+        let maxAmt = 0;
+        // Map stats geometry
+        r8GeoJsonData.features.forEach(f => {
+            const p = f.properties.PROV_TH;
+            // From GeoJSON 'name', some use "เมือง", some use "เมืองอุดรธานี"
+            let a = f.properties.AMP_TH;
+            if (a.startsWith('เมือง') && a !== 'เมือง' && !a.includes(p)) {
+                // GeoJSON sometimes has just "เมือง", sometimes "เมืองอุดรธานี"
+            } else if (a === 'เมือง') {
+                a = 'เมือง' + p;
+            }
+
+            // Some edge cases in Github geojson vs our namings
+            let key1 = p + "_" + a;
+            let key2 = p + "_เมือง" + p;
+
+            let foundAmt = 0;
+            let foundQty = 0;
+
+            // Try exact match
+            if (distStats[key1]) {
+                foundAmt = distStats[key1].amt;
+                foundQty = distStats[key1].qty;
+            } else if (a.includes('เมือง') && distStats[key2]) {
+                foundAmt = distStats[key2].amt;
+                foundQty = distStats[key2].qty;
+            } else {
+                // Try fuzzy match on keys
+                for (let k in distStats) {
+                    if (k.startsWith(p + "_") && (k.includes(a) || a.includes(k.split('_')[1]))) {
+                        foundAmt += distStats[k].amt;
+                        foundQty += distStats[k].qty;
+                    }
+                }
+            }
+
+            f.properties.gis_data = (foundAmt > 0 || foundQty > 0) ? { amt: foundAmt, qty: foundQty } : null;
+            if (foundAmt > maxAmt) maxAmt = foundAmt;
+        });
+
+        if (gisGeoJsonLayer) {
+            gisMap.removeLayer(gisGeoJsonLayer);
+        }
+
+        gisGeoJsonLayer = L.geoJson(r8GeoJsonData, {
+            style: function (feature) {
+                const data = feature.properties.gis_data;
+                const amt = data ? data.amt : 0;
+                return {
+                    weight: 1,
+                    opacity: 1,
+                    color: '#64748b',
+                    dashArray: '3',
+                    fillOpacity: 0.8,
+                    fillColor: getMapColor(amt, maxAmt)
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                layer.on({
+                    mouseover: function (e) {
+                        const l = e.target;
+                        l.setStyle({
+                            weight: 3,
+                            color: '#eab308',
+                            dashArray: '',
+                            fillOpacity: 0.9
+                        });
+                        l.bringToFront();
+                        gisInfoControl.update(layer.feature.properties);
+                    },
+                    mouseout: function (e) {
+                        gisGeoJsonLayer.resetStyle(e.target);
+                        gisInfoControl.update();
+                    },
+                    click: function (e) {
+                        gisMap.fitBounds(e.target.getBounds());
+                    }
+                });
+            }
+        }).addTo(gisMap);
+
+        // Update Legend
+        if (gisLegendControl && gisLegendControl._div) {
+            const grades = [0, 0.05, 0.2, 0.4, 0.6, 0.8];
+            let labels = ['<strong>วงเงิน (บาท)</strong><br>'];
+            for (let i = 0; i < grades.length; i++) {
+                const from = grades[i] * maxAmt;
+                const to = grades[i + 1] ? (grades[i + 1] * maxAmt) : maxAmt;
+
+                let rangeText = '';
+                if (from === 0 && (!grades[i + 1])) {
+                    rangeText = 'ไม่มีข้อมูล';
+                } else if (!grades[i + 1]) {
+                    rangeText = '> ' + formatMoney(from);
+                } else {
+                    rangeText = formatMoney(from) + ' &ndash; ' + formatMoney(to);
+                }
+
+                labels.push(
+                    '<i style="background:' + getMapColor(from + (maxAmt * 0.01), maxAmt) + '"></i> ' + rangeText
+                );
+            }
+            gisLegendControl._div.innerHTML = labels.join('<br>');
+        }
+
+        // Fit Map bounds if features exist
+        if (r8GeoJsonData.features.length > 0) {
+            gisMap.fitBounds(gisGeoJsonLayer.getBounds());
+        }
+    }
+
+    function populateEqDropdown() {
+        if (!MODEL) return;
+
+        // Filter SP
+        const spSelect = $('#spBranchFilter');
+        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
+        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
+        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
+
+        // Filter Year
+        const yrSelect = $('#eqYearFilter');
+        yrSelect.empty().append('<option value="ALL">ทุกปีงบประมาณ</option>');
+        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
+
+        $('.select2-filter').select2({ minimumResultsForSearch: 10 });
+
+        // Modal inputs
+        const mProv = $('#modalProv');
+        mProv.empty().append('<option value="">เลือกจังหวัด...</option>');
+        MODEL.sortedProvinces.forEach(p => mProv.append(new Option(p, p)));
+
+        const mSp = $('#modalSp');
+        mSp.empty().append('<option value="">เลือกสาขา SP...</option>');
+        const addSpList = MODEL.mspListSource && MODEL.mspListSource.length > 0 ? MODEL.mspListSource : (MODEL.spList || []);
+        addSpList.forEach(sp => mSp.append(new Option(sp, sp)));
+
+        const mYr = $('#modalYear');
+        mYr.empty().append('<option value="">เลือกปีงบประมาณ...</option>');
+        const curY = new Date().getFullYear() + 543;
+        for (let y = curY - 2; y <= curY + 5; y++) mYr.append(new Option(y, y));
+
+        // Initial empty state for hospital
+        const mHosp = $('#modalHosp');
+        mHosp.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
+
+        const mItem = $('#modalItem');
+        mItem.empty().append('<option value="">ค้นหาหรือเลือกชื่อรายการ...</option>');
+        MODEL.meqmophList.forEach(item => {
+            const opt = $(new Option(item.name, item.name));
+            opt.attr('data-price', item.price);
+            opt.attr('data-code', item.code);
+            mItem.append(opt);
+        });
+
+        $('.modal-select2').select2({ dropdownParent: $('#addEqModal'), width: '100%' });
+    }
+
+    function updateModalHospDropdown(preselectVal = '') {
+        const prov = document.getElementById('modalProv').value;
+        const mHosp = $('#modalHosp');
+        mHosp.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
+
+        if (prov && MODEL && MODEL.hospByProv[prov]) {
+            MODEL.hospByProv[prov].forEach(h => {
+                mHosp.append(new Option(h.name, h.name));
+            });
+        }
+
+        mHosp.val(preselectVal).trigger('change.select2');
+    }
+
+    function formatMoney(amount) {
+        return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderEqTable() {
+        if (!MODEL || !MODEL.eqData) return;
+
+        const spFilter = document.getElementById('spBranchFilter').value;
+        const yearFilter = document.getElementById('eqYearFilter').value;
+        const searchStr = document.getElementById('eqSearchInput').value.toLowerCase();
+        const provFilter = document.getElementById('provinceFilter') ? document.getElementById('provinceFilter').value : 'ALL';
+
+        // Filter Data
+        let filtered = MODEL.eqData;
+        if (provFilter !== 'ALL') {
+            filtered = filtered.filter(row => row.prov === provFilter);
+        }
+        if (spFilter !== 'ALL') {
+            filtered = filtered.filter(row => row.sp === spFilter);
+        }
+        if (yearFilter !== 'ALL') {
+            filtered = filtered.filter(row => String(row.year) === String(yearFilter));
+        }
+        if (searchStr.trim() !== '') {
+            filtered = filtered.filter(row =>
+                String(row.item).toLowerCase().includes(searchStr) ||
+                String(row.hosp).toLowerCase().includes(searchStr)
+            );
+        }
+
+        // Calculate Totals
+        let tItems = 0, tUnits = 0, tAmt = 0;
+
+        const tbodyHtml = filtered.map(r => {
+            const qtyStr = r.qty > 0 ? String(r.qty) : '-';
+            const amtStr = r.amt > 0 ? formatMoney(r.amt) : (r.price > 0 && r.qty > 0 ? formatMoney(r.price * r.qty) : '-');
+            const calculatedAmt = r.amt > 0 ? r.amt : (r.price > 0 && r.qty > 0 ? (r.price * r.qty) : 0);
+
+            tItems += 1;
+            tUnits += (r.qty || 0);
+            tAmt += calculatedAmt;
+
+            const editData = encodeURIComponent(JSON.stringify(r));
+
+            return `
+    <tr>
+        <td class="text-center align-middle font-medium text-slate-800">${escapeHtml(r.priority || '-')}</td>
+        <td class="text-center align-middle break-words">${escapeHtml(r.provPriority || '-')}</td>
+        <td class="text-center align-middle font-medium text-slate-800">${escapeHtml(r.year)}</td>
+        <td class="font-bold text-green-800 text-left align-middle break-words">${escapeHtml(r.sp)}</td>
+        <td class="text-left align-middle break-words">${escapeHtml(r.hosp)}</td>
+        <td class="text-left align-middle font-medium break-words">${escapeHtml(r.item)}</td>
+        <td class="text-center align-middle text-slate-600">${escapeHtml(r.fundSrc)}</td>
+        <td class="text-right align-middle pr-6 whitespace-nowrap">${r.price > 0 ? formatMoney(r.price) : '-'}</td>
+        <td class="text-center align-middle font-bold text-slate-800">${qtyStr}</td>
+        <td class="text-right align-middle text-slate-800 font-bold pr-6 whitespace-nowrap">${amtStr}</td>
+        <td class="text-center align-middle">
+            <button onclick="openEditEqModal('${editData}')" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-800 rounded-lg transition-colors border border-amber-200 shadow-sm" title="แก้ไขรายการ">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+            </button>
+        </td>
+    </tr>
+    `;
+        }).join('');
+
+        // Datatable redraw logic
+        if ($.fn.DataTable.isDataTable('#eqTable')) {
+            $('#eqTable').DataTable().destroy();
+        }
+
+        document.getElementById('eqBody').innerHTML = tbodyHtml;
+        document.getElementById('eqTotItems').innerText = tItems.toLocaleString();
+        document.getElementById('eqTotUnits').innerText = tUnits.toLocaleString();
+        document.getElementById('eqTotAmt').innerText = formatMoney(tAmt);
+        if (document.getElementById('eqTotAmtTitle')) {
+            document.getElementById('eqTotAmtTitle').innerText = yearFilter === 'ALL' ? 'วงเงินรวม (บาท)' : `วงเงินปีงบประมาณ ${yearFilter} (บาท)`;
+        }
+
+        $('#eqTable').DataTable({
+            paging: true,
+            info: true,
+            searching: false, // Custom search used instead
+            ordering: true, // Allow column sorting
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [[10, 20, 25, 50, 100, -1], [10, 20, 25, 50, 100, "ทั้งหมด"]],
+            dom: '<"flex flex-col md:flex-row justify-between items-center mb-4"<"w-full md:w-auto mb-2 md:mb-0"l><"w-full md:w-auto flex items-center justify-end gap-4 text-sm text-slate-500"pi>>rt',
+            language: {
+                lengthMenu: "แสดง _MENU_ รายการ",
+                info: "หน้า _PAGE_ / _PAGES_ (รวม _TOTAL_ รายการ)",
+                infoEmpty: "ไม่พบข้อมูล",
+                paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "»", previous: "«" }
+            }
+        });
+    }
+
+    function processAndRender(forceRebuild = false) {
+        if (!MODEL) return;
+        const filterEl = document.getElementById('provinceFilter');
+        const filter = filterEl ? filterEl.value : 'ALL';
+        const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
+        const modeChanged = (mode !== lastTableMode);
+        updateTopStatsAndCards(filter);
+        updateProvDrilldownCards(filter);
+        renderTables(filter, modeChanged || forceRebuild);
+        drawCharts(filter);
+        renderEqTable();
+        const main = document.getElementById('mainContent');
+        if (main) main.style.opacity = '1';
+        lastTableMode = mode;
+    }
+
+    function openAddEqModal() {
+        document.getElementById('modalMode').value = 'add';
+        document.getElementById('modalRowIdx').value = '';
+        document.getElementById('modalAmt').value = 0;
+        document.getElementById('modalPriority').value = '';
+        document.getElementById('modalProvPriority').value = '';
+        document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
+
+        // Clear cascading dropdown
+        $('#modalProv').val('').trigger('change.select2');
+        updateModalHospDropdown();
+
+        const m = document.getElementById('addEqModal');
+        m.classList.remove('hidden');
+        setTimeout(() => m.classList.remove('opacity-0'), 10);
+        const b = document.getElementById('addEqModalBody');
+        b.classList.remove('scale-95');
+        b.classList.add('scale-100');
+    }
+
+    function openEditEqModal(encodedData) {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            document.getElementById('modalMode').value = 'edit';
+            document.getElementById('modalRowIdx').value = data.rowIdx;
+            document.getElementById('addEqModalTitle').innerText = 'แก้ไขรายการครุภัณฑ์ (แถวที่ ' + data.rowIdx + ')';
+
+            // Populate form
+            $('#modalProv').val(data.prov).trigger('change.select2');
+            updateModalHospDropdown(data.hosp);
+
+            $('#modalYear').val(data.year).trigger('change.select2');
+            document.getElementById('modalFund').value = data.fundSrc || '';
+            $('#modalSp').val(data.sp).trigger('change.select2');
+
+            var itemExists = false;
+            $('#modalItem option').each(function () {
+                if (this.value === data.item) itemExists = true;
+            });
+
+            if (itemExists) {
+                $('#modalItem').val(data.item).trigger('change.select2');
+            } else {
+                var newOption = new Option(data.item, data.item, true, true);
+                if (data.itemCode) {
+                    $(newOption).attr('data-code', data.itemCode);
+                }
+                $('#modalItem').append(newOption).trigger('change.select2');
+            }
+
+            document.getElementById('modalPrice').value = data.price || 0;
+            document.getElementById('modalQty').value = data.qty || 1;
+            document.getElementById('modalAmt').value = data.amt || 0;
+            document.getElementById('modalPriority').value = data.priority || '';
+            document.getElementById('modalProvPriority').value = data.provPriority || '';
+
+            // Open Modal
+            const m = document.getElementById('addEqModal');
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.remove('opacity-0'), 10);
+            const b = document.getElementById('addEqModalBody');
+            b.classList.remove('scale-95');
+            b.classList.add('scale-100');
+        } catch (e) {
+            console.error("Error parsing edit data", e);
+            alert("ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้");
+        }
+    }
+
+    function closeAddEqModal() {
+        const m = document.getElementById('addEqModal');
+        const b = document.getElementById('addEqModalBody');
+        m.classList.add('opacity-0');
+        b.classList.remove('scale-100');
+        b.classList.add('scale-95');
+        setTimeout(() => m.classList.add('hidden'), 300);
+        document.getElementById('addEqForm').reset();
+        $('#modalYear, #modalProv, #modalHosp, #modalSp, #modalItem').val('').trigger('change.select2');
+    }
+
+    function autoFillPrice() {
+        const selected = $('#modalItem').find(':selected');
+        const price = parseFloat(selected.data('price')) || 0;
+        const pInput = document.getElementById('modalPrice');
+        if (selected.val() !== "") {
+            pInput.value = price;
+        } else {
+            pInput.value = '';
+        }
+        calculateTotalAmt();
+    }
+
+    function calculateTotalAmt() {
+        const p = parseFloat(document.getElementById('modalPrice').value) || 0;
+        const q = parseInt(document.getElementById('modalQty').value, 10) || 0;
+        if (p || q) {
+            document.getElementById('modalAmt').value = (p * q).toFixed(2);
+        } else {
+            document.getElementById('modalAmt').value = '';
+        }
+    }
+
+    function clearEqFilters() {
+        document.getElementById('eqSearchInput').value = '';
+        $('#spBranchFilter').val('ALL').trigger('change.select2');
+        $('#eqYearFilter').val('ALL').trigger('change.select2');
+        renderEqTable();
+    }
+
+    async function submitAddEqMode(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitEqBtn');
+        const ogText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> บันทึก...`;
+
+        const mode = document.getElementById('modalMode').value;
+        const rowIdx = document.getElementById('modalRowIdx').value;
+
+        let record;
+        try {
+            const itemSelect = document.getElementById('modalItem');
+            const sIndex = itemSelect.selectedIndex;
+            const selectedOption = sIndex >= 0 ? itemSelect.options[sIndex] : null;
+            const itemCode = selectedOption ? ($(selectedOption).attr('data-code') || $(selectedOption).data('code') || '') : '';
+
+            record = {
+                rowIdx: rowIdx,
+                year: document.getElementById('modalYear').value,
+                fundSrc: document.getElementById('modalFund').value,
+                prov: document.getElementById('modalProv').value,
+                sp: document.getElementById('modalSp').value,
+                hosp: document.getElementById('modalHosp').value,
+                item: document.getElementById('modalItem').value,
+                price: parseFloat(document.getElementById('modalPrice').value) || 0,
+                qty: parseInt(document.getElementById('modalQty').value, 10) || 0,
+                amt: parseFloat(document.getElementById('modalAmt').value) || 0,
+                itemCode: itemCode,
+                priority: document.getElementById('modalPriority').value,
+                provPriority: document.getElementById('modalProvPriority').value
+            };
+        } catch (err) {
+            console.error("Payload extraction error:", err);
+            alert('ข้อผิดพลาด: ' + err.message);
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+            return;
+        }
+
+        try {
+            await new Promise((resolve, reject) => {
+                if (mode === 'edit') {
+                    google.script.run
+                        .withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); })
+                        .withFailureHandler(err => reject(new Error(err.message || err.toString())))
+                        .editEquipmentRecord(record);
+                } else {
+                    google.script.run
+                        .withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); })
+                        .withFailureHandler(err => reject(new Error(err.message || err.toString())))
+                        .addEquipmentRecord(record);
+                }
+            });
+
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+            closeAddEqModal();
+            refreshNow();
+
+            try {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#059669',
+                        timer: 3000
+                    });
+                } else {
+                    alert(mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว');
+                }
+            } catch (e) { }
+
+        } catch (err) {
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+            try {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'พบข้อผิดพลาด!',
+                        text: err.message || 'ไม่สามารถบันทึกข้อมูลได้',
+                        icon: 'error',
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#DC2626'
+                    });
+                } else {
+                    alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
+                }
+            } catch (e) {
+                alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
+            }
+        }
+    }
+
+    window.onscroll = function () {
+        const btn = document.getElementById("backToTop");
+        if (btn) {
+            if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show");
+        }
+    };
+
+    window.onload = async function () {
+        try {
+            if (document.getElementById('headerVersion')) document.getElementById('headerVersion').innerText =
+                String(VERSION);
+            if (document.getElementById('templateVersionBadge'))
+                document.getElementById('templateVersionBadge').innerText = String(VERSION);
+            showLoader("กำลังโหลดข้อมูล... v." + VERSION);
+            await loadData({ force: false });
+            MODEL = buildModelOnce();
+            if (MODEL) processAndRender(true);
+            hideLoader();
+        } catch (e) {
+            showFatal("Load failed: " + (e.message || e));
+        }
+    };
+</script>
