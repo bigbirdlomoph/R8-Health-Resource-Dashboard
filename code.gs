@@ -6,7 +6,7 @@
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
 
 // เปลี่ยนเลขเวอร์ชันที่นี่ที่เดียว
-const VERSION = '690227-1030'; // อัปเดตเพื่อล้างแคชให้ข้อมูล SP ใหม่ปรากฏ
+const VERSION = '690228-1725'; // อัปเดตเพื่อล้างแคชให้ข้อมูล SP ใหม่ปรากฏ
 
 
 // ปรับได้ตามรอบอัปเดตข้อมูลจริง (สำหรับ 100+ concurrent แนะนำ 60–300s)
@@ -72,6 +72,7 @@ function getDashboardData() {
         const population = ss.getSheetByName('population').getDataRange().getValues();
         const sap = ss.getSheetByName('sap_level').getDataRange().getValues();
         const medical = ss.getSheetByName('medical').getDataRange().getValues();
+
         const bed = ss.getSheetByName('bed').getDataRange().getValues();
         const hospital_structure = ss.getSheetByName('hospital_structure').getDataRange().getValues();
         const meqsp = ss.getSheetByName('m_eq_sp').getDataRange().getValues();
@@ -208,3 +209,11 @@ function printNextStableVersion() {
     return v;
 }
 
+// Temporary Debug Function for Medical Headers
+function printMedicalHeaders() {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName('medical');
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    Logger.log("MEDICAL HEADERS: " + JSON.stringify(headers));
+    return headers;
+}
