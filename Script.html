@@ -575,93 +575,165 @@
     function switchTab(tabId) {
         const mainContent = document.getElementById('mainContent');
         const eqContent = document.getElementById('eqContent');
+        const gisContent = document.getElementById('gisContent');
+        const gisBedContent = document.getElementById('gisBedContent');
+        const gisDoctorContent = document.getElementById('gisDoctorContent');
+
         const mainBtn = document.getElementById('tabMainBtn');
         const eqBtn = document.getElementById('tabEqBtn');
+        const gisBtn = document.getElementById('tabGisBtn');
+        const gisBedBtn = document.getElementById('tabGisBedBtn');
+        const gisDoctorBtn = document.getElementById('tabGisDoctorBtn');
 
-        const activeClass = ['border-green-700', 'text-green-700'];
-        const inactiveClass = ['border-transparent', 'text-slate-500', 'hover:text-slate-800'];
+        const pageTitle = document.getElementById('headerPageTitle');
+        const pageSubtitle = document.getElementById('headerPageSubtitle');
+        const headerFilters = document.getElementById('provFilterContainer');
+
+        const activeClass = ['bg-white', 'text-moph-primary', 'shadow-sm', 'active-menu'];
+        const activeAddClass = ['font-medium'];
+        const inactiveClass = ['text-moph-50', 'hover:bg-white/10', 'hover:text-white', 'border-transparent', 'inactive-menu'];
+        const inactiveRemoveClass = ['font-normal'];
+
+        const setBtnState = (btn, isActive) => {
+            if (!btn) return;
+            const svg = btn.querySelector('svg');
+            if (isActive) {
+                btn.classList.add(...activeClass, ...activeAddClass);
+                btn.classList.remove(...inactiveClass, ...inactiveRemoveClass);
+                if (svg) { svg.classList.remove('opacity-80'); svg.setAttribute('stroke-width', '2.5'); }
+            } else {
+                btn.classList.add(...inactiveClass, ...inactiveRemoveClass);
+                btn.classList.remove(...activeClass, ...activeAddClass);
+                if (svg) { svg.classList.add('opacity-80'); svg.setAttribute('stroke-width', '2'); }
+            }
+        };
+
+        setBtnState(mainBtn, tabId === 'main');
+        setBtnState(eqBtn, tabId === 'eq');
+        setBtnState(gisBtn, tabId === 'gis');
+        setBtnState(gisBedBtn, tabId === 'gis_bed');
+        setBtnState(gisDoctorBtn, tabId === 'gis_doctor');
 
         if (tabId === 'main') {
-            mainContent.classList.remove('hidden');
-            setTimeout(() => mainContent.style.opacity = '1', 50);
-            eqContent.classList.add('hidden');
-            eqContent.style.opacity = '0';
+            if (pageTitle) pageTitle.innerText = "ภาพรวมทรัพยากร";
+            if (pageSubtitle) pageSubtitle.innerText = "ข้อมูลสรุปภาพรวมในเขตสุขภาพที่ 8";
+            if (headerFilters) headerFilters.classList.remove('hidden');
 
-            mainBtn.classList.remove(...inactiveClass);
-            mainBtn.classList.add(...activeClass);
-            eqBtn.classList.remove(...activeClass);
-            eqBtn.classList.add(...inactiveClass);
-
-            const gisBtn = document.getElementById('tabGisBtn');
-            if (gisBtn) {
-                gisBtn.classList.remove(...activeClass);
-                gisBtn.classList.add(...inactiveClass);
-            }
+            if (mainContent) { mainContent.classList.remove('hidden'); setTimeout(() => mainContent.style.opacity = '1', 50); }
+            if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
+            if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+            if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+            if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
         } else if (tabId === 'eq') {
-            eqContent.classList.remove('hidden');
-            setTimeout(() => eqContent.style.opacity = '1', 50);
-            mainContent.classList.add('hidden');
-            mainContent.style.opacity = '0';
+            if (pageTitle) pageTitle.innerText = "ครุภัณฑ์ SP";
+            if (pageSubtitle) pageSubtitle.innerText = "ข้อมูลความต้องการครุภัณฑ์ Service Plan";
+            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for EQ
 
-            const gisContent = document.getElementById('gisContent');
-            if (gisContent) {
-                gisContent.classList.add('hidden');
-                gisContent.style.opacity = '0';
-            }
+            if (eqContent) { eqContent.classList.remove('hidden'); setTimeout(() => eqContent.style.opacity = '1', 50); }
+            if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
+            if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+            if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+            if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
 
-            eqBtn.classList.remove(...inactiveClass);
-            eqBtn.classList.add(...activeClass);
-            mainBtn.classList.remove(...activeClass);
-            mainBtn.classList.add(...inactiveClass);
-
-            const gisBtn = document.getElementById('tabGisBtn');
-            if (gisBtn) {
-                gisBtn.classList.remove(...activeClass);
-                gisBtn.classList.add(...inactiveClass);
-            }
-
-            // Initial render for EQ if empty
-            if (document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
+            if (document.getElementById('spBranchFilter') && document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
         } else if (tabId === 'gis') {
-            const gisContent = document.getElementById('gisContent');
-            const gisBtn = document.getElementById('tabGisBtn');
+            if (pageTitle) pageTitle.innerText = "GIS ครุภัณฑ์ SP";
+            if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวครุภัณฑ์ Service Plan";
+            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS
 
-            if (gisContent) {
-                gisContent.classList.remove('hidden');
-                setTimeout(() => gisContent.style.opacity = '1', 50);
-            }
+            if (gisContent) { gisContent.classList.remove('hidden'); setTimeout(() => gisContent.style.opacity = '1', 50); }
+            if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
+            if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
+            if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+            if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
 
-            mainContent.classList.add('hidden');
-            mainContent.style.opacity = '0';
-            eqContent.classList.add('hidden');
-            eqContent.style.opacity = '0';
+            if (document.getElementById('gisSpFilter') && document.getElementById('gisSpFilter').options.length <= 1 && MODEL) { populateGisDropdown(); }
 
-            if (gisBtn) {
-                gisBtn.classList.remove(...inactiveClass);
-                gisBtn.classList.add(...activeClass);
-            }
-            mainBtn.classList.remove(...activeClass);
-            mainBtn.classList.add(...inactiveClass);
-            eqBtn.classList.remove(...activeClass);
-            eqBtn.classList.add(...inactiveClass);
+            setTimeout(async () => {
+                if (!gisMap) { await initGisMap(); } else { gisMap.invalidateSize(); }
+                if (window.renderGisMap) renderGisMap();
+            }, 200);
+        } else if (tabId === 'gis_bed') {
+            if (pageTitle) pageTitle.innerText = "GIS เตียง";
+            if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวเตียงผู้ป่วย";
+            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS Bed
 
-            // Init filter
-            if (document.getElementById('gisSpFilter').options.length <= 1 && MODEL) {
-                populateGisDropdown();
+            if (gisBedContent) { gisBedContent.classList.remove('hidden'); setTimeout(() => gisBedContent.style.opacity = '1', 50); }
+            if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
+            if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
+            if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+
+            // Initialize select2 for GIS Bed filters
+            if (!$('#gisBedProvFilter').hasClass('select2-hidden-accessible')) {
+                $('#gisBedProvFilter, #gisBedTypeFilter').select2({ minimumResultsForSearch: 10 });
             }
 
             setTimeout(async () => {
-                if (!gisMap) {
-                    await initGisMap();
-                } else {
-                    gisMap.invalidateSize();
-                }
-                renderGisMap();
+                if (!gisBedMap) { await initGisBedMap(); } else { gisBedMap.invalidateSize(); }
+                if (window.renderGisBedMap) renderGisBedMap();
             }, 200);
+        } else if (tabId === 'gis_doctor') {
+            if (pageTitle) pageTitle.innerText = "GIS แพทย์";
+            if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวบุคลากรทางการแพทย์";
+            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS Doctor
+
+            if (gisDoctorContent) { gisDoctorContent.classList.remove('hidden'); setTimeout(() => gisDoctorContent.style.opacity = '1', 50); }
+            if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
+            if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
+            if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+            if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+
+            // Initialize select2 for GIS Doctor filters
+            if (!$('#gisDoctorProvFilter').hasClass('select2-hidden-accessible')) {
+                $('#gisDoctorProvFilter, #gisDoctorTypeFilter').select2({ minimumResultsForSearch: 10 });
+            }
+
+            setTimeout(async () => {
+                if (!gisDoctorMap) { await initGisDoctorMap(); } else { gisDoctorMap.invalidateSize(); }
+                if (window.renderGisDoctorMap) renderGisDoctorMap();
+            }, 200);
+        }
+
+        // Auto close sidebar on mobile/tablet if opened
+        if (window.innerWidth < 1024) { // lg breakpoint
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
         }
     }
 
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const rightPanel = document.getElementById('mainRightPanel');
+
+        if (!sidebar) return;
+
+        // On Mobile/Tablet (lg: hidden breakpoint)
+        if (window.innerWidth < 1024) {
+            sidebar.classList.toggle('-translate-x-full');
+            if (overlay) overlay.classList.toggle('hidden');
+        } else {
+            // On Desktop - we shrink the sidebar instead
+            // To do this smoothly, we define a collapsed class state, e.g., w-[0px] or just -ml-[280px]
+            sidebar.classList.toggle('-ml-[280px]');
+        }
+
+        // Recalculate Layout elements (Map resize, DataTable redraws)
+        setTimeout(() => {
+            if (gisMap) {
+                gisMap.invalidateSize();
+            }
+            if (gisBedMap) {
+                gisBedMap.invalidateSize();
+            }
+            $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+        }, 300);
+    }
+
     let gisMap = null;
+    let gisBedMap = null;
     let gisGeoJsonLayer = null;
     let r8GeoJsonData = null;
     let gisInfoControl = null;
@@ -1027,12 +1099,12 @@
         const spFilter = document.getElementById('spBranchFilter').value;
         const yearFilter = document.getElementById('eqYearFilter').value;
         const searchStr = document.getElementById('eqSearchInput').value.toLowerCase();
-        const provFilter = document.getElementById('provinceFilter') ? document.getElementById('provinceFilter').value : 'ALL';
+        const provFilterEq = document.getElementById('eqProvFilter') ? document.getElementById('eqProvFilter').value : 'ALL';
 
         // Filter Data
         let filtered = MODEL.eqData;
-        if (provFilter !== 'ALL') {
-            filtered = filtered.filter(row => row.prov === provFilter);
+        if (provFilterEq !== 'ALL') {
+            filtered = filtered.filter(row => row.prov === provFilterEq);
         }
         if (spFilter !== 'ALL') {
             filtered = filtered.filter(row => row.sp === spFilter);
@@ -1357,5 +1429,634 @@
         } catch (e) {
             showFatal("Load failed: " + (e.message || e));
         }
-    };
+    }
+
+    // --- GIS Bed Functions ---
+    let gisBedGeoJsonLayer = null;
+    let gisBedInfoControl = null;
+    let gisBedLegendControl = null;
+
+    async function initGisBedMap() {
+        const mapDiv = document.getElementById('spGisBedMap');
+        if (!mapDiv) return;
+
+        gisBedMap = L.map('spGisBedMap', { scrollWheelZoom: false }).setView([17.5, 103.5], 8);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(gisBedMap);
+
+        gisBedMap.on('focus', function () { gisBedMap.scrollWheelZoom.enable(); });
+        gisBedMap.on('blur', function () { gisBedMap.scrollWheelZoom.disable(); });
+
+        gisBedInfoControl = L.control();
+        gisBedInfoControl.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        gisBedInfoControl.update = function (props) {
+            this._div.innerHTML = '<h4>ข้อมูลเตียงแยกตามพื้นที่</h4>' + (props ?
+                '<b>อ.' + props.AMP_TH + ' จ.' + props.PROV_TH + '</b><br />' +
+                (props.gis_bed_data && props.gis_bed_data.total > 0 ?
+                    'จำนวน: ' + props.gis_bed_data.total.toLocaleString() + ' เตียง'
+                    : 'ไม่มีข้อมูลเตียงหรือจำนวนเป็น 0')
+                : 'เลื่อนเมาส์ไปที่พื้นที่');
+        };
+        gisBedInfoControl.addTo(gisBedMap);
+
+        gisBedLegendControl = L.control({ position: 'bottomright' });
+        gisBedLegendControl.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info legend');
+            return this._div;
+        };
+        gisBedLegendControl.addTo(gisBedMap);
+
+        // We reuse the r8GeoJsonData from the other map; fetch if not exists
+        if (!r8GeoJsonData) {
+            try {
+                document.getElementById('gisBedMapOverlay').classList.remove('hidden');
+                const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+                const thGeoJson = await response.json();
+                const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
+                r8GeoJsonData = {
+                    type: "FeatureCollection",
+                    features: thGeoJson.features.filter(f => {
+                        const code = String(f.properties.pro_code || f.properties.PRO_CODE || '');
+                        return r8Codes.includes(code);
+                    })
+                };
+                r8GeoJsonData.features.forEach(f => {
+                    f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || '';
+                    f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || '';
+                });
+            } catch (err) {
+                console.error("Failed to load map boundaries", err);
+                toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
+            } finally {
+                document.getElementById('gisBedMapOverlay').classList.add('hidden');
+            }
+        }
+    }
+
+    function getBedMapColor(d, maxVal) {
+        if (!maxVal || maxVal === 0) maxVal = 1;
+        const pct = d / maxVal;
+        // Blue scale for beds
+        return pct > 0.8 ? '#08306b' :
+            pct > 0.6 ? '#08519c' :
+                pct > 0.4 ? '#2171b5' :
+                    pct > 0.2 ? '#4292c6' :
+                        pct > 0.05 ? '#6baed6' :
+                            pct > 0 ? '#9ecae1' :
+                                '#f7fbff';
+    }
+
+    function renderGisBedMap() {
+        if (!MODEL || !r8GeoJsonData || !gisBedMap) return;
+
+        const provFilter = document.getElementById('gisBedProvFilter').value;
+        const typeFilter = document.getElementById('gisBedTypeFilter').value;
+
+        // the 5 types for "ALL" summary
+        const summaryTypes = ['เตียง NICU', 'เตียง OR ศัลยกรรม', 'เตียง ICU', 'เตียง Stroke', 'เตียง HD'];
+
+        // Build district-level bed data
+        const bedDistData = {};
+
+        let sumNicu = 0, sumOr = 0, sumIcu = 0, sumStroke = 0, sumHd = 0;
+        let sumFrame = 0, sumReal = 0;
+
+        // Iterate over raw bed data
+        const bedSheet = rawData.bed || [];
+        bedSheet.slice(1).forEach(row => {
+            const r4 = String(row[4] || '');
+            const distName = DISTRICT_MAP[r4] || r4;
+            const provName = normProv(row[3]);
+
+            if (!provName) return;
+            if (provFilter !== 'ALL' && provName !== provFilter) return;
+
+            // Map data from row to our types
+            const getVal = (typeStr) => {
+                const idx = MODEL.idx.bed[typeStr];
+                return idx > -1 ? cleanNum(row[idx]) : 0;
+            };
+
+            const vals = {
+                'เตียงกรอบ': getVal('เตียงกรอบ'),
+                'เตียงจริง': getVal('เตียงจริง'),
+                'เตียง NICU': getVal('เตียง NICU'),
+                'เตียง OR ศัลยกรรม': getVal('เตียง OR ศัลยกรรม'),
+                'เตียง ICU': getVal('เตียง ICU'),
+                'เตียง Stroke': getVal('เตียง Stroke'),
+                'เตียง HD': getVal('เตียง HD'),
+                'เตียง Palliative Care': getVal('เตียง Palliative Care'),
+                'เตียงมินิธัญญารักษ์': getVal('เตียงมินิธัญญารักษ์')
+            };
+
+            // Update summary cards
+            sumFrame += vals['เตียงกรอบ'];
+            sumReal += vals['เตียงจริง'];
+            sumNicu += vals['เตียง NICU'];
+            sumOr += vals['เตียง OR ศัลยกรรม'];
+            sumIcu += vals['เตียง ICU'];
+            sumStroke += vals['เตียง Stroke'];
+            sumHd += vals['เตียง HD'];
+
+            if (!bedDistData[provName]) bedDistData[provName] = {};
+            if (!bedDistData[provName][distName]) {
+                bedDistData[provName][distName] = { total: 0 };
+            }
+
+            // Determine what the map shows based on typeFilter
+            let districtTotal = 0;
+            if (typeFilter === 'ALL') {
+                summaryTypes.forEach(t => districtTotal += vals[t]);
+            } else {
+                districtTotal = vals[typeFilter] || 0;
+            }
+
+            bedDistData[provName][distName].total += districtTotal;
+        });
+
+        // 1. Update summary boxes
+        document.getElementById('gisBedFrame').innerText = sumFrame.toLocaleString();
+        document.getElementById('gisBedReal').innerText = sumReal.toLocaleString();
+        document.getElementById('gisBedNicu').innerText = sumNicu.toLocaleString();
+        document.getElementById('gisBedOr').innerText = sumOr.toLocaleString();
+        document.getElementById('gisBedIcu').innerText = sumIcu.toLocaleString();
+        document.getElementById('gisBedStroke').innerText = sumStroke.toLocaleString();
+        document.getElementById('gisBedHd').innerText = sumHd.toLocaleString();
+        const totalSummary = sumNicu + sumOr + sumIcu + sumStroke + sumHd;
+        document.getElementById('gisBedTotal').innerText = totalSummary.toLocaleString();
+
+        // 2. Determine max amount for color scale
+        let maxBed = 0;
+        for (const prov in bedDistData) {
+            for (const dist in bedDistData[prov]) {
+                if (bedDistData[prov][dist].total > maxBed) {
+                    maxBed = bedDistData[prov][dist].total;
+                }
+            }
+        }
+
+        // 3. Update Legend
+        if (gisBedLegendControl && gisBedLegendControl._div) {
+            let labels = ['<strong>จำนวนเตียง</strong><br>'],
+                grades = [
+                    0,
+                    Math.floor(maxBed * 0.05),
+                    Math.floor(maxBed * 0.2),
+                    Math.floor(maxBed * 0.4),
+                    Math.floor(maxBed * 0.6),
+                    Math.floor(maxBed * 0.8)
+                ];
+
+            // Deduplicate grades
+            grades = [...new Set(grades)];
+
+            for (let i = 0; i < grades.length; i++) {
+                labels.push(
+                    '<i style="background:' + getBedMapColor(grades[i] + 1, maxBed) + '"></i> ' +
+                    grades[i] + (grades[i + 1] ? ' &ndash; ' + grades[i + 1] + '<br>' : '+')
+                );
+            }
+            gisBedLegendControl._div.innerHTML = labels.join('');
+        }
+
+        // 4. Highlight styling function
+        function bedStyle(feature) {
+            const propAmp = feature.properties.AMP_TH;
+            const propProv = feature.properties.PROV_TH;
+
+            let val = 0;
+            if (provFilter === 'ALL' || provFilter === propProv) {
+                if (bedDistData[propProv]) {
+                    if (bedDistData[propProv][propAmp]) {
+                        val = bedDistData[propProv][propAmp].total;
+                    } else {
+                        const tryAmp = 'เมือง' + propProv;
+                        if (bedDistData[propProv][propAmp.replace("เมือง", "")] && tryAmp === propAmp) {
+                            val = bedDistData[propProv][propAmp.replace("เมือง", "")].total;
+                        }
+                    }
+                }
+            }
+
+            // Determine styling based on whether it is a boundary and selection state
+            const isProvinceBoundary = true; // For future enhancement to specifically target exterior borders
+
+            return {
+                fillColor: getBedMapColor(val, maxBed),
+                weight: 2, // Thicker default weight for all regions
+                opacity: 1,
+                color: '#333333', // Darker border color
+                dashArray: '', // Solid line to make it look cleaner
+                fillOpacity: (provFilter !== 'ALL' && provFilter !== propProv) ? 0.2 : 0.8 // Dim unselected provinces more aggressively
+            };
+        }
+
+        function bedOnEachFeature(feature, layer) {
+            const propAmp = feature.properties.AMP_TH;
+            const propProv = feature.properties.PROV_TH;
+
+            let valObj = null;
+            if (bedDistData[propProv] && bedDistData[propProv][propAmp]) {
+                valObj = bedDistData[propProv][propAmp];
+            } else {
+                const tryAmp = 'เมือง' + propProv;
+                if (bedDistData[propProv] && bedDistData[propProv][propAmp.replace("เมือง", "")] && tryAmp === propAmp) {
+                    valObj = bedDistData[propProv][propAmp.replace("เมือง", "")];
+                }
+            }
+
+            feature.properties.gis_bed_data = valObj;
+
+            // Permanent Labels if a specific province is filtered
+            if (provFilter !== 'ALL' && provFilter === propProv) {
+                const valStr = valObj ? valObj.total.toLocaleString() : "0";
+                const labelText = `<div style="text-align:center; font-size:12px; font-weight:bold; color:#1e293b; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;">อ.${propAmp}<br/>${valStr}</div>`;
+                layer.bindTooltip(labelText, {
+                    permanent: true,
+                    direction: 'center',
+                    className: 'bg-transparent border-0 shadow-none'
+                });
+            } else if (provFilter === 'ALL') {
+                // Show Province label when viewing ALL
+                // To avoid repeating labels for every district, only attach it to the "เมือง" district 
+                // (or a fallback like "อุดรธานี" if the district name matches the province)
+                if (propAmp.includes('เมือง') || propAmp === propProv) {
+                    let provTotal = 0;
+                    if (bedDistData[propProv]) {
+                        Object.values(bedDistData[propProv]).forEach(d => provTotal += (d.total || 0));
+                    }
+                    const valStr = provTotal.toLocaleString();
+                    const labelText = `<div style="text-align:center; font-size:14px; font-weight:bold; color:#0f172a; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;">จ.${propProv}<br/>${valStr}</div>`;
+                    layer.bindTooltip(labelText, {
+                        permanent: true,
+                        direction: 'center',
+                        className: 'bg-transparent border-0 shadow-none'
+                    });
+                }
+            }
+
+            layer.on({
+                mouseover: function (e) {
+                    var layer = e.target;
+                    layer.setStyle({ weight: 3, color: '#f59e0b', dashArray: '', fillOpacity: 0.9 });
+                    layer.bringToFront();
+                    gisBedInfoControl.update(layer.feature.properties);
+                },
+                mouseout: function (e) {
+                    gisBedGeoJsonLayer.resetStyle(e.target);
+                    // Do not close tooltip as we want it permanent for selected provs
+                    gisBedInfoControl.update();
+                }
+            });
+        }
+
+        if (gisBedGeoJsonLayer) { gisBedMap.removeLayer(gisBedGeoJsonLayer); }
+
+        gisBedGeoJsonLayer = L.geoJson(r8GeoJsonData, {
+            style: bedStyle,
+            onEachFeature: bedOnEachFeature
+        }).addTo(gisBedMap);
+
+        // Auto zoom
+        let targetBounds = null;
+        if (provFilter !== 'ALL') {
+            const provFeatureGroup = new L.FeatureGroup();
+            gisBedGeoJsonLayer.eachLayer(function (layer) {
+                if (layer.feature.properties.PROV_TH === provFilter) {
+                    provFeatureGroup.addLayer(layer);
+                }
+            });
+            if (provFeatureGroup.getBounds().isValid()) {
+                targetBounds = provFeatureGroup.getBounds();
+            }
+        } else if (gisBedGeoJsonLayer && gisBedGeoJsonLayer.getBounds().isValid()) {
+            targetBounds = gisBedGeoJsonLayer.getBounds();
+        }
+
+        if (targetBounds) {
+            gisBedMap.fitBounds(targetBounds);
+            if (gisBedMap.getZoom() > 10) {
+                gisBedMap.setZoom(9);
+            }
+        }
+    }
+
+    function clearGisBedFilters() {
+        $('#gisBedProvFilter').val('ALL').trigger('change');
+        $('#gisBedTypeFilter').val('ALL').trigger('change');
+        renderGisBedMap();
+    }
+
+    /* =========================================================================
+        GIS DOCTOR MAP MODULE
+        ========================================================================= */
+
+    // [แก้ไขที่ 1] เพิ่มการประกาศตัวแปรที่หายไป เพื่อป้องกัน ReferenceError
+    let gisDoctorMap = null;
+    let gisDoctorGeoJson = null;
+    let gisDoctorData = null;
+
+    async function initGisDoctorMap() {
+        if (gisDoctorMap) return; // ตอนนี้จะไม่ Error แล้วเพราะประกาศตัวแปรด้านบนแล้ว
+
+        const mapDiv = document.getElementById('spGisDoctorMap');
+        if (!mapDiv) return;
+
+        gisDoctorMap = L.map('spGisDoctorMap', {
+            center: [17.5, 103.5], // Center R8
+            zoom: 8,
+            minZoom: 6,
+            zoomControl: false,
+            scrollWheelZoom: false // ป้องกันการซูมเวลาเลื่อนเมาส์ผ่าน
+        });
+
+        L.control.zoom({ position: 'topright' }).addTo(gisDoctorMap);
+
+        // เปิดให้ซูมได้เมื่อคลิกที่แผนที่
+        gisDoctorMap.on('focus', function () { gisDoctorMap.scrollWheelZoom.enable(); });
+        gisDoctorMap.on('blur', function () { gisDoctorMap.scrollWheelZoom.disable(); });
+
+        const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        });
+        cartoLight.addTo(gisDoctorMap);
+
+        // Fetch boundaries if needed (reuse bed map GeoJSON)
+        if (!r8GeoJsonData) {
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+                const thGeoJson = await response.json();
+                const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
+                r8GeoJsonData = {
+                    type: "FeatureCollection",
+                    features: thGeoJson.features.filter(f => {
+                        const code = String(f.properties.pro_code || f.properties.PRO_CODE || '');
+                        return r8Codes.includes(code);
+                    })
+                };
+                r8GeoJsonData.features.forEach(f => {
+                    f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || '';
+                    f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || '';
+                });
+            } catch (err) {
+                console.error("Failed to load map boundaries", err);
+                toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
+                return;
+            }
+        }
+
+        // วาดแผนที่และคำนวณตัวเลข
+        renderGisDoctorMap();
+
+        // [แก้ไขที่ 2] ตรวจจับการเปลี่ยนแปลงของ Dropdown
+        $('#gisDoctorProvFilter, #gisDoctorTypeFilter').off('change').on('change', function () {
+            renderGisDoctorMap();
+        });
+    }
+
+    function clearGisDoctorFilters() {
+        $('#gisDoctorProvFilter').val('ALL').trigger('change.select2');
+        $('#gisDoctorTypeFilter').val('ALL').trigger('change.select2');
+        renderGisDoctorMap();
+    }
+
+    function getDoctorMapColor(d, maxVal) {
+        if (!maxVal || maxVal === 0) maxVal = 1;
+        const pct = d / maxVal;
+        // Purple scale for doctors
+        return pct > 0.8 ? '#4a148c' :
+            pct > 0.6 ? '#6a1b9a' :
+                pct > 0.4 ? '#8e24aa' :
+                    pct > 0.2 ? '#ab47bc' :
+                        pct > 0.05 ? '#ce93d8' :
+                            pct > 0 ? '#e1bee7' :
+                                '#f7fbff';
+    }
+
+    function renderGisDoctorMap() {
+        if (!rawData.medical || rawData.medical.length === 0) return;
+
+        // [แก้ไขที่ 3] คำนวณ Summary Card เสมอแม้แผนที่จะยังโหลดไม่เสร็จ
+        const selProv = $('#gisDoctorProvFilter').val();
+        const selType = $('#gisDoctorTypeFilter').val();
+
+        let sumPeds = 0, sumSurg = 0, sumIcu = 0, sumStroke = 0, sumHd = 0, sumDent = 0, sumPharm = 0;
+        let districtDoctorCounts = {};
+        let provTotals = {};
+
+        const headers = rawData.medical[0].map(h => String(h || '').trim());
+        const findH = (text) => headers.findIndex(h => h.replace(/\s+/g, '').includes(text.replace(/\s+/g, '')));
+
+        const hProv = findH('จังหวัด');
+        const hAmp = findH('อำเภอ/เขต') > -1 ? findH('อำเภอ/เขต') : findH('อำเภอ');
+        const hHospCode = findH('รหัส5หลัก');
+
+        const pedsIdx = findH('กุมารแพทย์');
+        const surgIdx = findH('ศัลยแพทย์ OR');
+        const icuIdx = findH('อายุรแพทย์ ICU');
+        const strokeIdx = findH('อายุรแพทย์ Stroke');
+        const hdIdx = findH('อายุรแพทย์ HD');
+        const dentIdx = findH('ทันตแพทย์');
+        const pharmIdx = findH('เภสัชกร');
+
+        if (hProv === -1 || pedsIdx === -1) {
+            console.error("GIS DOCTOR: Missing Critical Headers!");
+            return;
+        }
+
+        rawData.medical.slice(1).forEach(row => {
+            if (!row[hProv]) return;
+
+            let rowProv = normProv(row[hProv]).replace('จ.', '').replace('จังหวัด', '').trim();
+            if (selProv !== 'ALL' && rowProv !== selProv) return;
+
+            let district = '';
+
+            // Try to get district directly from medical data first
+            if (hAmp > -1 && row[hAmp]) {
+                district = String(row[hAmp]).trim().replace('อำเภอ', '').replace('เขต', '');
+            }
+
+            // Fallback: If missing, try matching code5 with our old logic
+            const c5 = (hHospCode > -1 && row[hHospCode]) ? String(row[hHospCode]).trim() : '';
+            if (!district && c5) {
+                for (let prefix in DISTRICT_MAP) {
+                    if (c5.startsWith(prefix)) {
+                        district = DISTRICT_MAP[prefix].replace('อำเภอ', '');
+                        break;
+                    }
+                }
+            }
+
+            // Ultimate fallback
+            if (!district) district = 'เมือง' + rowProv;
+
+            const dKey = `${district}_${rowProv}`;
+            if (!districtDoctorCounts[dKey]) districtDoctorCounts[dKey] = 0;
+            if (!provTotals[rowProv]) provTotals[rowProv] = 0;
+
+            const nPeds = cleanNum(row[pedsIdx]);
+            const nSurg = cleanNum(row[surgIdx]);
+            const nIcu = cleanNum(row[icuIdx]);
+            const nStroke = cleanNum(row[strokeIdx]);
+            const nHd = cleanNum(row[hdIdx]);
+            const nDent = dentIdx > -1 ? cleanNum(row[dentIdx]) : 0;
+            const nPharm = pharmIdx > -1 ? cleanNum(row[pharmIdx]) : 0;
+
+            sumPeds += nPeds;
+            sumSurg += nSurg;
+            sumIcu += nIcu;
+            sumStroke += nStroke;
+            sumHd += nHd;
+            sumDent += nDent;
+            sumPharm += nPharm;
+
+            let rowTotalForMap = 0;
+            if (selType === 'ALL') {
+                rowTotalForMap = nPeds + nSurg + nIcu + nStroke + nHd + nDent + nPharm;
+            } else if (selType === 'กุมารแพทย์') rowTotalForMap = nPeds;
+            else if (selType === 'ศัลยแพทย์ OR') rowTotalForMap = nSurg;
+            else if (selType === 'อายุรแพทย์ ICU') rowTotalForMap = nIcu;
+            else if (selType === 'อายุรแพทย์ Stroke') rowTotalForMap = nStroke;
+            else if (selType === 'อายุรแพทย์ HD') rowTotalForMap = nHd;
+            else if (selType === 'ทันตแพทย์') rowTotalForMap = nDent;
+            else if (selType === 'เภสัชกร') rowTotalForMap = nPharm;
+
+            districtDoctorCounts[dKey] += rowTotalForMap;
+            provTotals[rowProv] += rowTotalForMap;
+        });
+
+        // อัปเดต Summary Cards
+        $('#gisDocPeds').text(sumPeds.toLocaleString());
+        $('#gisDocSurgery').text(sumSurg.toLocaleString());
+        $('#gisDocIcu').text(sumIcu.toLocaleString());
+        $('#gisDocStroke').text(sumStroke.toLocaleString());
+        $('#gisDocHd').text(sumHd.toLocaleString());
+        $('#gisDocDentist').text(sumDent.toLocaleString());
+        $('#gisDocPharm').text(sumPharm.toLocaleString());
+        $('#gisDocTotal').text((sumPeds + sumSurg + sumIcu + sumStroke + sumHd + sumDent + sumPharm).toLocaleString());
+
+        // ตรวจสอบแผนที่ ถ้ายังไม่โหลดให้ออกไปก่อน (Summary Card จะอัปเดตไปแล้ว)
+        if (!gisDoctorMap || !r8GeoJsonData) return;
+
+        if (gisDoctorGeoJson) {
+            gisDoctorMap.removeLayer(gisDoctorGeoJson);
+        }
+
+        gisDoctorData = districtDoctorCounts;
+        const countsArray = Object.values(districtDoctorCounts);
+        const maxCounts = countsArray.length > 0 ? Math.max(...countsArray) : 1;
+
+        function style(feature) {
+            const fProv = feature.properties.PROV_TH;
+            let fAmp = String(feature.properties.AMP_TH).replace('อำเภอ', '').trim();
+            if (fAmp === 'เมือง') fAmp = 'เมือง' + fProv;
+
+            const isFilteredProv = (selProv === 'ALL' || selProv === fProv);
+            const dKey = `${fAmp}_${fProv}`;
+            const count = (isFilteredProv && districtDoctorCounts[dKey]) ? districtDoctorCounts[dKey] : 0;
+
+            const isFocusProv = selProv !== 'ALL' && selProv === fProv;
+            const provColor = PROV_COLORS[fProv] || '#555';
+
+            return {
+                fillColor: isFilteredProv ? getDoctorMapColor(count, maxCounts) : '#e2e8f0',
+                weight: isFocusProv ? 1 : 2,
+                opacity: 1,
+                color: isFocusProv ? '#cbd5e1' : provColor,
+                dashArray: isFocusProv ? '3' : '',
+                fillOpacity: isFilteredProv ? 0.8 : 0.3
+            };
+        }
+
+        function onEachFeature(feature, layer) {
+            const fProv = feature.properties.PROV_TH;
+            let fAmp = String(feature.properties.AMP_TH).replace('อำเภอ', '').trim();
+            if (fAmp === 'เมือง') fAmp = 'เมือง' + fProv;
+            const dKey = `${fAmp}_${fProv}`;
+            const count = districtDoctorCounts[dKey] || 0;
+
+            const isFilteredProv = (selProv === 'ALL' || selProv === fProv);
+
+            let tooltipContent = isFilteredProv ?
+                `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${fAmp}, ${fProv}</div>
+                 <div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${count.toLocaleString()}</span> คน</div>`
+                :
+                `<div class="font-heading font-medium text-slate-500">${fAmp}, ${fProv}</div>`;
+
+            layer.bindTooltip(tooltipContent, {
+                sticky: true,
+                className: 'custom-map-tooltip',
+                direction: 'top'
+            });
+
+            layer.on({
+                mouseover: function (e) {
+                    if (!isFilteredProv) return;
+                    const l = e.target;
+                    l.setStyle({ weight: 3, color: '#f59e0b', dashArray: '', fillOpacity: 0.9 });
+                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) l.bringToFront();
+                },
+                mouseout: function (e) { if (gisDoctorGeoJson) gisDoctorGeoJson.resetStyle(e.target); }
+            });
+
+            if (selProv !== 'ALL' && selProv === fProv) {
+                layer.bindTooltip(
+                    `<div class="text-center">
+                        <div class="font-bold text-[10px] text-slate-800 leading-tight drop-shadow-md bg-white/70 px-1 rounded">${fAmp}</div>
+                        <div class="font-black text-[12px] text-purple-700 leading-tight drop-shadow-md bg-white/70 px-1 rounded">${count.toLocaleString()}</div>
+                     </div>`,
+                    { permanent: true, direction: "center", className: "transparent-tooltip" }
+                ).openTooltip();
+            }
+            else if (selProv === 'ALL' && String(fAmp).startsWith('เมือง')) {
+                const pTot = provTotals[fProv] || 0;
+                layer.bindTooltip(
+                    `<div class="text-center bg-white/80 border border-purple-200 shadow-sm rounded-lg px-2 py-1 transform -translate-y-4">
+                        <div class="font-bold text-xs text-slate-800">${fProv}</div>
+                        <div class="font-black text-sm text-purple-700">${pTot.toLocaleString()}</div>
+                     </div>`,
+                    { permanent: true, direction: "center", className: "transparent-tooltip" }
+                ).openTooltip();
+            }
+        }
+
+        gisDoctorGeoJson = L.geoJson(r8GeoJsonData, {
+            style: style,
+            onEachFeature: onEachFeature
+        }).addTo(gisDoctorMap);
+
+        // Auto Zoom to fit province
+        let targetBounds = null;
+        if (selProv !== 'ALL') {
+            const provFeatureGroup = new L.FeatureGroup();
+            gisDoctorGeoJson.eachLayer(function (layer) {
+                if (layer.feature.properties.PROV_TH === selProv) {
+                    provFeatureGroup.addLayer(layer);
+                }
+            });
+            if (provFeatureGroup.getBounds().isValid()) {
+                targetBounds = provFeatureGroup.getBounds();
+            }
+        } else if (gisDoctorGeoJson && gisDoctorGeoJson.getBounds().isValid()) {
+            targetBounds = gisDoctorGeoJson.getBounds();
+        }
+
+        if (targetBounds) {
+            gisDoctorMap.fitBounds(targetBounds);
+            if (gisDoctorMap.getZoom() > 10) {
+                gisDoctorMap.setZoom(9);
+            }
+        }
+    }
 </script>
