@@ -4,38 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <title>R8 Health Resource Dashboard</title>
-
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7NV8MT3JV5"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
-
         gtag('config', 'G-7NV8MT3JV5');
     </script>
-
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966334.png" type="image/png">
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
     <script type="text/javascript" charset="utf8"
         src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
-
-    <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
     <link
         href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
@@ -50,15 +38,11 @@
                             primary: '#005c32', secondary: '#008b49'
                         }
                     },
-                    fontFamily: {
-                        sans: ['Kanit', 'sans-serif'],
-                        heading: ['Prompt', 'sans-serif'],
-                    }
+                    fontFamily: { sans: ['Kanit', 'sans-serif'], heading: ['Prompt', 'sans-serif'] }
                 }
             }
         }
     </script>
-
     <?!= include('Style'); ?>
 </head>
 
@@ -74,10 +58,8 @@
         <div id="fatalError" class="error-box hidden"></div>
     </div>
 
-    <!-- 1. แถบ Sidebar ด้านซ้าย -->
     <aside id="sidebar"
         class="w-[280px] bg-moph-primary text-white flex flex-col transition-all duration-300 shadow-2xl z-50 flex-shrink-0 absolute lg:relative h-full -translate-x-full lg:translate-x-0">
-        <!-- โลโก้ -->
         <div class="h-20 md:h-24 flex items-center px-6 border-b border-white/10 bg-black/10">
             <div class="flex items-center gap-4">
                 <div class="bg-white p-2.5 rounded-2xl shadow-sm">
@@ -92,8 +74,7 @@
                             class="text-moph-200 font-medium text-sm font-sans">Resource Dashboard</span></h1>
                 </div>
             </div>
-            <!-- ปุ่มปิด Sidebar บนมือถือ -->
-            <button onclick="toggleSidebar()" aria-label="Close Sidebar" title="ปิดเมนู"
+            <button onclick="toggleSidebar()"
                 class="lg:hidden ml-auto text-white/70 hover:text-white p-1 rounded hover:bg-white/10">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -102,11 +83,9 @@
             </button>
         </div>
 
-        <!-- รายการเมนู -->
         <nav class="flex-1 py-8 px-4 space-y-2.5 overflow-y-auto hidden-scrollbar">
             <div class="font-heading text-[12px] font-medium text-moph-200/70 uppercase tracking-widest mb-4 px-3">
-                เมนูหลัก (Main Menu)</div>
-
+                เมนูหลัก</div>
             <button id="tabMainBtn" onclick="switchTab('main')"
                 class="w-full flex items-center gap-3 px-4 py-3.5 bg-white text-moph-primary rounded-xl font-medium transition-colors shadow-sm text-left active-menu">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -116,7 +95,6 @@
                 </svg>
                 ภาพรวมทรัพยากร
             </button>
-
             <button id="tabEqBtn" onclick="switchTab('eq')"
                 class="w-full flex items-center gap-3 px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-normal transition-colors border border-transparent text-left inactive-menu">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24"
@@ -126,46 +104,58 @@
                 </svg>
                 ครุภัณฑ์ SP
             </button>
-
-            <button id="tabGisBtn" onclick="switchTab('gis')"
-                class="w-full flex items-center gap-3 px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-normal transition-colors border border-transparent text-left inactive-menu">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                GIS ครุภัณฑ์ SP
-            </button>
-
-            <button id="tabGisBedBtn" onclick="switchTab('gis_bed')"
-                class="w-full flex items-center gap-3 px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-normal transition-colors border border-transparent text-left inactive-menu">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
-                </svg>
-                GIS เตียง
-            </button>
-
-            <!-- GIS Doctor Menu Item -->
-            <button id="tabGisDoctorBtn" onclick="switchTab('gis_doctor')"
-                class="w-full flex items-center gap-3 px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-normal transition-colors border border-transparent text-left inactive-menu">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                GIS แพทย์
-            </button>
+            <div class="pt-2">
+                <button onclick="toggleSubmenu('gisSubmenu', 'gisChevron')"
+                    class="w-full flex items-center justify-between px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-medium transition-colors border border-transparent text-left group">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80 group-hover:opacity-100"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        ระบบแผนที่ (GIS)
+                    </div>
+                    <svg id="gisChevron" xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 transition-transform duration-300 transform rotate-0 opacity-80" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="gisSubmenu"
+                    class="hidden mt-1 space-y-1 ml-6 border-l border-white/20 pl-3 transition-all duration-300">
+                    <button id="tabGisBtn" onclick="switchTab('gis')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>GIS ครุภัณฑ์ SP
+                    </button>
+                    <button id="tabGisBedBtn" onclick="switchTab('gis_bed')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>GIS เตียง
+                    </button>
+                    <button id="tabGisDoctorBtn" onclick="switchTab('gis_doctor')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>GIS แพทย์
+                    </button>
+                    <button id="tabGisNurseBtn" onclick="switchTab('gis_nurse')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>GIS พยาบาล
+                    </button>
+                </div>
+            </div>
         </nav>
 
-        <!-- โปรไฟล์ -->
         <div class="px-6 py-6 border-t border-white/10 bg-black/10">
             <div class="flex items-center gap-4">
                 <div
                     class="h-10 w-10 min-w-[40px] rounded-full bg-white/20 border border-white/30 flex items-center justify-center font-heading font-medium text-white shadow-inner">
-                    R8
-                </div>
+                    R8</div>
                 <div class="overflow-hidden">
                     <h3 class="text-sm font-medium text-white m-0 truncate leading-tight">เขตสุขภาพที่ 8</h3>
                     <p class="text-[12px] text-moph-200 opacity-90 tracking-wide font-normal truncate mt-0.5">เวอร์ชัน
@@ -176,19 +166,14 @@
         </div>
     </aside>
 
-    <!-- Overlay สำหรับ Mobile -->
     <div id="sidebarOverlay" onclick="toggleSidebar()"
         class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
-    <!-- 2. พื้นที่หลักด้านขวา -->
     <div id="mainRightPanel" class="flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-300">
-
-        <!-- แถบ Header -->
         <header
             class="h-20 md:h-24 bg-white border-b border-slate-200 px-6 md:px-10 flex items-center justify-between z-10 shadow-sm transition-all duration-300 flex-shrink-0">
             <div class="flex items-center gap-3 md:gap-4">
-                <!-- Hamburger Button -->
-                <button onclick="toggleSidebar()" aria-label="Toggle Sidebar" title="เปิด/ปิดเมนู"
+                <button onclick="toggleSidebar()"
                     class="p-2 -ml-2 text-slate-500 hover:text-moph-primary hover:bg-slate-100 rounded-xl transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -204,55 +189,47 @@
                         ข้อมูลสรุปภาพรวมในเขตสุขภาพที่ 8</p>
                 </div>
             </div>
-
-            <!-- กล่องควบคุมขวา -->
             <div class="flex items-center gap-3">
                 <div id="provFilterContainer">
                     <select id="provinceFilter" onchange="processAndRender(true)"
                         class="bg-slate-50 border border-slate-200 text-slate-700 py-2 md:py-2.5 px-4 md:px-6 rounded-2xl text-[13px] md:text-sm font-normal shadow-sm cursor-pointer focus:ring-2 focus:ring-moph-400 outline-none w-[130px] md:w-auto font-kanit">
                         <option value="ALL">ทุกจังหวัด</option>
-                        <option value="บึงกาฬ">บึงกาฬ</option>
-                        <option value="หนองบัวลำภู">หนองบัวลำภู</option>
                         <option value="อุดรธานี">อุดรธานี</option>
-                        <option value="เลย">เลย</option>
-                        <option value="หนองคาย">หนองคาย</option>
                         <option value="สกลนคร">สกลนคร</option>
                         <option value="นครพนม">นครพนม</option>
+                        <option value="เลย">เลย</option>
+                        <option value="หนองคาย">หนองคาย</option>
+                        <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+                        <option value="บึงกาฬ">บึงกาฬ</option>
                     </select>
                 </div>
-
                 <div
                     class="hidden md:flex bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-2xl text-[13px] font-medium shadow-sm items-center">
                     DB: <span id="templateVersionBadge" class="ml-1 text-slate-900">...</span>
                 </div>
-
-                <button id="refreshBtn" onclick="refreshNow()"
-                    class="bg-moph-primary hover:bg-moph-secondary text-white py-2 md:py-2.5 px-3 md:px-5 rounded-2xl text-[13px] md:text-sm font-normal shadow-md flex items-center gap-2 transition-all min-w-10 justify-center">
+                <button id="clearFilterBtn" onclick="clearProvFilter()"
+                    class="bg-white hover:bg-red-50 text-red-500 py-2 md:py-2.5 px-3 md:px-5 rounded-2xl text-[13px] md:text-sm font-bold shadow-sm flex items-center gap-2 transition-all min-w-10 justify-center border border-red-200 hover:border-red-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14.828-2M4 16a8 8 0 0014.828 2" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <span class="hidden sm:inline">Refresh</span>
+                    <span class="hidden sm:inline">ล้างค่า</span>
                 </button>
             </div>
         </header>
 
-        <!-- พื้นที่ Content เลื่อนได้ -->
         <main id="scrollableBody" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50 scroll-smooth relative">
 
-            <!-- Main Tab: Original Dashboard -->
             <div id="mainContent" class="space-y-8 transition-opacity duration-300 opacity-0">
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
                     <div class="kpi-card text-white border-none shadow-xl"
                         style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);">
                         <div class="flex items-center gap-5">
-                            <div class="bg-white/20 p-5 rounded-[1.75rem] backdrop-blur-md">
-                                <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div class="bg-white/20 p-5 rounded-[1.75rem] backdrop-blur-md"><svg class="h-10 w-10"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-width="2"
                                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
-                                </svg>
-                            </div>
+                                </svg></div>
                             <div class="flex-1">
                                 <div class="kpi-title text-white/90">โรงพยาบาลรวม</div>
                                 <div class="kpi-value kpi-value-size mt-2"><span id="totalHospitals">0</span></div>
@@ -262,13 +239,12 @@
                     </div>
                     <div class="card kpi-card border-l-[10px] border-l-green-600">
                         <div class="flex items-center gap-5">
-                            <div class="bg-green-50 p-5 rounded-[1.75rem] text-green-700">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <div class="bg-green-50 p-5 rounded-[1.75rem] text-green-700"><svg
+                                    xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                            </div>
+                                </svg></div>
                             <div class="flex-1">
                                 <div class="kpi-title text-slate-500">ประชากรรวม</div>
                                 <div class="kpi-value kpi-value-size-pop mt-2 text-slate-900"><span
@@ -279,43 +255,39 @@
                     </div>
                     <div class="card kpi-card border-l-[10px] border-l-blue-600">
                         <div class="flex items-center gap-5">
-                            <div class="bg-blue-50 p-5 rounded-[1.75rem] text-blue-700">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <div class="bg-blue-50 p-5 rounded-[1.75rem] text-blue-700"><svg
+                                    xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M12 2a5 5 0 00-5 5v1a5 5 0 0010 0V7a5 5 0 00-5-5z" />
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M8 15h8a4 4 0 014 4v2H4v-2a4 4 0 014-4z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v3m-1.5-1.5h3" />
-                                </svg>
-                            </div>
+                                </svg></div>
                             <div class="flex-1">
                                 <div class="kpi-title text-slate-500">แพทย์สาขาหลักรวม</div>
                                 <div class="kpi-value kpi-value-size mt-2 text-slate-900"><span
-                                        id="totalCoreDoctors">0</span>
-                                </div>
+                                        id="totalCoreDoctors">0</span></div>
                                 <div class="kpi-unit-below text-slate-500">คน</div>
                             </div>
                         </div>
                     </div>
                     <div class="card kpi-card border-l-[10px] border-l-amber-600">
                         <div class="flex items-center gap-5">
-                            <div class="bg-amber-50 p-5 rounded-[1.75rem] text-amber-700">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <div class="bg-amber-50 p-5 rounded-[1.75rem] text-amber-700"><svg
+                                    xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M3 11V8a2 2 0 012-2h6a2 2 0 012 2v3" />
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M11 11h10a2 2 0 012 2v3H1v-3a2 2 0 012-2h8z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16v4M21 16v4" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 9h2" />
-                                </svg>
-                            </div>
+                                </svg></div>
                             <div class="flex-1">
                                 <div class="kpi-title text-slate-500">เตียงจริงทั้งหมด</div>
                                 <div class="kpi-value kpi-value-size mt-2 text-slate-900"><span
-                                        id="totalRealBeds">0</span>
-                                </div>
+                                        id="totalRealBeds">0</span></div>
                                 <div class="kpi-unit-below text-slate-500">เตียง</div>
                             </div>
                         </div>
@@ -327,16 +299,15 @@
 
                 <div id="distPopCard" class="card p-8 hidden">
                     <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
-                        <div class="w-2 h-6 bg-blue-600 rounded-full"></div>
-                        เจาะลึก: ประชากรแยกตามอำเภอ (<span id="selectedProvLabel"></span>)
+                        <div class="w-2 h-6 bg-blue-600 rounded-full"></div>เจาะลึก: ประชากรแยกตามอำเภอ (<span
+                            id="selectedProvLabel"></span>)
                     </h3>
                     <div class="chart-container"><canvas id="distPopChart"></canvas></div>
                 </div>
-
                 <div id="docSpecCard" class="card p-8 hidden">
                     <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
-                        <div class="w-2 h-6 bg-indigo-600 rounded-full"></div>
-                        เจาะลึก: จำนวนแพทย์แยกตามสาขาหลัก (<span id="selectedProvLabel2"></span>)
+                        <div class="w-2 h-6 bg-indigo-600 rounded-full"></div>เจาะลึก: จำนวนแพทย์แยกตามสาขาหลัก (<span
+                            id="selectedProvLabel2"></span>)
                     </h3>
                     <div class="chart-container"><canvas id="docSpecChart"></canvas></div>
                     <div class="table-note">หมายเหตุ: รวมจำนวนแพทย์จากทุกโรงพยาบาลในจังหวัดที่เลือก</div>
@@ -344,12 +315,10 @@
 
                 <div class="card p-8">
                     <h3 class="text-xl font-bold mb-8 flex items-center gap-2">
-                        <div class="w-2 h-6 bg-green-600 rounded-full"></div>
-                        จำนวนโรงพยาบาล จำแนกประเภท รพศ./รพท./รพช.
+                        <div class="w-2 h-6 bg-green-600 rounded-full"></div>จำนวนโรงพยาบาล จำแนกประเภท รพศ./รพท./รพช.
                     </h3>
                     <div class="chart-container"><canvas id="hospTypeChart"></canvas></div>
                 </div>
-
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     <div class="card xl:col-span-1">
                         <h3>ประชากรรายจังหวัด</h3>
@@ -378,7 +347,6 @@
                     <div class="table-note">หมายเหตุ: เตียง Palliative Care (รวมเตียงจริง), เตียงมินิธัญญารักษ์
                         (ไม่รวมจำนวนเตียงจริง)</div>
                 </div>
-
                 <div class="space-y-4">
                     <h3 id="structureTitle" class="text-xl font-bold px-2">สรุปข้อมูลโครงสร้างและเครื่องมือแพทย์สำคัญ
                     </h3>
@@ -392,7 +360,6 @@
                     </div>
                     <div class="table-note">หมายเหตุ: ห้องตรวจผู้ป่วยนอก (ห้อง) (ไม่นับรวมทันตกรรม,SMC,PMC)</div>
                 </div>
-
                 <div class="space-y-4">
                     <h3 id="physicianTitle" class="text-xl font-bold px-2">สรุปจำนวนแพทย์สาขาหลักแยกตามความเชี่ยวชาญ
                     </h3>
@@ -405,7 +372,6 @@
                         </table>
                     </div>
                 </div>
-
                 <div class="space-y-4 pb-20">
                     <h3 id="nurseTitle" class="text-xl font-bold px-2">สรุปจำนวนพยาบาลเฉพาะทางแยกตามสาขา</h3>
                     <div class="custom-table-container bg-white p-4 rounded-3xl shadow-sm overflow-hidden">
@@ -419,20 +385,19 @@
                 </div>
             </div>
 
-            <!-- EQ Tab: New Equipment Dashboard -->
             <div id="eqContent" class="space-y-8 opacity-0 hidden transition-opacity duration-300">
-                <div class="card bg-white p-6 shadow-sm border-2 border-amber-500 rounded-3xl mb-6">
+                <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl mb-6">
                     <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 items-end">
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label>
-                                <select id="eqYearFilter" onchange="renderEqTable()" class="w-full select2-filter">
+                                <select id="eqYearFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกปีงบ</option>
                                 </select>
                             </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
-                                <select id="eqProvFilter" onchange="renderEqTable()" class="w-full select2-filter">
+                                <select id="eqProvFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกจังหวัด</option>
                                     <option value="อุดรธานี">อุดรธานี</option>
                                     <option value="สกลนคร">สกลนคร</option>
@@ -445,7 +410,7 @@
                             </div>
                             <div class="lg:col-span-3">
                                 <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE PLAN</label>
-                                <select id="spBranchFilter" onchange="renderEqTable()" class="w-full select2-filter">
+                                <select id="spBranchFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกสาขา</option>
                                 </select>
                             </div>
@@ -457,35 +422,31 @@
                             </div>
                             <div class="lg:col-span-2 flex gap-2">
                                 <button onclick="clearEqFilters()"
-                                    class="w-1/2 py-[9px] px-4 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 shadow-sm whitespace-nowrap">
-                                    ล้างค่า
-                                </button>
-                                <button onclick="openAddEqModal()"
-                                    class="w-1/2 py-[11px] px-4 bg-green-700 hover:bg-green-800 text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-1 transition-colors">
-                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    class="w-1/2 py-[11px] px-4 bg-white border border-red-200 text-red-500 rounded-xl text-sm font-bold hover:bg-red-50 hover:border-red-300 shadow-sm whitespace-nowrap transition-colors">ล้างค่า</button>
+                                <!-- <button onclick="openAddEqModal()"
+                                    class="w-1/2 py-[11px] px-4 bg-moph-primary hover:bg-moph-secondary text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-1 transition-colors"><svg
+                                        class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd"
                                             d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
                                             clip-rule="evenodd" />
-                                    </svg>
-                                    เพิ่มรายการ
-                                </button>
+                                    </svg>เพิ่ม</button> -->
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center shadow-sm">
-                        <div class="text-sm font-bold text-blue-800 mb-2">จำนวนครุภัณฑ์ (รายการ)</div>
-                        <div class="text-4xl font-black text-blue-700" id="eqTotItems">0</div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">จำนวนครุภัณฑ์ (รายการ)</div>
+                        <div class="text-4xl font-black text-moph-700" id="eqTotItems">0</div>
                     </div>
-                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-center shadow-sm">
-                        <div class="text-sm font-bold text-amber-800 mb-2">จำนวนหน่วย (ชิ้น)</div>
-                        <div class="text-4xl font-black text-amber-700" id="eqTotUnits">0</div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">จำนวนหน่วย (ชิ้น)</div>
+                        <div class="text-4xl font-black text-moph-700" id="eqTotUnits">0</div>
                     </div>
-                    <div class="bg-green-50 border border-green-100 rounded-2xl p-6 text-center shadow-sm">
-                        <div class="text-sm font-bold text-green-800 mb-2" id="eqTotAmtTitle">วงเงินรวม (บาท)</div>
-                        <div class="text-4xl font-black text-green-700" id="eqTotAmt">0.00</div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2" id="eqTotAmtTitle">วงเงินรวม (บาท)</div>
+                        <div class="text-4xl font-black text-moph-700" id="eqTotAmt">0.00</div>
                     </div>
                 </div>
 
@@ -501,16 +462,13 @@
                     <table id="eqTable" class="display cell-border stripe w-full text-sm">
                         <thead>
                             <tr>
-                                <th style="width: 8%; text-align: center !important;">ลำดับความสำคัญ</th>
-                                <th style="width: 10%; text-align: center !important;">ความสำคัญจังหวัด</th>
                                 <th style="width: 8%; text-align: center !important;">ปีงบประมาณ</th>
-                                <th style="width: 12%; text-align: center !important;">สาขา SP</th>
-                                <th style="width: 15%; text-align: center !important;">หน่วยบริการ</th>
-                                <th style="width: 20%; text-align: center !important;">ชื่อรายการ</th>
+                                <th style="width: 14%; text-align: center !important;">สาขา SP</th>
+                                <th style="width: 18%; text-align: center !important;">หน่วยบริการ</th>
+                                <th style="width: 22%; text-align: center !important;">ชื่อรายการ</th>
                                 <th style="width: 10%; text-align: center !important;">แหล่งงบประมาณ</th>
                                 <th style="width: 13%; text-align: right !important; padding-right: 1.5rem !important;">
                                     ราคาต่อหน่วย</th>
-
                                 <th style="width: 7%; text-align: center !important;">จำนวน</th>
                                 <th style="width: 15%; text-align: right !important; padding-right: 1.5rem !important;">
                                     วงเงินรวม</th>
@@ -522,35 +480,45 @@
                 </div>
             </div>
 
-            <!-- GIS Tab: Equipment Map Dashboard -->
             <div id="gisContent" class="space-y-8 opacity-0 hidden transition-opacity duration-300">
                 <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl mb-6">
                     <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label>
-                                <select id="gisYearFilter" onchange="renderGisMap()" class="w-full select2-filter">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+                            <div><label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label><select
+                                    id="gisProvFilter" class="w-full select2-filter">
+                                    <option value="ALL">ทุกจังหวัด</option>
+                                    <option value="อุดรธานี">อุดรธานี</option>
+                                    <option value="สกลนคร">สกลนคร</option>
+                                    <option value="นครพนม">นครพนม</option>
+                                    <option value="เลย">เลย</option>
+                                    <option value="หนองคาย">หนองคาย</option>
+                                    <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+                                    <option value="บึงกาฬ">บึงกาฬ</option>
+                                </select></div>
+                            <div><label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label><select
+                                    id="gisYearFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกปีงบ</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE PLAN</label>
-                                <select id="gisSpFilter" onchange="renderGisMap()" class="w-full select2-filter">
+                                </select></div>
+                            <div><label class="block text-sm font-bold text-slate-500 mb-2">สาขา SERVICE
+                                    PLAN</label><select id="gisSpFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกสาขา</option>
-                                </select>
-                            </div>
+                                </select></div>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="clearGisFilters()"
+                                class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
-                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center shadow-sm">
-                        <div class="text-sm font-bold text-blue-800 mb-2">รวมจำนวนชิ้นในพื้นที่ทั้งหมด</div>
-                        <div class="text-4xl font-black text-blue-700" id="gisTotUnits">0</div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">รวมจำนวนชิ้นในพื้นที่ทั้งหมด</div>
+                        <div class="text-4xl font-black text-moph-700" id="gisTotUnits">0</div>
                     </div>
-                    <div class="bg-green-50 border border-green-100 rounded-2xl p-6 text-center shadow-sm">
-                        <div class="text-sm font-bold text-green-800 mb-2">วงเงินรวมในพื้นที่ทั้งหมด (บาท)</div>
-                        <div class="text-4xl font-black text-green-700" id="gisTotAmt">0.00</div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">วงเงินรวมในพื้นที่ทั้งหมด (บาท)</div>
+                        <div class="text-4xl font-black text-moph-700" id="gisTotAmt">0.00</div>
                     </div>
                 </div>
 
@@ -558,20 +526,18 @@
                     <div id="spGisMap" style="height: 650px; width: 100%; z-index: 1;"></div>
                     <div id="gisMapOverlay"
                         class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center hidden">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-green-700"></div>
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-moph-700"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- GIS Bed Tab: Bed Map Dashboard -->
             <div id="gisBedContent" class="space-y-8 opacity-0 hidden transition-opacity duration-300">
                 <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl mb-6">
                     <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
-                                <select id="gisBedProvFilter" onchange="renderGisBedMap()"
-                                    class="w-full select2-filter">
+                                <select id="gisBedProvFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกจังหวัด</option>
                                     <option value="อุดรธานี">อุดรธานี</option>
                                     <option value="สกลนคร">สกลนคร</option>
@@ -584,8 +550,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-500 mb-2">ประเภทเตียง</label>
-                                <select id="gisBedTypeFilter" onchange="renderGisBedMap()"
-                                    class="w-full select2-filter">
+                                <select id="gisBedTypeFilter" class="w-full select2-filter">
                                     <option value="ALL">รวม 5 ประเภทหลัก</option>
                                     <option value="เตียงกรอบ">เตียงกรอบ</option>
                                     <option value="เตียงจริง">เตียงจริง</option>
@@ -599,82 +564,89 @@
                                     </option>
                                 </select>
                             </div>
-                            <div>
-                                <button onclick="clearGisBedFilters()"
-                                    class="w-full py-[11px] px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">
-                                    ล้างค่า
-                                </button>
+                            <div><button onclick="clearGisBedFilters()"
+                                    class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- GIS Bed Summary Cards -->
-                <!-- Overview Row (2 Cards) -->
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div
-                        class="bg-white rounded-xl shadow-sm p-4 border border-moph-100 relative overflow-hidden group hover:border-blue-300 transition-colors">
+                        class="bg-white rounded-xl shadow-sm p-4 border border-slate-200 relative overflow-hidden group hover:border-moph-300 transition-colors">
                         <div
-                            class="absolute right-0 top-0 w-20 h-20 bg-gradient-to-br from-blue-50 to-blue-100 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 flex items-center justify-center">
-                            <!-- Medical Bed Icon -->
+                            class="absolute right-0 top-0 w-20 h-20 bg-slate-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg"
-                                class="h-8 w-8 text-blue-300 transform translate-x-1 -translate-y-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                class="h-8 w-8 text-slate-300 transform translate-x-1 -translate-y-1 opacity-70 group-hover:opacity-100 group-hover:text-moph-300 transition-colors"
                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                <path stroke-width="2"
                                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
                             </svg>
                         </div>
-                        <h3 class="text-sm font-medium text-moph-500 mb-1 relative z-10">เตียงกรอบ</h3>
-                        <div class="flex items-end justify-between relative z-10">
-                            <span class="text-3xl font-bold text-moph-primary leading-none" id="gisBedFrame">-</span>
-                            <span class="text-xs text-moph-400 font-medium">เตียง</span>
-                        </div>
+                        <h3 class="text-sm font-bold text-slate-500 mb-1 relative z-10">เตียงกรอบ</h3>
+                        <div class="flex items-end justify-between relative z-10"><span
+                                class="text-3xl font-black text-slate-700 leading-none" id="gisBedFrame">-</span><span
+                                class="text-xs text-slate-400 font-medium">เตียง</span></div>
                     </div>
                     <div
-                        class="bg-white rounded-xl shadow-sm p-4 border border-moph-100 relative overflow-hidden group hover:border-green-300 transition-colors">
+                        class="bg-white rounded-xl shadow-sm p-4 border border-slate-200 relative overflow-hidden group hover:border-moph-300 transition-colors">
                         <div
-                            class="absolute right-0 top-0 w-20 h-20 bg-gradient-to-br from-green-50 to-green-100 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 flex items-center justify-center">
-                            <!-- Medical Bed Icon -->
+                            class="absolute right-0 top-0 w-20 h-20 bg-slate-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg"
-                                class="h-8 w-8 text-green-300 transform translate-x-1 -translate-y-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                class="h-8 w-8 text-slate-300 transform translate-x-1 -translate-y-1 opacity-70 group-hover:opacity-100 group-hover:text-moph-300 transition-colors"
                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                <path stroke-width="2"
                                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
                             </svg>
                         </div>
-                        <h3 class="text-sm font-medium text-moph-500 mb-1 relative z-10">เตียงจริง</h3>
-                        <div class="flex items-end justify-between relative z-10">
-                            <span class="text-3xl font-bold text-green-600 leading-none" id="gisBedReal">-</span>
-                            <span class="text-xs text-moph-400 font-medium">เตียง</span>
-                        </div>
+                        <h3 class="text-sm font-bold text-slate-500 mb-1 relative z-10">เตียงจริง</h3>
+                        <div class="flex items-end justify-between relative z-10"><span
+                                class="text-3xl font-black text-moph-700 leading-none" id="gisBedReal">-</span><span
+                                class="text-xs text-slate-400 font-medium">เตียง</span></div>
                     </div>
                 </div>
 
-                <!-- Detail Row (6 Cards) -->
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pb-4">
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center shadow-sm">
-                        <div class="text-xs font-bold text-blue-800 mb-1">เตียง NICU</div>
-                        <div class="text-2xl font-black text-blue-700" id="gisBedNicu">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            เตียง NICU</div>
+                        <div class="text-2xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisBedNicu">0</div>
                     </div>
-                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center shadow-sm">
-                        <div class="text-xs font-bold text-indigo-800 mb-1">เตียง OR ศัลยกรรม</div>
-                        <div class="text-2xl font-black text-indigo-700" id="gisBedOr">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            เตียง OR ศัลยกรรม</div>
+                        <div class="text-2xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisBedOr">0</div>
                     </div>
-                    <div class="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center shadow-sm">
-                        <div class="text-xs font-bold text-purple-800 mb-1">เตียง ICU</div>
-                        <div class="text-2xl font-black text-purple-700" id="gisBedIcu">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            เตียง ICU</div>
+                        <div class="text-2xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisBedIcu">0</div>
                     </div>
-                    <div class="bg-pink-50 border border-pink-100 rounded-xl p-4 text-center shadow-sm">
-                        <div class="text-xs font-bold text-pink-800 mb-1">เตียง Stroke</div>
-                        <div class="text-2xl font-black text-pink-700" id="gisBedStroke">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            เตียง Stroke</div>
+                        <div class="text-2xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisBedStroke">0</div>
                     </div>
-                    <div class="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center shadow-sm">
-                        <div class="text-xs font-bold text-rose-800 mb-1">เตียง HD</div>
-                        <div class="text-2xl font-black text-rose-700" id="gisBedHd">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            เตียง HD</div>
+                        <div class="text-2xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisBedHd">0</div>
                     </div>
-                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center shadow-md">
-                        <div class="text-xs font-bold text-green-800 mb-1">รวมทั้งหมด (5 ประเภท)</div>
-                        <div class="text-2xl font-black text-green-700" id="gisBedTotal">0</div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div class="text-xs font-bold text-slate-500 mb-1 group-hover:text-moph-600 transition-colors">
+                            รวมทั้งหมด (5 ประเภท)</div>
+                        <div class="text-2xl font-black text-moph-700" id="gisBedTotal">0</div>
                     </div>
                 </div>
 
@@ -682,120 +654,204 @@
                     <div id="spGisBedMap" style="height: 650px; width: 100%; z-index: 1;"></div>
                     <div id="gisBedMapOverlay"
                         class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center hidden">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-700"></div>
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-moph-700"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- 6. ส่วนเนื้อหา GIS แพทย์ (GIS Doctor Content) -->
-            <div id="gisDoctorContent" class="hidden h-full flex flex-col">
-                <header class="bg-white px-8 py-5 border-b border-moph-100 flex-shrink-0">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-moph-primary font-heading flex items-center gap-3">
-                                <span class="w-2 h-8 bg-moph-500 rounded-full"></span>
-                                GIS แพทย์
-                            </h2>
-                            <p class="text-moph-500 mt-1 pl-5">แผนที่กระจายตัวแพทย์ผู้เชี่ยวชาญ</p>
+            <div id="gisDoctorContent" class="hidden space-y-8 opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-slate-500 mb-2">จังหวัด</label>
+                            <select id="gisDoctorProvFilter" class="w-full select2-filter">
+                                <option value="ALL">ทุกจังหวัด</option>
+                                <option value="อุดรธานี">อุดรธานี</option>
+                                <option value="สกลนคร">สกลนคร</option>
+                                <option value="นครพนม">นครพนม</option>
+                                <option value="เลย">เลย</option>
+                                <option value="หนองคาย">หนองคาย</option>
+                                <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+                                <option value="บึงกาฬ">บึงกาฬ</option>
+                            </select>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="bg-moph-50/50 px-4 py-2 rounded-lg border border-moph-100 text-sm">
-                                <span class="text-moph-400">DB:</span>
-                                <span class="font-medium text-moph-800 ml-1" id="gisDoctorDbVersion">-</span>
-                            </div>
-                            <button onclick="fetchData()"
-                                class="flex items-center gap-2 px-4 py-2 bg-moph-primary hover:bg-moph-600 text-white rounded-lg transition-colors shadow-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Refresh
-                            </button>
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-slate-500 mb-2">ประเภทแพทย์</label>
+                            <select id="gisDoctorTypeFilter" class="w-full select2-filter">
+                                <option value="ALL">รวมทั้งหมด</option>
+                                <option value="กุมารแพทย์">กุมารแพทย์</option>
+                                <option value="ศัลยแพทย์ OR">ศัลยแพทย์ OR</option>
+                                <option value="อายุรแพทย์ ICU">อายุรแพทย์ ICU</option>
+                                <option value="อายุรแพทย์ Stroke">อายุรแพทย์ Stroke</option>
+                                <option value="อายุรแพทย์ HD">อายุรแพทย์ HD</option>
+                                <option value="ทันตแพทย์">ทันตแพทย์</option>
+                                <option value="เภสัชกร">เภสัชกร</option>
+                            </select>
                         </div>
-                    </div>
-                </header>
-
-                <div class="flex-1 p-6 overflow-hidden flex flex-col relative z-10 hidden-scrollbar">
-                    <!-- GIS Doctor Filters -->
-                    <div class="bg-white rounded-xl shadow-sm border border-moph-100 p-4 mb-4 flex-shrink-0">
-                        <div class="flex flex-col md:flex-row gap-4">
-                            <div class="flex-1">
-                                <label class="block text-sm font-semibold text-moph-700 mb-2">จังหวัด</label>
-                                <select id="gisDoctorProvFilter" class="w-full select2-custom">
-                                    <option value="ALL">ภาพรวมเขต (ALL)</option>
-                                    <option value="อุดรธานี">อุดรธานี</option>
-                                    <option value="สกลนคร">สกลนคร</option>
-                                    <option value="นครพนม">นครพนม</option>
-                                    <option value="เลย">เลย</option>
-                                    <option value="หนองคาย">หนองคาย</option>
-                                    <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                    <option value="บึงกาฬ">บึงกาฬ</option>
-                                </select>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-semibold text-moph-700 mb-2">ประเภทแพทย์</label>
-                                <select id="gisDoctorTypeFilter" class="w-full select2-custom">
-                                    <option value="ALL">รวมทั้งหมด</option>
-                                    <option value="กุมารแพทย์">กุมารแพทย์</option>
-                                    <option value="ศัลยแพทย์ OR">ศัลยแพทย์ OR</option>
-                                    <option value="อายุรแพทย์ ICU">อายุรแพทย์ ICU</option>
-                                    <option value="อายุรแพทย์ Stroke">อายุรแพทย์ Stroke</option>
-                                    <option value="อายุรแพทย์ HD">อายุรแพทย์ HD</option>
-                                    <option value="ทันตแพทย์">ทันตแพทย์</option>
-                                    <option value="เภสัชกร">เภสัชกร</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <button onclick="clearGisDoctorFilters()"
-                                    class="w-full py-[11px] px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">
-                                    ล้างค่า
-                                </button>
-                            </div>
+                        <div class="flex items-end">
+                            <button onclick="clearGisDoctorFilters()"
+                                class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- GIS Doctor Summary Cards (8 Cards) -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 pb-4">
-                        <div class="bg-pink-50 border border-pink-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-pink-800 mb-1 leading-tight">กุมารแพทย์</div>
-                            <div class="text-xl font-black text-pink-700" id="gisDocPeds">0</div>
-                        </div>
-                        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-indigo-800 mb-1 leading-tight">ศัลยแพทย์ OR</div>
-                            <div class="text-xl font-black text-indigo-700" id="gisDocSurgery">0</div>
-                        </div>
-                        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-purple-800 mb-1 leading-tight">อายุรแพทย์ ICU</div>
-                            <div class="text-xl font-black text-purple-700" id="gisDocIcu">0</div>
-                        </div>
-                        <div class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-rose-800 mb-1 leading-tight">อายุรแพทย์ Stroke</div>
-                            <div class="text-xl font-black text-rose-700" id="gisDocStroke">0</div>
-                        </div>
-                        <div class="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-orange-800 mb-1 leading-tight">อายุรแพทย์ HD</div>
-                            <div class="text-xl font-black text-orange-700" id="gisDocHd">0</div>
-                        </div>
-                        <div class="bg-teal-50 border border-teal-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-teal-800 mb-1 leading-tight">ทันตแพทย์</div>
-                            <div class="text-xl font-black text-teal-700" id="gisDocDentist">0</div>
-                        </div>
-                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center shadow-sm">
-                            <div class="text-[11px] font-bold text-blue-800 mb-1 leading-tight">เภสัชกร</div>
-                            <div class="text-xl font-black text-blue-700" id="gisDocPharm">0</div>
-                        </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 pb-4">
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
                         <div
-                            class="bg-white border-2 border-moph-500 rounded-xl p-3 text-center shadow-sm flex flex-col items-center justify-center">
-                            <div class="text-[11px] font-bold text-moph-600 mb-1 leading-tight">รวมทั้งหมด</div>
-                            <div class="text-xl font-black text-moph-primary relative z-10" id="gisDocTotal">0</div>
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            กุมารแพทย์</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocPeds">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            ศัลยแพทย์ OR</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocSurgery">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            อายุรแพทย์ ICU</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocIcu">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            อายุรแพทย์ Stroke</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocStroke">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            อายุรแพทย์ HD</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocHd">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            ทันตแพทย์</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocDentist">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            เภสัชกร</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisDocPharm">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm flex flex-col items-center justify-center group hover:border-moph-300 transition-colors">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            รวมทั้งหมด</div>
+                        <div class="text-xl font-black text-moph-700 relative z-10" id="gisDocTotal">0</div>
+                    </div>
+                </div>
+
+                <div class="card p-0 shadow-sm border border-slate-200 rounded-3xl overflow-hidden relative">
+                    <div id="spGisDoctorMap" style="height: 650px; width: 100%; z-index: 1;"></div>
+                </div>
+            </div>
+
+            <div id="gisNurseContent" class="hidden space-y-8 opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-slate-500 mb-2">จังหวัด</label>
+                            <select id="gisNurseProvFilter" class="w-full select2-filter">
+                                <option value="ALL">ทุกจังหวัด</option>
+                                <option value="อุดรธานี">อุดรธานี</option>
+                                <option value="สกลนคร">สกลนคร</option>
+                                <option value="นครพนม">นครพนม</option>
+                                <option value="เลย">เลย</option>
+                                <option value="หนองคาย">หนองคาย</option>
+                                <option value="หนองบัวลำภู">หนองบัวลำภู</option>
+                                <option value="บึงกาฬ">บึงกาฬ</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-slate-500 mb-2">ประเภทพยาบาลเฉพาะทาง</label>
+                            <select id="gisNurseTypeFilter" class="w-full select2-filter">
+                                <option value="ALL">พยาบาล 5 สาขาหลัก</option>
+                                <option value="พยาบาล NICU">RN NICU (พยาบาล NICU)</option>
+                                <option value="พยาบาล OR ศัลยกรรม">RN OR (พยาบาล OR ศัลยกรรม)</option>
+                                <option value="พยาบาล ICU อายุรกรรม">RN ICU (พยาบาล ICU อายุรกรรม)</option>
+                                <option value="พยาบาล Stroke อายุรกรรม">RN Stroke (พยาบาล Stroke)</option>
+                                <option value="พยาบาล HD">RN HD (พยาบาล HD)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="clearGisNurseFilters()"
+                                class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- GIS Doctor Map Area -->
-                    <div class="card p-0 shadow-sm border border-slate-200 rounded-3xl overflow-hidden relative">
-                        <div id="spGisDoctorMap" style="height: 650px; width: 100%; z-index: 1;"></div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pb-4">
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            พยาบาล NICU</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisNurseNicu">0</div>
                     </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            พยาบาล OR</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisNurseOr">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            พยาบาล ICU</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisNurseIcu">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            พยาบาล Stroke</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisNurseStroke">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            พยาบาล HD</div>
+                        <div class="text-xl font-black text-slate-700 group-hover:text-moph-700 transition-colors"
+                            id="gisNurseHd">0</div>
+                    </div>
+                    <div
+                        class="bg-white border border-slate-200 rounded-xl p-3 text-center shadow-sm flex flex-col items-center justify-center hover:border-moph-300 transition-colors group">
+                        <div
+                            class="text-[11px] font-bold text-slate-500 mb-1 leading-tight group-hover:text-moph-600 transition-colors">
+                            รวมเฉพาะทาง</div>
+                        <div class="text-xl font-black text-moph-700 relative z-10" id="gisNurseTotal">0</div>
+                    </div>
+                </div>
+
+                <div class="card p-0 shadow-sm border border-slate-200 rounded-3xl overflow-hidden relative">
+                    <div id="spGisNurseMap" style="height: 650px; width: 100%; z-index: 1;"></div>
                 </div>
             </div>
 
@@ -806,7 +862,6 @@
                 </svg>
             </button>
 
-            <!-- Add Equipment Modal -->
             <div id="addEqModal"
                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
                 <div class="bg-white rounded-3xl shadow-2xl w-11/12 max-w-[1024px] max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300"
@@ -814,128 +869,93 @@
                     <div
                         class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-3xl shadow-sm">
                         <h2 class="text-xl font-bold flex items-center gap-3 text-green-800">
-                            <div class="p-2 bg-green-100 rounded-xl">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
+                            <div class="p-2 bg-green-100 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 4v16m8-8H4" />
-                                </svg>
-                            </div>
+                                </svg></div>
                             <span id="addEqModalTitle">เพิ่มรายการครุภัณฑ์ใหม่</span>
                         </h2>
                         <button onclick="closeAddEqModal()"
-                            class="text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors p-2 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            class="text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors p-2 rounded-full"><svg
+                                xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                            </svg></button>
                     </div>
-
                     <form id="addEqForm" onsubmit="submitAddEqMode(event)" class="p-8 space-y-8">
-                        <!-- Hidden inputs for Edit mode -->
-                        <input type="hidden" id="modalRowIdx" value="">
-                        <input type="hidden" id="modalMode" value="add">
-
-                        <!-- Row 1: จังหวัด, หน่วยบริการ, สาขา SP -->
+                        <input type="hidden" id="modalRowIdx" value=""><input type="hidden" id="modalMode" value="add">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">จังหวัด <span
-                                        class="text-red-500">*</span></label>
-                                <select id="modalProv" required class="w-full modal-select2"
-                                    onchange="updateModalHospDropdown()">
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">จังหวัด <span
+                                        class="text-red-500">*</span></label><select id="modalProv" required
+                                    class="w-full modal-select2" onchange="updateModalHospDropdown()">
                                     <option value="">เลือกจังหวัด...</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">หน่วยบริการ <span
-                                        class="text-red-500">*</span></label>
-                                <select id="modalHosp" required class="w-full modal-select2">
+                                </select></div>
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">หน่วยบริการ <span
+                                        class="text-red-500">*</span></label><select id="modalHosp" required
+                                    class="w-full modal-select2">
                                     <option value="">เลือกหน่วยบริการ...</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">สาขา SP <span
-                                        class="text-red-500">*</span></label>
-                                <select id="modalSp" required class="w-full modal-select2">
+                                </select></div>
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">สาขา SP <span
+                                        class="text-red-500">*</span></label><select id="modalSp" required
+                                    class="w-full modal-select2">
                                     <option value="">เลือกสาขา SP...</option>
-                                </select>
-                            </div>
+                                </select></div>
                         </div>
-
-                        <!-- Row 2: ชื่อรายการ -->
-                        <div>
-                            <label class="block text-base font-bold text-slate-700 mb-3">ชื่อรายการ <span
-                                    class="text-red-500">*</span></label>
-                            <select id="modalItem" required class="w-full modal-select2" onchange="autoFillPrice()">
+                        <div><label class="block text-base font-bold text-slate-700 mb-3">ชื่อรายการ <span
+                                    class="text-red-500">*</span></label><select id="modalItem" required
+                                class="w-full modal-select2" onchange="autoFillPrice()">
                                 <option value="">ค้นหาหรือเลือกชื่อรายการ...</option>
-                            </select>
-                        </div>
-
-                        <!-- Row 3: ราคา, จำนวน, วงเงินรวม -->
+                            </select></div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">ราคาต่อหน่วย (บาท)</label>
-                                <input type="number" step="0.01" id="modalPrice" required readonly
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">ราคาต่อหน่วย
+                                    (บาท)</label><input type="number" step="0.01" id="modalPrice" required readonly
                                     class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-[12px] px-4 rounded-xl text-base outline-none cursor-not-allowed text-right font-mono font-bold">
                             </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">จำนวน <span
-                                        class="text-red-500">*</span></label>
-                                <input type="number" id="modalQty" required min="1" step="1" value="1"
-                                    oninput="calculateTotalAmt()"
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">จำนวน <span
+                                        class="text-red-500">*</span></label><input type="number" id="modalQty" required
+                                    min="1" step="1" value="1" oninput="calculateTotalAmt()"
                                     class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none text-right font-mono font-bold">
                             </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">วงเงินรวม (บาท)</label>
-                                <input type="number" step="0.01" id="modalAmt" required readonly
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">วงเงินรวม
+                                    (บาท)</label><input type="number" step="0.01" id="modalAmt" required readonly
                                     class="w-full bg-green-50 border border-green-200 text-green-700 py-[12px] px-4 rounded-xl text-base outline-none cursor-not-allowed text-right font-mono font-black">
                             </div>
                         </div>
-
-                        <!-- Row 4: แหล่งงบฯ, ปีงบฯ, ความสำคัญ, ความสำคัญ(จังหวัด) -->
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">แหล่งงบประมาณ <span
-                                        class="text-red-500">*</span></label>
-                                <input type="text" id="modalFund" required placeholder="เช่น งบค่าเสื่อม..."
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">แหล่งงบประมาณ <span
+                                        class="text-red-500">*</span></label><input type="text" id="modalFund" required
+                                    placeholder="เช่น งบค่าเสื่อม..."
                                     class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
                             </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">ปีงบประมาณ <span
-                                        class="text-red-500">*</span></label>
-                                <select id="modalYear" required class="w-full modal-select2">
+                            <div><label class="block text-base font-bold text-slate-700 mb-3">ปีงบประมาณ <span
+                                        class="text-red-500">*</span></label><select id="modalYear" required
+                                    class="w-full modal-select2">
                                     <option value="">เลือกปีงบประมาณ...</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">ลำดับความสำคัญ</label>
-                                <input type="number" id="modalPriority" placeholder="ระบุตัวเลข..."
+                                </select></div>
+                            <div><label
+                                    class="block text-base font-bold text-slate-700 mb-3">ลำดับความสำคัญ</label><input
+                                    type="number" id="modalPriority" placeholder="ระบุตัวเลข..."
                                     class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
                             </div>
-                            <div>
-                                <label class="block text-base font-bold text-slate-700 mb-3">ความสำคัญ(จังหวัด)</label>
-                                <input type="text" id="modalProvPriority" placeholder="ระบุความสำคัญ..."
+                            <div><label
+                                    class="block text-base font-bold text-slate-700 mb-3">ความสำคัญ(จังหวัด)</label><input
+                                    type="text" id="modalProvPriority" placeholder="ระบุความสำคัญ..."
                                     class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
                             </div>
                         </div>
-
-
-
                         <div class="pt-6 flex gap-4 justify-end border-t border-slate-100 mt-6">
                             <button type="button" onclick="closeAddEqModal()"
                                 class="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">ยกเลิก</button>
                             <button type="submit" id="submitEqBtn"
-                                class="py-3 px-8 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                class="py-3 px-8 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2"><svg
+                                    xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
                                     fill="currentColor">
                                     <path fill-rule="evenodd"
                                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                         clip-rule="evenodd" />
-                                </svg>
-                                บันทึกข้อมูล
-                            </button>
+                                </svg>บันทึกข้อมูล</button>
                         </div>
                     </form>
                 </div>
@@ -952,7 +972,7 @@
                 </div>
             </footer>
         </main>
-    </div> <!-- Close right flex panel -->
+    </div>
 
     <script>
         const VERSION = "<?= version ?>";
