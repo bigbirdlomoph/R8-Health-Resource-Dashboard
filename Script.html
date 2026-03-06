@@ -32,7 +32,6 @@
             'เมืองหนองบัวลำภู', '3902': 'นากลาง', '3903': 'โนนสัง', '3904': 'ศรีบุญเรือง', '3905': 'สุวรรณคูหา', '3906': 'นาวัง'
     };
 
-    // [ZONE STRUCTURE]
     const ZONES = {
         'Zone 8.1': ['อุดรธานี', 'เลย', 'หนองบัวลำภู'],
         'Zone 8.2': ['หนองคาย', 'บึงกาฬ'],
@@ -60,6 +59,7 @@
     const charts = {};
     let lastTableMode = null;
 
+    function formatMoney(n) { return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function cleanNum(v) { if (!v || v === "-") return 0; return parseFloat(String(v).replace(/,/g, '')) || 0; }
     function getValClass(v) { return cleanNum(v) === 0 ? 'zero-value' : ''; }
     function escapeHtml(s) {
@@ -118,11 +118,10 @@
         (rawData.bed || []).slice(1).forEach(r => { if (r[6]) rowByCode.bed[String(r[6]).trim()] = r; });
         (rawData.hospital_structure || []).slice(1).forEach(r => { if (r[6]) rowByCode.str[String(r[6]).trim()] = r; });
 
-        // Process m_eq_sp data
         let eqData = [];
         if (rawData.meqsp && rawData.meqsp.length > 1) {
             const eqHeaders = rawData.meqsp[0];
-            const spIdx = eqHeaders.findIndex(h => h && h.includes('สาขา')); // "สาขา SP" หรือ "สาขา"
+            const spIdx = eqHeaders.findIndex(h => h && h.includes('สาขา'));
             const hospIdx = eqHeaders.findIndex(h => h && h.includes('หน่วยบริการ'));
             const itemIdx = eqHeaders.findIndex(h => h && h.includes('ชื่อรายการ'));
             const priceIdx = eqHeaders.findIndex(h => h && h.includes('ราคาต่อหน่วย'));
@@ -134,7 +133,7 @@
             eqData = rawData.meqsp.slice(1).map((r, idx) => {
                 const hName = String(r[hospIdx] || '').trim();
                 return {
-                    rowIdx: idx + 2, // Row in Google Sheet (header is row 1, data starts at row 2)
+                    rowIdx: idx + 2,
                     year: yearIdx > -1 ? String(r[yearIdx] || '').trim() : '',
                     sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
                     hosp: hName,
@@ -144,14 +143,13 @@
                     price: priceIdx > -1 ? cleanNum(r[priceIdx]) : 0,
                     qty: qtyIdx > -1 ? cleanNum(r[qtyIdx]) : 0,
                     amt: amtIdx > -1 ? cleanNum(r[amtIdx]) : 0,
-                    itemCode: String(r[9] || '').trim(), // Col J
-                    priority: String(r[10] || '').trim(), // Col K
-                    provPriority: String(r[11] || '').trim() // Col L
+                    itemCode: String(r[9] || '').trim(),
+                    priority: String(r[10] || '').trim(),
+                    provPriority: String(r[11] || '').trim()
                 };
             });
         }
 
-        // Extract SP List from eqData
         const spSet = new Set();
         const yearSet = new Set();
         eqData.forEach(item => {
@@ -161,7 +159,7 @@
         const spList = Array.from(spSet).sort();
         const yearList = Array.from(yearSet).sort((a, b) => b.toString().localeCompare(a.toString()));
         const allHospList = Array.from(new Set(Object.keys(hospProvMap))).map(h => ({ val: h, text: `[${hospProvMap[h]}] ${h}` })).sort((a, b) => a.text.localeCompare(b.text, 'th'));
-        let mspListSource = []; // For dropdown options
+        let mspListSource = [];
         if (rawData.msp && rawData.msp.length > 1) {
             mspListSource = Array.from(new Set(rawData.msp.slice(1).map(r => String(r[0] || '').trim()).filter(s => s !== ''))).sort();
         }
@@ -169,11 +167,10 @@
         let meqmophList = [];
         if (rawData.meqmoph && rawData.meqmoph.length > 1) {
             meqmophList = rawData.meqmoph.slice(1).map(r => ({
-                code: String(r[3] || '').trim(), // Col D
-                name: String(r[4] || '').trim(), // Col E
-                price: cleanNum(r[6]) // Col G
+                code: String(r[3] || '').trim(),
+                name: String(r[4] || '').trim(),
+                price: cleanNum(r[6])
             })).filter(i => i.name !== '');
-            // Unique by name (in case of duplicates)
             const mapUnique = new Map();
             meqmophList.forEach(i => { if (!mapUnique.has(i.name)) mapUnique.set(i.name, i); });
             meqmophList = Array.from(mapUnique.values()).sort((a, b) => a.name.localeCompare(b.name, 'th'));
@@ -285,22 +282,32 @@
                 reject(new Error("google.script is not available"));
                 return;
             }
-            google.script.run.withSuccessHandler(res => {
-                if (res.status === 'success') {
-                    rawData = res.data;
-                    setLastUpdated(res.meta);
-                    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data: rawData, meta: res.meta }));
-                    resolve({ from: "server", meta: res.meta });
-                } else reject(new Error(res.message || "Unknown error"));
-            }).withFailureHandler(err => reject(err)).getDashboardData();
+            google.script.run
+                .withSuccessHandler(resRaw => {
+                    try {
+                        // ป้องกัน Error โดยการเช็คว่าเป็นข้อความ (String) แล้วค่อยแปลกลับเป็น Object
+                        const res = typeof resRaw === 'string' ? JSON.parse(resRaw) : resRaw;
+                        if (res.status === 'success') {
+                            rawData = res.data;
+                            setLastUpdated(res.meta);
+                            sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data: rawData, meta: res.meta }));
+                            resolve({ from: "server", meta: res.meta });
+                        } else {
+                            reject(new Error(res.message || "Unknown error"));
+                        }
+                    } catch (parseErr) {
+                        reject(new Error("Data parsing error: " + parseErr.message));
+                    }
+                })
+                .withFailureHandler(err => reject(err))
+                .getDashboardData();
         });
     }
 
     async function refreshNow() {
         if (typeof google === 'undefined' || !google.script) return;
         const btn = document.getElementById('refreshBtn');
-        btn.disabled = true;
-        btn.classList.add('opacity-70');
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-70'); }
         showLoader("กำลังรีเฟรชและล้างแคช... v." + VERSION);
         try {
             sessionStorage.removeItem(SESSION_KEY);
@@ -312,25 +319,18 @@
             processAndRender(true);
             toast("รีเฟรชข้อมูลล่าสุดเรียบร้อย");
         } catch (e) { showFatal("Refresh failed: " + e.message); toast("รีเฟรชไม่สำเร็จ"); }
-        finally { hideLoader(); btn.disabled = false; btn.classList.remove('opacity-70'); }
+        finally { hideLoader(); if (btn) { btn.disabled = false; btn.classList.remove('opacity-70'); } }
     }
 
     function destroyTables() {
-        const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable', '#eqTable'];
-        tables.forEach(t => {
-            if ($.fn.DataTable.isDataTable(t)) {
-                $(t).DataTable().destroy();
-            }
+        ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable', '#eqTable'].forEach(t => {
+            if ($.fn.DataTable.isDataTable(t)) { $(t).DataTable().destroy(); }
         });
     }
 
     function initTables() {
-        const tables = ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable'];
-        tables.forEach(t => {
-            $(t).DataTable({
-                paging: false, info: false, searching: false,
-                scrollX: true, deferRender: true, autoWidth: false, destroy: true
-            });
+        ['#bedTable', '#structureTable', '#physicianTable', '#nurseTable'].forEach(t => {
+            $(t).DataTable({ paging: false, info: false, searching: false, scrollX: true, deferRender: true, autoWidth: false, destroy: true });
         });
     }
 
@@ -352,49 +352,41 @@
         const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
         const totalHosp = list.reduce((s, p) => s + (stats[p]?.count || 0), 0);
         const totalPop = Math.round(list.reduce((s, p) => s + (stats[p]?.pop || 0), 0));
-        const totalCoreDocs = Math.round(list.reduce((sum, p) => sum + KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0),
-            0), 0));
+        const totalCoreDocs = Math.round(list.reduce((sum, p) => sum + KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0), 0), 0));
         const totalRealBeds = Math.round(list.reduce((s, p) => s + (stats[p]?.beds?.["เตียงจริง"] || 0), 0));
 
-        document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
-        document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
-        document.getElementById('totalCoreDoctors').innerText = totalCoreDocs.toLocaleString();
-        document.getElementById('totalRealBeds').innerText = totalRealBeds.toLocaleString();
+        if (document.getElementById('totalHospitals')) document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
+        if (document.getElementById('totalPopulation')) document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
+        if (document.getElementById('totalCoreDoctors')) document.getElementById('totalCoreDoctors').innerText = totalCoreDocs.toLocaleString();
+        if (document.getElementById('totalRealBeds')) document.getElementById('totalRealBeds').innerText = totalRealBeds.toLocaleString();
 
-        // [UPDATE] Zone Grouping Logic with Total Calculation
         let html = '';
         for (const [zoneName, provs] of Object.entries(ZONES)) {
-            // Calculate Zone Total
             let zoneSum = 0;
             provs.forEach(p => zoneSum += (stats[p]?.count || 0));
 
             html += `<div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 flex flex-col items-center">
-    <div class="mb-4 flex items-center gap-2">
-        <span
-            class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">${zoneName}</span>
-        <span class="text-xs font-black text-green-700">รวม ${zoneSum} แห่ง</span>
-    </div>
-    <div class="flex flex-wrap justify-center gap-6 w-full">`;
+                <div class="mb-4 flex items-center gap-2">
+                    <span class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">${zoneName}</span>
+                    <span class="text-xs font-black text-moph-700">รวม ${zoneSum} แห่ง</span>
+                </div>
+                <div class="flex flex-wrap justify-center gap-6 w-full">`;
 
             provs.forEach(p => {
                 const isDim = filter !== 'ALL' && filter !== p;
                 const count = stats[p]?.count ?? 0;
                 html += `<div class="flex flex-col items-center transition-all ${isDim ? 'opacity-20 grayscale' : ''}">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                style="color:${PROV_COLORS[p] || '#94a3b8'}">
-                <path stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
-            </svg>
-            <span class="text-[13px] font-bold text-slate-700">${escapeHtml(p)}</span>
-            <span class="text-xl font-black text-slate-800">${count}</span>
-            <span class="text-[10px] font-bold text-slate-400 mt-1">แห่ง</span>
-        </div>`;
+                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:${PROV_COLORS[p] || '#94a3b8'}">
+                        <path stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
+                    </svg>
+                    <span class="text-[13px] font-bold text-slate-700">${escapeHtml(p)}</span>
+                    <span class="text-xl font-black text-slate-800">${count}</span>
+                    <span class="text-[10px] font-bold text-slate-400 mt-1">แห่ง</span>
+                </div>`;
             });
-
-            html += `</div>
-</div>`;
+            html += `</div></div>`;
         }
-        document.getElementById('hospitalCards').innerHTML = html;
+        if (document.getElementById('hospitalCards')) document.getElementById('hospitalCards').innerHTML = html;
     }
 
     function updateProvDrilldownCards(filter) {
@@ -421,18 +413,11 @@
         destroyTables();
 
         if (rebuildHeaders) {
-            const headerLead = isAll ? `<th>จังหวัด</th>` : `<th>โรงพยาบาล</th>
-<th>ประเภท</th>
-<th>ระดับเดิม</th>
-<th>ระดับ SAP</th>`;
-            if (document.getElementById('bedHeader')) document.getElementById('bedHeader').innerHTML =
-                `${headerLead}${KEYS.BED.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
-            if (document.getElementById('structureHeader')) document.getElementById('structureHeader').innerHTML =
-                `${headerLead}${KEYS.STRUCT.map(k => `<th>${escapeHtml(k)}</th>`).join('')}`;
-            if (document.getElementById('physicianHeader')) document.getElementById('physicianHeader').innerHTML =
-                `${headerLead}${KEYS.DOC.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
-            if (document.getElementById('nurseHeader')) document.getElementById('nurseHeader').innerHTML =
-                `${headerLead}${KEYS.NURSE.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+            const headerLead = isAll ? `<th>จังหวัด</th>` : `<th>โรงพยาบาล</th><th>ประเภท</th><th>ระดับเดิม</th><th>ระดับ SAP</th>`;
+            if (document.getElementById('bedHeader')) document.getElementById('bedHeader').innerHTML = `${headerLead}${KEYS.BED.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+            if (document.getElementById('structureHeader')) document.getElementById('structureHeader').innerHTML = `${headerLead}${KEYS.STRUCT.map(k => `<th>${escapeHtml(k)}</th>`).join('')}`;
+            if (document.getElementById('physicianHeader')) document.getElementById('physicianHeader').innerHTML = `${headerLead}${KEYS.DOC.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
+            if (document.getElementById('nurseHeader')) document.getElementById('nurseHeader').innerHTML = `${headerLead}${KEYS.NURSE.map(k => `<th>${escapeHtml(k)}</th>`).join('')}<th>รวม</th>`;
         }
 
         const list = isAll ? MODEL.sortedProvinces : hospList;
@@ -446,38 +431,24 @@
                     total += v;
                     cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
                 }
-                return `<tr>
-    <td>${escapeHtml(p)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">
-        ${total.toLocaleString()}</td>` : ''}
-</tr>`;
+                return `<tr><td>${escapeHtml(p)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">${total.toLocaleString()}</td>` : ''}</tr>`;
             } else {
                 const r = codeRowMap[item.code5] || [];
-                const keyIdx = statsField === 'docs' ? idx.medicalDocs : (statsField === 'nurses' ? idx.medicalNurses : (statsField ===
-                    'beds' ? idx.bed : idx.structure));
+                const keyIdx = statsField === 'docs' ? idx.medicalDocs : (statsField === 'nurses' ? idx.medicalNurses : (statsField === 'beds' ? idx.bed : idx.structure));
                 for (const k of keys) {
                     const i = keyIdx[k];
                     const v = (i > -1) ? cleanNum(r[i]) : 0;
                     total += v;
                     cells += `<td class="${getValClass(v)}">${v.toLocaleString()}</td>`;
                 }
-                return `<tr>
-    <td>${escapeHtml(item.name)}</td>
-    <td>${escapeHtml(TYPE_MAP[item.type] || item.type)}</td>
-    <td>${escapeHtml(item.oldLvl)}</td>
-    <td>${escapeHtml(item.sapLvl)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">
-        ${total.toLocaleString()}</td>` : ''}
-</tr>`;
+                return `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(TYPE_MAP[item.type] || item.type)}</td><td>${escapeHtml(item.oldLvl)}</td><td>${escapeHtml(item.sapLvl)}</td>${cells}${statsField !== 'structure' ? `<td class="doc-total-cell">${total.toLocaleString()}</td>` : ''}</tr>`;
             }
         };
 
-        if (document.getElementById('bedBody')) document.getElementById('bedBody').innerHTML = list.map(i => renderRow(i,
-            KEYS.BED, rowByCode.bed, 'beds')).join('');
-        if (document.getElementById('structureBody')) document.getElementById('structureBody').innerHTML = list.map(i =>
-            renderRow(i, KEYS.STRUCT, rowByCode.str, 'structure')).join('');
-        if (document.getElementById('physicianBody')) document.getElementById('physicianBody').innerHTML = list.map(i =>
-            renderRow(i, KEYS.DOC, rowByCode.med, 'docs')).join('');
-        if (document.getElementById('nurseBody')) document.getElementById('nurseBody').innerHTML = list.map(i => renderRow(i,
-            KEYS.NURSE, rowByCode.med, 'nurses')).join('');
+        if (document.getElementById('bedBody')) document.getElementById('bedBody').innerHTML = list.map(i => renderRow(i, KEYS.BED, rowByCode.bed, 'beds')).join('');
+        if (document.getElementById('structureBody')) document.getElementById('structureBody').innerHTML = list.map(i => renderRow(i, KEYS.STRUCT, rowByCode.str, 'structure')).join('');
+        if (document.getElementById('physicianBody')) document.getElementById('physicianBody').innerHTML = list.map(i => renderRow(i, KEYS.DOC, rowByCode.med, 'docs')).join('');
+        if (document.getElementById('nurseBody')) document.getElementById('nurseBody').innerHTML = list.map(i => renderRow(i, KEYS.NURSE, rowByCode.med, 'nurses')).join('');
 
         initTables();
     }
@@ -488,43 +459,17 @@
         const optB = {
             responsive: true, maintainAspectRatio: false, plugins: {
                 legend: { position: 'bottom' }, datalabels: {
-                    color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v) => v > 0 ? v.toLocaleString() : '', align: 'center',
-                    anchor: 'center'
+                    color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v) => v > 0 ? v.toLocaleString() : '', align: 'center', anchor: 'center'
                 }
             }
         };
-        const optO = {
-            ...optB, plugins: {
-                ...optB.plugins, datalabels: {
-                    ...optB.plugins.datalabels, align: 'end', anchor:
-                        'end', color: '#1e293b'
-                }
-            }
-        };
+        const optO = { ...optB, plugins: { ...optB.plugins, datalabels: { ...optB.plugins.datalabels, align: 'end', anchor: 'end', color: '#1e293b' } } };
 
         if (filter !== 'ALL') {
             const distObj = stats[filter]?.distPops || {};
-            upsertChart('dist', 'distPopChart', {
-                type: 'bar', data: {
-                    labels: Object.keys(distObj), datasets: [{
-                        label:
-                            'ประชากรรายอำเภอ', data: Object.values(distObj), backgroundColor: '#3b82f6'
-                    }]
-                }, options: optB
-            });
+            upsertChart('dist', 'distPopChart', { type: 'bar', data: { labels: Object.keys(distObj), datasets: [{ label: 'ประชากรรายอำเภอ', data: Object.values(distObj), backgroundColor: '#3b82f6' }] }, options: optB });
             const vals = KEYS.DOC.map(k => stats[filter]?.docs?.[k] || 0);
-            upsertChart('docSpec', 'docSpecChart', {
-                type: 'bar', data: {
-                    labels: KEYS.DOC, datasets: [{
-                        label: 'จำนวนแพทย์ (คน)',
-                        data: vals, backgroundColor: '#4f46e5'
-                    }]
-                }, options: {
-                    ...optO, plugins: {
-                        ...optO.plugins, legend: { display: false }
-                    }, scales: { y: { beginAtZero: true } }
-                }
-            });
+            upsertChart('docSpec', 'docSpecChart', { type: 'bar', data: { labels: KEYS.DOC, datasets: [{ label: 'จำนวนแพทย์ (คน)', data: vals, backgroundColor: '#4f46e5' }] }, options: { ...optO, plugins: { ...optO.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
         } else { destroyChart('dist'); destroyChart('docSpec'); }
 
         upsertChart('hType', 'hospTypeChart', {
@@ -537,53 +482,51 @@
             }, options: { ...optB, scales: { x: { stacked: filter === 'ALL' }, y: { stacked: filter === 'ALL' } } }
         });
 
-        upsertChart('pop', 'popChart', {
-            type: 'bar', data: {
-                labels, datasets: [{
-                    label: 'ประชากร', data: labels.map(l =>
-                        stats[l]?.pop || 0), backgroundColor: '#056839'
-                }]
-            }, options: optO
-        });
-        upsertChart('core', 'coreBarChart', {
-            type: 'bar', data: {
-                labels, datasets: [{
-                    label: 'รวมแพทย์', data: labels.map(l =>
-                        KEYS.DOC.reduce((s, k) => s + (stats[l]?.docs?.[k] || 0), 0)), backgroundColor: '#16a34a'
-                }]
-            }, options: optO
-        });
+        upsertChart('pop', 'popChart', { type: 'bar', data: { labels, datasets: [{ label: 'ประชากร', data: labels.map(l => stats[l]?.pop || 0), backgroundColor: '#056839' }] }, options: optO });
+        upsertChart('core', 'coreBarChart', { type: 'bar', data: { labels, datasets: [{ label: 'รวมแพทย์', data: labels.map(l => KEYS.DOC.reduce((s, k) => s + (stats[l]?.docs?.[k] || 0), 0)), backgroundColor: '#16a34a' }] }, options: optO });
         upsertChart('sap', 'sapChart', {
             type: 'bar', data: {
                 labels, datasets: ['S+', 'S', 'A+', 'A', 'P+', 'P'].map(g => ({
-                    label: g, data: labels.map(l => stats[l]?.sap?.[g] || 0), backgroundColor: {
-                        'S+': '#056839', 'S': '#16a34a', 'A+':
-                            '#1d4ed8', 'A': '#3b82f6', 'P+': '#ea580c', 'P': '#f59e0b'
-                    }[g]
+                    label: g, data: labels.map(l => stats[l]?.sap?.[g] || 0), backgroundColor: { 'S+': '#056839', 'S': '#16a34a', 'A+': '#1d4ed8', 'A': '#3b82f6', 'P+': '#ea580c', 'P': '#f59e0b' }[g]
                 }))
-            }, options: {
-                ...optB, scales: {
-                    x: {
-                        stacked: true
-                    }, y: { stacked: true }
-                }
-            }
+            }, options: { ...optB, scales: { x: { stacked: true }, y: { stacked: true } } }
         });
     }
 
-    // Tab Switching Logic
+    // ฟังก์ชันเปิด-ปิดเมนูย่อย
+    function toggleSubmenu(submenuId, chevronId) {
+        const submenu = document.getElementById(submenuId);
+        const chevron = document.getElementById(chevronId);
+        if (submenu.classList.contains('hidden')) {
+            submenu.classList.remove('hidden');
+            chevron.style.transform = 'rotate(180deg)'; // หมุนลูกศรขึ้น
+        } else {
+            submenu.classList.add('hidden');
+            chevron.style.transform = 'rotate(0deg)'; // หมุนลูกศรลง
+        }
+    }
+
     function switchTab(tabId) {
+        if (tabId.startsWith('gis')) {
+            const submenu = document.getElementById('gisSubmenu');
+            const chevron = document.getElementById('gisChevron');
+            if (submenu) submenu.classList.remove('hidden');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+
         const mainContent = document.getElementById('mainContent');
         const eqContent = document.getElementById('eqContent');
         const gisContent = document.getElementById('gisContent');
         const gisBedContent = document.getElementById('gisBedContent');
         const gisDoctorContent = document.getElementById('gisDoctorContent');
+        const gisNurseContent = document.getElementById('gisNurseContent');
 
         const mainBtn = document.getElementById('tabMainBtn');
         const eqBtn = document.getElementById('tabEqBtn');
         const gisBtn = document.getElementById('tabGisBtn');
         const gisBedBtn = document.getElementById('tabGisBedBtn');
         const gisDoctorBtn = document.getElementById('tabGisDoctorBtn');
+        const gisNurseBtn = document.getElementById('tabGisNurseBtn');
 
         const pageTitle = document.getElementById('headerPageTitle');
         const pageSubtitle = document.getElementById('headerPageSubtitle');
@@ -613,6 +556,7 @@
         setBtnState(gisBtn, tabId === 'gis');
         setBtnState(gisBedBtn, tabId === 'gis_bed');
         setBtnState(gisDoctorBtn, tabId === 'gis_doctor');
+        setBtnState(gisNurseBtn, tabId === 'gis_nurse');
 
         if (tabId === 'main') {
             if (pageTitle) pageTitle.innerText = "ภาพรวมทรัพยากร";
@@ -624,28 +568,33 @@
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+            if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
         } else if (tabId === 'eq') {
             if (pageTitle) pageTitle.innerText = "ครุภัณฑ์ SP";
             if (pageSubtitle) pageSubtitle.innerText = "ข้อมูลความต้องการครุภัณฑ์ Service Plan";
-            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for EQ
+            if (headerFilters) headerFilters.classList.add('hidden');
 
             if (eqContent) { eqContent.classList.remove('hidden'); setTimeout(() => eqContent.style.opacity = '1', 50); }
             if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+            if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
 
             if (document.getElementById('spBranchFilter') && document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
+            $('#spBranchFilter, #eqYearFilter, #eqProvFilter').off('change.app select2:select.app').on('change.app select2:select.app', function () { setTimeout(renderEqTable, 0); });
+
         } else if (tabId === 'gis') {
             if (pageTitle) pageTitle.innerText = "GIS ครุภัณฑ์ SP";
             if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวครุภัณฑ์ Service Plan";
-            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS
+            if (headerFilters) headerFilters.classList.add('hidden');
 
             if (gisContent) { gisContent.classList.remove('hidden'); setTimeout(() => gisContent.style.opacity = '1', 50); }
             if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
             if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+            if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
 
             if (document.getElementById('gisSpFilter') && document.getElementById('gisSpFilter').options.length <= 1 && MODEL) { populateGisDropdown(); }
 
@@ -653,49 +602,75 @@
                 if (!gisMap) { await initGisMap(); } else { gisMap.invalidateSize(); }
                 if (window.renderGisMap) renderGisMap();
             }, 200);
+
         } else if (tabId === 'gis_bed') {
             if (pageTitle) pageTitle.innerText = "GIS เตียง";
             if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวเตียงผู้ป่วย";
-            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS Bed
+            if (headerFilters) headerFilters.classList.add('hidden');
 
             if (gisBedContent) { gisBedContent.classList.remove('hidden'); setTimeout(() => gisBedContent.style.opacity = '1', 50); }
             if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
             if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+            if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+            if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
 
-            // Initialize select2 for GIS Bed filters
             if (!$('#gisBedProvFilter').hasClass('select2-hidden-accessible')) {
                 $('#gisBedProvFilter, #gisBedTypeFilter').select2({ minimumResultsForSearch: 10 });
             }
+            $('#gisBedProvFilter, #gisBedTypeFilter').off('change.app').on('change.app', renderGisBedMap);
 
             setTimeout(async () => {
                 if (!gisBedMap) { await initGisBedMap(); } else { gisBedMap.invalidateSize(); }
                 if (window.renderGisBedMap) renderGisBedMap();
             }, 200);
+
         } else if (tabId === 'gis_doctor') {
             if (pageTitle) pageTitle.innerText = "GIS แพทย์";
             if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวบุคลากรทางการแพทย์";
-            if (headerFilters) headerFilters.classList.add('hidden'); // Hide prov filter for GIS Doctor
+            if (headerFilters) headerFilters.classList.add('hidden');
 
             if (gisDoctorContent) { gisDoctorContent.classList.remove('hidden'); setTimeout(() => gisDoctorContent.style.opacity = '1', 50); }
             if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
             if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+            if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
 
-            // Initialize select2 for GIS Doctor filters
             if (!$('#gisDoctorProvFilter').hasClass('select2-hidden-accessible')) {
                 $('#gisDoctorProvFilter, #gisDoctorTypeFilter').select2({ minimumResultsForSearch: 10 });
             }
+            $('#gisDoctorProvFilter, #gisDoctorTypeFilter').off('change.app').on('change.app', renderGisDoctorMap);
 
             setTimeout(async () => {
                 if (!gisDoctorMap) { await initGisDoctorMap(); } else { gisDoctorMap.invalidateSize(); }
                 if (window.renderGisDoctorMap) renderGisDoctorMap();
             }, 200);
+
+        } else if (tabId === 'gis_nurse') {
+            if (pageTitle) pageTitle.innerText = "GIS พยาบาล";
+            if (pageSubtitle) pageSubtitle.innerText = "แผนที่กระจายตัวพยาบาลเฉพาะทาง";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            if (gisNurseContent) { gisNurseContent.classList.remove('hidden'); setTimeout(() => gisNurseContent.style.opacity = '1', 50); }
+            if (mainContent) { mainContent.classList.add('hidden'); mainContent.style.opacity = '0'; }
+            if (eqContent) { eqContent.classList.add('hidden'); eqContent.style.opacity = '0'; }
+            if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
+            if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
+            if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+
+            if (!$('#gisNurseProvFilter').hasClass('select2-hidden-accessible')) {
+                $('#gisNurseProvFilter, #gisNurseTypeFilter').select2({ minimumResultsForSearch: 10 });
+            }
+            $('#gisNurseProvFilter, #gisNurseTypeFilter').off('change.app').on('change.app', renderGisNurseMap);
+
+            setTimeout(async () => {
+                if (!gisNurseMap) { await initGisNurseMap(); } else { gisNurseMap.invalidateSize(); }
+                if (window.renderGisNurseMap) renderGisNurseMap();
+            }, 200);
         }
 
-        // Auto close sidebar on mobile/tablet if opened
-        if (window.innerWidth < 1024) { // lg breakpoint
+        if (window.innerWidth < 1024) {
             const sidebar = document.getElementById('sidebar');
             if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
                 toggleSidebar();
@@ -706,54 +681,25 @@
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        const rightPanel = document.getElementById('mainRightPanel');
-
         if (!sidebar) return;
-
-        // On Mobile/Tablet (lg: hidden breakpoint)
         if (window.innerWidth < 1024) {
             sidebar.classList.toggle('-translate-x-full');
             if (overlay) overlay.classList.toggle('hidden');
         } else {
-            // On Desktop - we shrink the sidebar instead
-            // To do this smoothly, we define a collapsed class state, e.g., w-[0px] or just -ml-[280px]
             sidebar.classList.toggle('-ml-[280px]');
         }
-
-        // Recalculate Layout elements (Map resize, DataTable redraws)
         setTimeout(() => {
-            if (gisMap) {
-                gisMap.invalidateSize();
-            }
-            if (gisBedMap) {
-                gisBedMap.invalidateSize();
-            }
+            if (gisMap) gisMap.invalidateSize();
+            if (gisBedMap) gisBedMap.invalidateSize();
+            if (gisDoctorMap) gisDoctorMap.invalidateSize();
+            if (gisNurseMap) gisNurseMap.invalidateSize();
             $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
         }, 300);
     }
 
-    let gisMap = null;
-    let gisBedMap = null;
-    let gisGeoJsonLayer = null;
-    let r8GeoJsonData = null;
-    let gisInfoControl = null;
-    let gisLegendControl = null;
-
-    function populateGisDropdown() {
-        if (!MODEL) return;
-        const spSelect = $('#gisSpFilter');
-        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
-        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
-        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
-
-        const yrSelect = $('#gisYearFilter');
-        yrSelect.empty().append('<option value="ALL">ทุกปีงบประมาณ</option>');
-        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
-
-        $('#gisSpFilter, #gisYearFilter').select2({ minimumResultsForSearch: 10 });
-    }
-
-    // Custom Color Scale based on total amount
+    // ==========================================
+    // UNIFIED MAP COLOR SCALE (MOPH Green Theme)
+    // ==========================================
     function getMapColor(d, maxVal) {
         if (!maxVal || maxVal === 0) maxVal = 1;
         const pct = d / maxVal;
@@ -762,722 +708,225 @@
                 pct > 0.4 ? '#238b45' :
                     pct > 0.2 ? '#41ab5d' :
                         pct > 0.05 ? '#74c476' :
-                            pct > 0 ? '#a1d99b' :
-                                '#f7fcf5';
+                            pct > 0 ? '#c7e9c0' :
+                                '#f8fafc';
     }
 
-    async function initGisMap() {
-        // Initialize Leaflet Map
-        const mapDiv = document.getElementById('spGisMap');
-        if (!mapDiv) return;
+    // ==========================================
+    // MAP LEGEND (ใช้ร่วมทุกแผนที่ GIS)
+    // ==========================================
+    function addMapLegend(map, maxVal, title, unit) {
+        if (map._legendControl) { map.removeControl(map._legendControl); }
+        if (!maxVal || maxVal === 0) maxVal = 1;
 
-        // Disable scroll zoom initially until clicked/focused to avoid capturing user page scroll
-        gisMap = L.map('spGisMap', { scrollWheelZoom: false }).setView([17.5, 103.5], 8);
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'info legend');
+            const pcts = [0, 0.05, 0.2, 0.4, 0.6, 0.8];
+            const grades = pcts.map(p => +(maxVal * p).toFixed(2));
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
-        }).addTo(gisMap);
+            const fmt = (v) => unit === 'บาท'
+                ? v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : Math.round(v).toLocaleString();
 
-        gisMap.on('focus', function () { gisMap.scrollWheelZoom.enable(); });
-        gisMap.on('blur', function () { gisMap.scrollWheelZoom.disable(); });
-
-        // Add Custom Info Control
-        gisInfoControl = L.control();
-        gisInfoControl.onAdd = function (map) {
-            this._div = L.DomUtil.create('div', 'info');
-            this.update();
-            return this._div;
+            div.innerHTML = '<h4>' + title + '</h4>';
+            for (let i = 0; i < grades.length; i++) {
+                const from = grades[i];
+                const to = grades[i + 1];
+                div.innerHTML +=
+                    '<i style="background:' + getMapColor(from + 0.01, maxVal) + '"></i> ' +
+                    fmt(from) + (to ? ' &ndash; ' + fmt(to) : '+') + '<br>';
+            }
+            return div;
         };
-        gisInfoControl.update = function (props) {
-            this._div.innerHTML = '<h4>ข้อมูลแยกตามพื้นที่</h4>' + (props ?
-                '<b>อ.' + props.AMP_TH + ' จ.' + props.PROV_TH + '</b><br />' +
-                (props.gis_data ?
-                    'จำนวน: ' + props.gis_data.qty.toLocaleString() + ' ชิ้น<br />' +
-                    'งบประมาณ: ฿' + formatMoney(props.gis_data.amt)
-                    : 'ไม่มีข้อมูลครุภัณฑ์')
-                : 'เลื่อนเมาส์ไปที่พื้นที่');
-        };
-        gisInfoControl.addTo(gisMap);
+        legend.addTo(map);
+        map._legendControl = legend;
+    }
 
-        gisLegendControl = L.control({ position: 'bottomright' });
-        gisLegendControl.onAdd = function (map) {
-            this._div = L.DomUtil.create('div', 'info legend');
-            return this._div;
-        };
-        gisLegendControl.addTo(gisMap);
+    // ==========================================
+    // EQUIPMENTS TABLE & DROPDOWN LOGIC
+    // ==========================================
+    function populateEqDropdown() {
+        if (!MODEL) return;
+        const spSelect = $('#spBranchFilter');
+        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
+        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
+        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
+        const yrSelect = $('#eqYearFilter');
+        yrSelect.empty().append('<option value="ALL">ทุกปีงบ</option>');
+        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
+        $('#spBranchFilter, #eqYearFilter, #eqProvFilter').select2({ minimumResultsForSearch: 10 });
+        $('#spBranchFilter, #eqYearFilter, #eqProvFilter').off('change.app select2:select.app').on('change.app select2:select.app', function () { setTimeout(renderEqTable, 0); });
+    }
 
-        // Fetch District Polygon for Region 8 (Thailand)
-        // Public source of Thailand districts GeoJSON via JSDelivr to bypass Apps Script CORS blocks
+    function clearEqFilters() {
+        $('#eqYearFilter, #eqProvFilter, #spBranchFilter').val('ALL').trigger('change.select2');
+        document.getElementById('eqSearchInput').value = '';
+        renderEqTable();
+    }
+
+    function renderEqTable() {
+        if (!MODEL || !MODEL.eqData) return;
+        const year = document.getElementById('eqYearFilter').value;
+        const prov = document.getElementById('eqProvFilter').value;
+        const sp = document.getElementById('spBranchFilter').value;
+        const search = document.getElementById('eqSearchInput').value.toLowerCase();
+
+        let filtered = MODEL.eqData;
+        if (year !== 'ALL') filtered = filtered.filter(r => String(r.year) === String(year));
+        if (prov !== 'ALL') filtered = filtered.filter(r => String(r.prov) === String(prov));
+        if (sp !== 'ALL') filtered = filtered.filter(r => String(r.sp) === String(sp));
+        if (search) {
+            filtered = filtered.filter(r =>
+                String(r.hosp).toLowerCase().includes(search) ||
+                String(r.item).toLowerCase().includes(search) ||
+                String(r.sp).toLowerCase().includes(search)
+            );
+        }
+
+        let html = '';
+        let totItems = 0, totUnits = 0, totAmt = 0;
+
+        filtered.forEach(r => {
+            totItems++;
+            totUnits += r.qty;
+            const itemAmt = r.amt > 0 ? r.amt : (r.price * r.qty);
+            totAmt += itemAmt;
+
+            const editData = encodeURIComponent(JSON.stringify(r));
+
+            html += `<tr>
+                <td class="text-center text-slate-600">${r.year}</td>
+                <td class="text-center text-slate-600"><span class="px-2 py-1 bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200">${r.sp}</span></td>
+                <td class="text-slate-800 font-medium">${r.hosp}</td>
+                <td class="text-moph-800 font-medium">${r.item}</td>
+                <td class="text-center text-slate-600">${r.fundSrc}</td>
+                <td class="text-right text-slate-700">${r.price > 0 ? r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                <td class="text-center font-bold text-slate-700">${r.qty}</td>
+                <td class="text-right font-bold text-moph-700">${itemAmt > 0 ? itemAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+                <td class="text-center">
+                    <button onclick="openEditEqModal('${editData}')" class="p-1.5 bg-slate-50 hover:bg-amber-50 text-slate-400 hover:text-amber-500 rounded-lg transition-colors border border-slate-200 hover:border-amber-200 shadow-sm group relative">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                </td>
+            </tr>`;
+        });
+
+        if ($.fn.DataTable.isDataTable('#eqTable')) {
+            $('#eqTable').DataTable().destroy();
+        }
+
+        document.getElementById('eqBody').innerHTML = html;
+        document.getElementById('eqTotItems').innerText = totItems.toLocaleString();
+        document.getElementById('eqTotUnits').innerText = totUnits.toLocaleString();
+        document.getElementById('eqTotAmt').innerText = totAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        $('#eqTable').DataTable({
+            paging: true, info: true, searching: false, scrollX: true, pageLength: 15, lengthMenu: [15, 30, 50, 100],
+            language: {
+                lengthMenu: "แสดง _MENU_ รายการต่อหน้า", zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+                info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ", infoEmpty: "ไม่มีข้อมูล",
+                infoFiltered: "(กรองจาก _MAX_ รายการทั้งหมด)",
+                paginate: { first: "แรก", last: "สุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
+            }
+        });
+    }
+
+    function populateGisDropdown() {
+        if (!MODEL) return;
+        const spSelect = $('#gisSpFilter');
+        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
+        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
+        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
+        const yrSelect = $('#gisYearFilter');
+        yrSelect.empty().append('<option value="ALL">ทุกปีงบประมาณ</option>');
+        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
+        $('#gisProvFilter, #gisSpFilter, #gisYearFilter').select2({ minimumResultsForSearch: 10 });
+        $('#gisProvFilter, #gisSpFilter, #gisYearFilter').off('change.app').on('change.app', renderGisMap);
+    }
+
+    function clearGisFilters() {
+        $('#gisProvFilter, #gisSpFilter, #gisYearFilter').val('ALL').trigger('change.select2');
+        renderGisMap();
+    }
+
+    // ==========================================
+    // GIS EQUIPMENT MAP
+    // ==========================================
+    let gisMap = null;
+    let gisGeoJsonLayer = null;
+    let r8GeoJsonData = null;
+    let r8ProvGeoJsonData = null;
+
+    function clearProvFilter() {
+        document.getElementById('provinceFilter').value = 'ALL';
+        processAndRender(true);
+    }
+
+    async function loadProvinceBoundaries() {
+        if (r8ProvGeoJsonData) return r8ProvGeoJsonData;
         try {
-            document.getElementById('gisMapOverlay').classList.remove('hidden');
-            const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+            const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/provinces.geojson');
             const thGeoJson = await response.json();
-
-            // Filter only Region 8 Provinces
-            // 43: หนองคาย, 38: บึงกาฬ, 41: อุดรธานี, 42: เลย, 39: หนองบัวลำภู, 47: สกลนคร, 48: นครพนม
             const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
-            r8GeoJsonData = {
+            r8ProvGeoJsonData = {
                 type: "FeatureCollection",
                 features: thGeoJson.features.filter(f => {
                     const code = String(f.properties.pro_code || f.properties.PRO_CODE || '');
                     return r8Codes.includes(code);
                 })
             };
-            console.log("Filtered R8 GeoJSON Features:", r8GeoJsonData.features.length);
-
-            // We map the legacy properties to standard names
-            r8GeoJsonData.features.forEach(f => {
-                f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || '';
-                f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || '';
-            });
-
         } catch (err) {
-            console.error("Failed to load map boundaries", err);
-            toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
-        } finally {
-            document.getElementById('gisMapOverlay').classList.add('hidden');
+            console.error('Failed to load province boundaries', err);
         }
+        return r8ProvGeoJsonData;
     }
 
-    function renderGisMap() {
-        if (!MODEL || !MODEL.eqData || !r8GeoJsonData || !gisMap) return;
+    function addProvinceBorderLayer(map) {
+        if (map._provBorderLayer) map.removeLayer(map._provBorderLayer);
+        if (!r8ProvGeoJsonData) return;
+        map._provBorderLayer = L.geoJson(r8ProvGeoJsonData, {
+            style: { fillColor: 'transparent', fillOpacity: 0, weight: 2, color: '#475569', opacity: 0.6, dashArray: '' },
+            interactive: false
+        }).addTo(map);
+    }
 
-        const spFilter = document.getElementById('gisSpFilter').value;
-        const yearFilter = document.getElementById('gisYearFilter').value;
-
-        let filtered = MODEL.eqData;
-        if (spFilter !== 'ALL') {
-            filtered = filtered.filter(row => row.sp === spFilter);
-        }
-        if (yearFilter !== 'ALL') {
-            filtered = filtered.filter(row => String(row.year) === String(yearFilter));
-        }
-
-        // Aggregate by Province and then District (Hospital name matching)
-        // Since we don't have exact district codes for hospitals, we use a simple text match or map
-        // to a default district (เมือง) if not matched.
-        let distStats = {};
-        let tAmt = 0;
-        let tUnits = 0;
-
-        filtered.forEach(r => {
-            const calculatedAmt = r.amt > 0 ? r.amt : (r.price > 0 && r.qty > 0 ? (r.price * r.qty) : 0);
-            const qty = r.qty || 0;
-
-            let rawProv = r.prov !== undefined && r.prov !== null ? String(r.prov).trim() : '';
-            if (rawProv === 'undefined' || rawProv === 'null') rawProv = '';
-            let prov = rawProv.replace('จ.', '').trim();
-
-            // Fallback for province if empty and we can guess from hospital
-            if (!prov && r.hosp) {
-                if (r.hosp.includes('อุดร')) prov = 'อุดรธานี';
-                else if (r.hosp.includes('เลย')) prov = 'เลย';
-                else if (r.hosp.includes('สกล')) prov = 'สกลนคร';
-                else if (r.hosp.includes('นครพนม')) prov = 'นครพนม';
-                else if (r.hosp.includes('หนองคาย')) prov = 'หนองคาย';
-                else if (r.hosp.includes('บึงกาฬ')) prov = 'บึงกาฬ';
-                else if (r.hosp.includes('บัวลำภู')) prov = 'หนองบัวลำภู';
-            }
-            if (!prov) return;
-
-            // Try to match district from hospital name, else assign to "เมือง<Province>"
-            let distTarget = 'เมือง' + prov;
-
-            if (r.hosp === 'รพ.สกลนคร') distTarget = 'เมืองสกลนคร';
-            else if (r.hosp === 'รพ.อุดรธานี') distTarget = 'เมืองอุดรธานี';
-            // Simple heuristic to extract district
-            else {
-                for (let code in DISTRICT_MAP) {
-                    if (DISTRICT_MAP[code].includes('เมือง') && !distTarget.includes('เมือง')) continue;
-
-                    const distName = DISTRICT_MAP[code].replace('เมือง', ''); // "เมืองเลย" -> "เลย" to match รพ.เลย
-                    if (r.hosp.includes(DISTRICT_MAP[code]) || r.hosp.includes(distName)) {
-                        // verify it belongs to correct province
-                        // In real production, hospitals should have exact district ID mapping. For now, rely on names.
-                        distTarget = DISTRICT_MAP[code];
-                        break;
-                    }
+    function addProvinceLabels(map) {
+        if (map._provLabelLayer) map.removeLayer(map._provLabelLayer);
+        if (!r8ProvGeoJsonData) return;
+        map._provLabelLayer = L.geoJson(r8ProvGeoJsonData, {
+            style: { fillOpacity: 0, weight: 0, opacity: 0 },
+            onEachFeature: function (f, l) {
+                const name = f.properties.pro_th || f.properties.PRO_TH || '';
+                if (name) {
+                    l.bindTooltip('จ.' + name, {
+                        permanent: true, direction: 'center',
+                        className: 'province-label'
+                    }).openTooltip();
                 }
-            }
-
-            const key = prov + "_" + distTarget;
-            if (!distStats[key]) distStats[key] = { amt: 0, qty: 0 };
-            distStats[key].amt += calculatedAmt;
-            distStats[key].qty += qty;
-
-            tAmt += calculatedAmt;
-            tUnits += qty;
-        });
-        console.log("distStats Map Aggregation:", distStats);
-        console.log("tAmt:", tAmt, "tUnits:", tUnits);
-
-        // Update top cards
-        document.getElementById('gisTotUnits').innerText = tUnits.toLocaleString();
-        document.getElementById('gisTotAmt').innerText = formatMoney(tAmt);
-
-        let maxAmt = 0;
-        // Map stats geometry
-        r8GeoJsonData.features.forEach(f => {
-            const p = f.properties.PROV_TH;
-            // From GeoJSON 'name', some use "เมือง", some use "เมืองอุดรธานี"
-            let a = f.properties.AMP_TH;
-            if (a.startsWith('เมือง') && a !== 'เมือง' && !a.includes(p)) {
-                // GeoJSON sometimes has just "เมือง", sometimes "เมืองอุดรธานี"
-            } else if (a === 'เมือง') {
-                a = 'เมือง' + p;
-            }
-
-            // Some edge cases in Github geojson vs our namings
-            let key1 = p + "_" + a;
-            let key2 = p + "_เมือง" + p;
-
-            let foundAmt = 0;
-            let foundQty = 0;
-
-            // Try exact match
-            if (distStats[key1]) {
-                foundAmt = distStats[key1].amt;
-                foundQty = distStats[key1].qty;
-            } else if (a.includes('เมือง') && distStats[key2]) {
-                foundAmt = distStats[key2].amt;
-                foundQty = distStats[key2].qty;
-            } else {
-                // Try fuzzy match on keys
-                for (let k in distStats) {
-                    if (k.startsWith(p + "_") && (k.includes(a) || a.includes(k.split('_')[1]))) {
-                        foundAmt += distStats[k].amt;
-                        foundQty += distStats[k].qty;
-                    }
-                }
-            }
-
-            f.properties.gis_data = (foundAmt > 0 || foundQty > 0) ? { amt: foundAmt, qty: foundQty } : null;
-            if (foundAmt > maxAmt) maxAmt = foundAmt;
-        });
-
-        if (gisGeoJsonLayer) {
-            gisMap.removeLayer(gisGeoJsonLayer);
-        }
-
-        gisGeoJsonLayer = L.geoJson(r8GeoJsonData, {
-            style: function (feature) {
-                const data = feature.properties.gis_data;
-                const amt = data ? data.amt : 0;
-                return {
-                    weight: 1,
-                    opacity: 1,
-                    color: '#64748b',
-                    dashArray: '3',
-                    fillOpacity: 0.8,
-                    fillColor: getMapColor(amt, maxAmt)
-                };
             },
-            onEachFeature: function (feature, layer) {
-                layer.on({
-                    mouseover: function (e) {
-                        const l = e.target;
-                        l.setStyle({
-                            weight: 3,
-                            color: '#eab308',
-                            dashArray: '',
-                            fillOpacity: 0.9
-                        });
-                        l.bringToFront();
-                        gisInfoControl.update(layer.feature.properties);
-                    },
-                    mouseout: function (e) {
-                        gisGeoJsonLayer.resetStyle(e.target);
-                        gisInfoControl.update();
-                    },
-                    click: function (e) {
-                        gisMap.fitBounds(e.target.getBounds());
-                    }
-                });
-            }
-        }).addTo(gisMap);
-
-        // Update Legend
-        if (gisLegendControl && gisLegendControl._div) {
-            const grades = [0, 0.05, 0.2, 0.4, 0.6, 0.8];
-            let labels = ['<strong>วงเงิน (บาท)</strong><br>'];
-            for (let i = 0; i < grades.length; i++) {
-                const from = grades[i] * maxAmt;
-                const to = grades[i + 1] ? (grades[i + 1] * maxAmt) : maxAmt;
-
-                let rangeText = '';
-                if (from === 0 && (!grades[i + 1])) {
-                    rangeText = 'ไม่มีข้อมูล';
-                } else if (!grades[i + 1]) {
-                    rangeText = '> ' + formatMoney(from);
-                } else {
-                    rangeText = formatMoney(from) + ' &ndash; ' + formatMoney(to);
-                }
-
-                labels.push(
-                    '<i style="background:' + getMapColor(from + (maxAmt * 0.01), maxAmt) + '"></i> ' + rangeText
-                );
-            }
-            gisLegendControl._div.innerHTML = labels.join('<br>');
-        }
-
-        // Fit Map bounds if features exist
-        if (r8GeoJsonData.features.length > 0) {
-            gisMap.fitBounds(gisGeoJsonLayer.getBounds());
-        }
+            interactive: false
+        }).addTo(map);
     }
 
-    function populateEqDropdown() {
-        if (!MODEL) return;
-
-        // Filter SP
-        const spSelect = $('#spBranchFilter');
-        spSelect.empty().append('<option value="ALL">ทุกสาขา</option>');
-        const filterSpList = MODEL.spList && MODEL.spList.length > 0 ? MODEL.spList : (MODEL.mspListSource || []);
-        filterSpList.forEach(sp => spSelect.append(new Option(sp, sp)));
-
-        // Filter Year
-        const yrSelect = $('#eqYearFilter');
-        yrSelect.empty().append('<option value="ALL">ทุกปีงบประมาณ</option>');
-        MODEL.yearList.forEach(yr => yrSelect.append(new Option(yr, yr)));
-
-        $('.select2-filter').select2({ minimumResultsForSearch: 10 });
-
-        // Modal inputs
-        const mProv = $('#modalProv');
-        mProv.empty().append('<option value="">เลือกจังหวัด...</option>');
-        MODEL.sortedProvinces.forEach(p => mProv.append(new Option(p, p)));
-
-        const mSp = $('#modalSp');
-        mSp.empty().append('<option value="">เลือกสาขา SP...</option>');
-        const addSpList = MODEL.mspListSource && MODEL.mspListSource.length > 0 ? MODEL.mspListSource : (MODEL.spList || []);
-        addSpList.forEach(sp => mSp.append(new Option(sp, sp)));
-
-        const mYr = $('#modalYear');
-        mYr.empty().append('<option value="">เลือกปีงบประมาณ...</option>');
-        const curY = new Date().getFullYear() + 543;
-        for (let y = curY - 2; y <= curY + 5; y++) mYr.append(new Option(y, y));
-
-        // Initial empty state for hospital
-        const mHosp = $('#modalHosp');
-        mHosp.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
-
-        const mItem = $('#modalItem');
-        mItem.empty().append('<option value="">ค้นหาหรือเลือกชื่อรายการ...</option>');
-        MODEL.meqmophList.forEach(item => {
-            const opt = $(new Option(item.name, item.name));
-            opt.attr('data-price', item.price);
-            opt.attr('data-code', item.code);
-            mItem.append(opt);
-        });
-
-        $('.modal-select2').select2({ dropdownParent: $('#addEqModal'), width: '100%' });
-    }
-
-    function updateModalHospDropdown(preselectVal = '') {
-        const prov = document.getElementById('modalProv').value;
-        const mHosp = $('#modalHosp');
-        mHosp.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
-
-        if (prov && MODEL && MODEL.hospByProv[prov]) {
-            MODEL.hospByProv[prov].forEach(h => {
-                mHosp.append(new Option(h.name, h.name));
-            });
-        }
-
-        mHosp.val(preselectVal).trigger('change.select2');
-    }
-
-    function formatMoney(amount) {
-        return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    function renderEqTable() {
-        if (!MODEL || !MODEL.eqData) return;
-
-        const spFilter = document.getElementById('spBranchFilter').value;
-        const yearFilter = document.getElementById('eqYearFilter').value;
-        const searchStr = document.getElementById('eqSearchInput').value.toLowerCase();
-        const provFilterEq = document.getElementById('eqProvFilter') ? document.getElementById('eqProvFilter').value : 'ALL';
-
-        // Filter Data
-        let filtered = MODEL.eqData;
-        if (provFilterEq !== 'ALL') {
-            filtered = filtered.filter(row => row.prov === provFilterEq);
-        }
-        if (spFilter !== 'ALL') {
-            filtered = filtered.filter(row => row.sp === spFilter);
-        }
-        if (yearFilter !== 'ALL') {
-            filtered = filtered.filter(row => String(row.year) === String(yearFilter));
-        }
-        if (searchStr.trim() !== '') {
-            filtered = filtered.filter(row =>
-                String(row.item).toLowerCase().includes(searchStr) ||
-                String(row.hosp).toLowerCase().includes(searchStr)
-            );
-        }
-
-        // Calculate Totals
-        let tItems = 0, tUnits = 0, tAmt = 0;
-
-        const tbodyHtml = filtered.map(r => {
-            const qtyStr = r.qty > 0 ? String(r.qty) : '-';
-            const amtStr = r.amt > 0 ? formatMoney(r.amt) : (r.price > 0 && r.qty > 0 ? formatMoney(r.price * r.qty) : '-');
-            const calculatedAmt = r.amt > 0 ? r.amt : (r.price > 0 && r.qty > 0 ? (r.price * r.qty) : 0);
-
-            tItems += 1;
-            tUnits += (r.qty || 0);
-            tAmt += calculatedAmt;
-
-            const editData = encodeURIComponent(JSON.stringify(r));
-
-            return `
-    <tr>
-        <td class="text-center align-middle font-medium text-slate-800">${escapeHtml(r.priority || '-')}</td>
-        <td class="text-center align-middle break-words">${escapeHtml(r.provPriority || '-')}</td>
-        <td class="text-center align-middle font-medium text-slate-800">${escapeHtml(r.year)}</td>
-        <td class="font-bold text-green-800 text-left align-middle break-words">${escapeHtml(r.sp)}</td>
-        <td class="text-left align-middle break-words">${escapeHtml(r.hosp)}</td>
-        <td class="text-left align-middle font-medium break-words">${escapeHtml(r.item)}</td>
-        <td class="text-center align-middle text-slate-600">${escapeHtml(r.fundSrc)}</td>
-        <td class="text-right align-middle pr-6 whitespace-nowrap">${r.price > 0 ? formatMoney(r.price) : '-'}</td>
-        <td class="text-center align-middle font-bold text-slate-800">${qtyStr}</td>
-        <td class="text-right align-middle text-slate-800 font-bold pr-6 whitespace-nowrap">${amtStr}</td>
-        <td class="text-center align-middle">
-            <button onclick="openEditEqModal('${editData}')" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-800 rounded-lg transition-colors border border-amber-200 shadow-sm" title="แก้ไขรายการ">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-            </button>
-        </td>
-    </tr>
-    `;
-        }).join('');
-
-        // Datatable redraw logic
-        if ($.fn.DataTable.isDataTable('#eqTable')) {
-            $('#eqTable').DataTable().destroy();
-        }
-
-        document.getElementById('eqBody').innerHTML = tbodyHtml;
-        document.getElementById('eqTotItems').innerText = tItems.toLocaleString();
-        document.getElementById('eqTotUnits').innerText = tUnits.toLocaleString();
-        document.getElementById('eqTotAmt').innerText = formatMoney(tAmt);
-        if (document.getElementById('eqTotAmtTitle')) {
-            document.getElementById('eqTotAmtTitle').innerText = yearFilter === 'ALL' ? 'วงเงินรวม (บาท)' : `วงเงินปีงบประมาณ ${yearFilter} (บาท)`;
-        }
-
-        $('#eqTable').DataTable({
-            paging: true,
-            info: true,
-            searching: false, // Custom search used instead
-            ordering: true, // Allow column sorting
-            autoWidth: false,
-            pageLength: 10,
-            lengthMenu: [[10, 20, 25, 50, 100, -1], [10, 20, 25, 50, 100, "ทั้งหมด"]],
-            dom: '<"flex flex-col md:flex-row justify-between items-center mb-4"<"w-full md:w-auto mb-2 md:mb-0"l><"w-full md:w-auto flex items-center justify-end gap-4 text-sm text-slate-500"pi>>rt',
-            language: {
-                lengthMenu: "แสดง _MENU_ รายการ",
-                info: "หน้า _PAGE_ / _PAGES_ (รวม _TOTAL_ รายการ)",
-                infoEmpty: "ไม่พบข้อมูล",
-                paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "»", previous: "«" }
-            }
-        });
-    }
-
-    function processAndRender(forceRebuild = false) {
-        if (!MODEL) return;
-        const filterEl = document.getElementById('provinceFilter');
-        const filter = filterEl ? filterEl.value : 'ALL';
-        const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
-        const modeChanged = (mode !== lastTableMode);
-        updateTopStatsAndCards(filter);
-        updateProvDrilldownCards(filter);
-        renderTables(filter, modeChanged || forceRebuild);
-        drawCharts(filter);
-        renderEqTable();
-        const main = document.getElementById('mainContent');
-        if (main) main.style.opacity = '1';
-        lastTableMode = mode;
-    }
-
-    function openAddEqModal() {
-        document.getElementById('modalMode').value = 'add';
-        document.getElementById('modalRowIdx').value = '';
-        document.getElementById('modalAmt').value = 0;
-        document.getElementById('modalPriority').value = '';
-        document.getElementById('modalProvPriority').value = '';
-        document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
-
-        // Clear cascading dropdown
-        $('#modalProv').val('').trigger('change.select2');
-        updateModalHospDropdown();
-
-        const m = document.getElementById('addEqModal');
-        m.classList.remove('hidden');
-        setTimeout(() => m.classList.remove('opacity-0'), 10);
-        const b = document.getElementById('addEqModalBody');
-        b.classList.remove('scale-95');
-        b.classList.add('scale-100');
-    }
-
-    function openEditEqModal(encodedData) {
-        try {
-            const data = JSON.parse(decodeURIComponent(encodedData));
-            document.getElementById('modalMode').value = 'edit';
-            document.getElementById('modalRowIdx').value = data.rowIdx;
-            document.getElementById('addEqModalTitle').innerText = 'แก้ไขรายการครุภัณฑ์ (แถวที่ ' + data.rowIdx + ')';
-
-            // Populate form
-            $('#modalProv').val(data.prov).trigger('change.select2');
-            updateModalHospDropdown(data.hosp);
-
-            $('#modalYear').val(data.year).trigger('change.select2');
-            document.getElementById('modalFund').value = data.fundSrc || '';
-            $('#modalSp').val(data.sp).trigger('change.select2');
-
-            var itemExists = false;
-            $('#modalItem option').each(function () {
-                if (this.value === data.item) itemExists = true;
-            });
-
-            if (itemExists) {
-                $('#modalItem').val(data.item).trigger('change.select2');
-            } else {
-                var newOption = new Option(data.item, data.item, true, true);
-                if (data.itemCode) {
-                    $(newOption).attr('data-code', data.itemCode);
-                }
-                $('#modalItem').append(newOption).trigger('change.select2');
-            }
-
-            document.getElementById('modalPrice').value = data.price || 0;
-            document.getElementById('modalQty').value = data.qty || 1;
-            document.getElementById('modalAmt').value = data.amt || 0;
-            document.getElementById('modalPriority').value = data.priority || '';
-            document.getElementById('modalProvPriority').value = data.provPriority || '';
-
-            // Open Modal
-            const m = document.getElementById('addEqModal');
-            m.classList.remove('hidden');
-            setTimeout(() => m.classList.remove('opacity-0'), 10);
-            const b = document.getElementById('addEqModalBody');
-            b.classList.remove('scale-95');
-            b.classList.add('scale-100');
-        } catch (e) {
-            console.error("Error parsing edit data", e);
-            alert("ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้");
-        }
-    }
-
-    function closeAddEqModal() {
-        const m = document.getElementById('addEqModal');
-        const b = document.getElementById('addEqModalBody');
-        m.classList.add('opacity-0');
-        b.classList.remove('scale-100');
-        b.classList.add('scale-95');
-        setTimeout(() => m.classList.add('hidden'), 300);
-        document.getElementById('addEqForm').reset();
-        $('#modalYear, #modalProv, #modalHosp, #modalSp, #modalItem').val('').trigger('change.select2');
-    }
-
-    function autoFillPrice() {
-        const selected = $('#modalItem').find(':selected');
-        const price = parseFloat(selected.data('price')) || 0;
-        const pInput = document.getElementById('modalPrice');
-        if (selected.val() !== "") {
-            pInput.value = price;
-        } else {
-            pInput.value = '';
-        }
-        calculateTotalAmt();
-    }
-
-    function calculateTotalAmt() {
-        const p = parseFloat(document.getElementById('modalPrice').value) || 0;
-        const q = parseInt(document.getElementById('modalQty').value, 10) || 0;
-        if (p || q) {
-            document.getElementById('modalAmt').value = (p * q).toFixed(2);
-        } else {
-            document.getElementById('modalAmt').value = '';
-        }
-    }
-
-    function clearEqFilters() {
-        document.getElementById('eqSearchInput').value = '';
-        $('#spBranchFilter').val('ALL').trigger('change.select2');
-        $('#eqYearFilter').val('ALL').trigger('change.select2');
-        renderEqTable();
-    }
-
-    async function submitAddEqMode(e) {
-        e.preventDefault();
-        const btn = document.getElementById('submitEqBtn');
-        const ogText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> บันทึก...`;
-
-        const mode = document.getElementById('modalMode').value;
-        const rowIdx = document.getElementById('modalRowIdx').value;
-
-        let record;
-        try {
-            const itemSelect = document.getElementById('modalItem');
-            const sIndex = itemSelect.selectedIndex;
-            const selectedOption = sIndex >= 0 ? itemSelect.options[sIndex] : null;
-            const itemCode = selectedOption ? ($(selectedOption).attr('data-code') || $(selectedOption).data('code') || '') : '';
-
-            record = {
-                rowIdx: rowIdx,
-                year: document.getElementById('modalYear').value,
-                fundSrc: document.getElementById('modalFund').value,
-                prov: document.getElementById('modalProv').value,
-                sp: document.getElementById('modalSp').value,
-                hosp: document.getElementById('modalHosp').value,
-                item: document.getElementById('modalItem').value,
-                price: parseFloat(document.getElementById('modalPrice').value) || 0,
-                qty: parseInt(document.getElementById('modalQty').value, 10) || 0,
-                amt: parseFloat(document.getElementById('modalAmt').value) || 0,
-                itemCode: itemCode,
-                priority: document.getElementById('modalPriority').value,
-                provPriority: document.getElementById('modalProvPriority').value
-            };
-        } catch (err) {
-            console.error("Payload extraction error:", err);
-            alert('ข้อผิดพลาด: ' + err.message);
-            btn.innerHTML = ogText;
-            btn.disabled = false;
-            return;
-        }
-
-        try {
-            await new Promise((resolve, reject) => {
-                if (mode === 'edit') {
-                    google.script.run
-                        .withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); })
-                        .withFailureHandler(err => reject(new Error(err.message || err.toString())))
-                        .editEquipmentRecord(record);
-                } else {
-                    google.script.run
-                        .withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); })
-                        .withFailureHandler(err => reject(new Error(err.message || err.toString())))
-                        .addEquipmentRecord(record);
-                }
-            });
-
-            btn.innerHTML = ogText;
-            btn.disabled = false;
-            closeAddEqModal();
-            refreshNow();
-
-            try {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'สำเร็จ!',
-                        text: mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว',
-                        icon: 'success',
-                        confirmButtonText: 'ตกลง',
-                        confirmButtonColor: '#059669',
-                        timer: 3000
-                    });
-                } else {
-                    alert(mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว');
-                }
-            } catch (e) { }
-
-        } catch (err) {
-            btn.innerHTML = ogText;
-            btn.disabled = false;
-            try {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'พบข้อผิดพลาด!',
-                        text: err.message || 'ไม่สามารถบันทึกข้อมูลได้',
-                        icon: 'error',
-                        confirmButtonText: 'ตกลง',
-                        confirmButtonColor: '#DC2626'
-                    });
-                } else {
-                    alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
-                }
-            } catch (e) {
-                alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
-            }
-        }
-    }
-
-    window.onscroll = function () {
-        const btn = document.getElementById("backToTop");
-        if (btn) {
-            if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show");
-        }
-    };
-
-    window.onload = async function () {
-        try {
-            if (document.getElementById('headerVersion')) document.getElementById('headerVersion').innerText =
-                String(VERSION);
-            if (document.getElementById('templateVersionBadge'))
-                document.getElementById('templateVersionBadge').innerText = String(VERSION);
-            showLoader("กำลังโหลดข้อมูล... v." + VERSION);
-            await loadData({ force: false });
-            MODEL = buildModelOnce();
-            if (MODEL) processAndRender(true);
-            hideLoader();
-        } catch (e) {
-            showFatal("Load failed: " + (e.message || e));
-        }
-    }
-
-    // --- GIS Bed Functions ---
-    let gisBedGeoJsonLayer = null;
-    let gisBedInfoControl = null;
-    let gisBedLegendControl = null;
-
-    async function initGisBedMap() {
-        const mapDiv = document.getElementById('spGisBedMap');
+    async function initGisMap() {
+        const mapDiv = document.getElementById('spGisMap');
         if (!mapDiv) return;
 
-        gisBedMap = L.map('spGisBedMap', { scrollWheelZoom: false }).setView([17.5, 103.5], 8);
+        gisMap = L.map('spGisMap', { scrollWheelZoom: false, zoomControl: false }).setView([17.5, 103.5], 8);
+        L.control.zoom({ position: 'topright' }).addTo(gisMap);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
-        }).addTo(gisBedMap);
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd', maxZoom: 20
+        }).addTo(gisMap);
 
-        gisBedMap.on('focus', function () { gisBedMap.scrollWheelZoom.enable(); });
-        gisBedMap.on('blur', function () { gisBedMap.scrollWheelZoom.disable(); });
+        gisMap.on('focus', function () { gisMap.scrollWheelZoom.enable(); });
+        gisMap.on('blur', function () { gisMap.scrollWheelZoom.disable(); });
 
-        gisBedInfoControl = L.control();
-        gisBedInfoControl.onAdd = function (map) {
-            this._div = L.DomUtil.create('div', 'info');
-            this.update();
-            return this._div;
-        };
-        gisBedInfoControl.update = function (props) {
-            this._div.innerHTML = '<h4>ข้อมูลเตียงแยกตามพื้นที่</h4>' + (props ?
-                '<b>อ.' + props.AMP_TH + ' จ.' + props.PROV_TH + '</b><br />' +
-                (props.gis_bed_data && props.gis_bed_data.total > 0 ?
-                    'จำนวน: ' + props.gis_bed_data.total.toLocaleString() + ' เตียง'
-                    : 'ไม่มีข้อมูลเตียงหรือจำนวนเป็น 0')
-                : 'เลื่อนเมาส์ไปที่พื้นที่');
-        };
-        gisBedInfoControl.addTo(gisBedMap);
-
-        gisBedLegendControl = L.control({ position: 'bottomright' });
-        gisBedLegendControl.onAdd = function (map) {
-            this._div = L.DomUtil.create('div', 'info legend');
-            return this._div;
-        };
-        gisBedLegendControl.addTo(gisBedMap);
-
-        // We reuse the r8GeoJsonData from the other map; fetch if not exists
         if (!r8GeoJsonData) {
             try {
-                document.getElementById('gisBedMapOverlay').classList.remove('hidden');
+                document.getElementById('gisMapOverlay').classList.remove('hidden');
                 const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
                 const thGeoJson = await response.json();
                 const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
@@ -1496,22 +945,200 @@
                 console.error("Failed to load map boundaries", err);
                 toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
             } finally {
-                document.getElementById('gisBedMapOverlay').classList.add('hidden');
+                document.getElementById('gisMapOverlay').classList.add('hidden');
             }
         }
+        loadProvinceBoundaries();
     }
 
-    function getBedMapColor(d, maxVal) {
-        if (!maxVal || maxVal === 0) maxVal = 1;
-        const pct = d / maxVal;
-        // Blue scale for beds
-        return pct > 0.8 ? '#08306b' :
-            pct > 0.6 ? '#08519c' :
-                pct > 0.4 ? '#2171b5' :
-                    pct > 0.2 ? '#4292c6' :
-                        pct > 0.05 ? '#6baed6' :
-                            pct > 0 ? '#9ecae1' :
-                                '#f7fbff';
+    function renderGisMap() {
+        if (!MODEL || !MODEL.eqData || !r8GeoJsonData || !gisMap) return;
+
+        const provFilter = document.getElementById('gisProvFilter').value;
+        const spFilter = document.getElementById('gisSpFilter').value;
+        const yearFilter = document.getElementById('gisYearFilter').value;
+
+        let filtered = MODEL.eqData;
+        if (provFilter !== 'ALL') filtered = filtered.filter(row => row.prov === provFilter);
+        if (spFilter !== 'ALL') filtered = filtered.filter(row => row.sp === spFilter);
+        if (yearFilter !== 'ALL') filtered = filtered.filter(row => String(row.year) === String(yearFilter));
+
+        let distStats = {};
+        let provTotals = {};
+        let tAmt = 0, tUnits = 0;
+
+        filtered.forEach(r => {
+            const calculatedAmt = r.amt > 0 ? r.amt : (r.price > 0 && r.qty > 0 ? (r.price * r.qty) : 0);
+            const qty = r.qty || 0;
+            let rawProv = r.prov !== undefined && r.prov !== null ? String(r.prov).trim() : '';
+            if (rawProv === 'undefined' || rawProv === 'null') rawProv = '';
+            let prov = rawProv.replace('จ.', '').trim();
+
+            if (!prov && r.hosp) {
+                if (r.hosp.includes('อุดร')) prov = 'อุดรธานี';
+                else if (r.hosp.includes('เลย')) prov = 'เลย';
+                else if (r.hosp.includes('สกล')) prov = 'สกลนคร';
+                else if (r.hosp.includes('นครพนม')) prov = 'นครพนม';
+                else if (r.hosp.includes('หนองคาย')) prov = 'หนองคาย';
+                else if (r.hosp.includes('บึงกาฬ')) prov = 'บึงกาฬ';
+                else if (r.hosp.includes('บัวลำภู')) prov = 'หนองบัวลำภู';
+            }
+            if (!prov) return;
+
+            let distTarget = 'เมือง' + prov;
+            if (r.hosp === 'รพ.สกลนคร') distTarget = 'เมืองสกลนคร';
+            else if (r.hosp === 'รพ.อุดรธานี') distTarget = 'เมืองอุดรธานี';
+            else {
+                for (let code in DISTRICT_MAP) {
+                    if (DISTRICT_MAP[code].includes('เมือง') && !distTarget.includes('เมือง')) continue;
+                    const distName = DISTRICT_MAP[code].replace('เมือง', '');
+                    if (r.hosp.includes(DISTRICT_MAP[code]) || r.hosp.includes(distName)) {
+                        distTarget = DISTRICT_MAP[code]; break;
+                    }
+                }
+            }
+
+            const key = prov + "_" + distTarget;
+            if (!distStats[key]) distStats[key] = { amt: 0, qty: 0 };
+            distStats[key].amt += calculatedAmt;
+            distStats[key].qty += qty;
+
+            if (!provTotals[prov]) provTotals[prov] = { amt: 0, qty: 0 };
+            provTotals[prov].amt += calculatedAmt;
+            provTotals[prov].qty += qty;
+
+            tAmt += calculatedAmt;
+            tUnits += qty;
+        });
+
+        document.getElementById('gisTotUnits').innerText = tUnits.toLocaleString();
+        document.getElementById('gisTotAmt').innerText = formatMoney(tAmt);
+
+        let maxAmt = 0;
+        r8GeoJsonData.features.forEach(f => {
+            const p = f.properties.PROV_TH;
+            let a = f.properties.AMP_TH;
+            if (a.startsWith('เมือง') && a !== 'เมือง' && !a.includes(p)) { }
+            else if (a === 'เมือง') { a = 'เมือง' + p; }
+
+            let key1 = p + "_" + a;
+            let key2 = p + "_เมือง" + p;
+            let foundAmt = 0, foundQty = 0;
+
+            if (distStats[key1]) { foundAmt = distStats[key1].amt; foundQty = distStats[key1].qty; }
+            else if (a.includes('เมือง') && distStats[key2]) { foundAmt = distStats[key2].amt; foundQty = distStats[key2].qty; }
+            else {
+                for (let k in distStats) {
+                    if (k.startsWith(p + "_") && (k.includes(a) || a.includes(k.split('_')[1]))) {
+                        foundAmt += distStats[k].amt; foundQty += distStats[k].qty;
+                    }
+                }
+            }
+
+            f.properties.gis_data = (foundAmt > 0 || foundQty > 0) ? { amt: foundAmt, qty: foundQty } : null;
+            if (foundAmt > maxAmt) maxAmt = foundAmt;
+        });
+
+        if (gisGeoJsonLayer) gisMap.removeLayer(gisGeoJsonLayer);
+
+        gisGeoJsonLayer = L.geoJson(r8GeoJsonData, {
+            style: function (feature) {
+                const data = feature.properties.gis_data;
+                const amt = data ? data.amt : 0;
+                const p = feature.properties.PROV_TH;
+                const isFiltered = (provFilter === 'ALL' || provFilter === p);
+                return {
+                    fillColor: isFiltered ? getMapColor(amt, maxAmt) : '#f8fafc',
+                    weight: 1.5, opacity: 1, color: '#cbd5e1', dashArray: '', fillOpacity: isFiltered ? 0.8 : 0.3
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                const p = feature.properties.PROV_TH;
+                let a = String(feature.properties.AMP_TH).replace('อำเภอ', '').trim();
+                const data = feature.properties.gis_data;
+                const amtStr = data ? formatMoney(data.amt) : "0.00";
+                const qtyStr = data ? data.qty.toLocaleString() : "0";
+                const isFiltered = (provFilter === 'ALL' || provFilter === p);
+
+                let tooltipContent = isFiltered ?
+                    `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${a}, ${p}</div>
+                     <div class="text-xs text-moph-600">วงเงิน: <span class="font-bold text-moph-primary">${amtStr}</span> บาท</div>
+                     <div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${qtyStr}</span> ชิ้น</div>`
+                    : `<div class="font-heading font-medium text-slate-500">${a}, ${p}</div>`;
+
+                layer.bindTooltip(tooltipContent, { sticky: true, className: 'custom-map-tooltip', direction: 'top' });
+
+                layer.on({
+                    mouseover: function (e) {
+                        if (!isFiltered) return;
+                        var l = e.target;
+                        l.setStyle({ weight: 2.5, color: '#f59e0b', fillOpacity: 0.9 });
+                        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) l.bringToFront();
+                    },
+                    mouseout: function (e) { if (gisGeoJsonLayer) gisGeoJsonLayer.resetStyle(e.target); }
+                });
+
+                if (provFilter !== 'ALL' && provFilter === p) {
+                    const labelText = `<div class="text-center bg-white/90 border border-slate-200 shadow-sm rounded px-1.5 py-0.5 transform -translate-y-2">
+                        <div class="font-bold text-[10px] text-slate-600 leading-tight">${a.replace('อำเภอ', '')}</div>
+                        <div class="font-black text-xs text-moph-700 leading-tight">${qtyStr} ชิ้น</div>
+                    </div>`;
+                    layer.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                } else if (provFilter === 'ALL') {
+                    if (a.includes('เมือง') || a === p) {
+                        const pTotQty = provTotals[p] ? provTotals[p].qty : 0;
+                        const labelText = `<div class="text-center bg-white border border-moph-200 shadow-md rounded-xl px-2 py-1 transform -translate-y-4">
+                            <div class="font-bold text-[11px] text-slate-700 leading-tight">จ.${p}</div>
+                            <div class="font-black text-sm text-moph-700 leading-tight">${pTotQty.toLocaleString()} ชิ้น</div>
+                        </div>`;
+                        layer.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                    }
+                }
+            }
+        }).addTo(gisMap);
+        addProvinceBorderLayer(gisMap);
+        addProvinceLabels(gisMap);
+
+        let targetBounds = null;
+        if (provFilter !== 'ALL') {
+            const group = new L.FeatureGroup();
+            gisGeoJsonLayer.eachLayer(l => { if (l.feature.properties.PROV_TH === provFilter) group.addLayer(l); });
+            if (group.getBounds().isValid()) targetBounds = group.getBounds();
+        } else if (gisGeoJsonLayer && gisGeoJsonLayer.getBounds().isValid()) targetBounds = gisGeoJsonLayer.getBounds();
+        if (targetBounds) { gisMap.fitBounds(targetBounds); if (provFilter !== 'ALL' && gisMap.getZoom() > 10) gisMap.setZoom(9); }
+        addMapLegend(gisMap, maxAmt, 'วงเงิน (บาท)', 'บาท');
+    }
+
+    // ==========================================
+    // GIS BED MAP
+    // ==========================================
+    let gisBedMap = null;
+    let gisBedGeoJsonLayer = null;
+
+    async function initGisBedMap() {
+        const mapDiv = document.getElementById('spGisBedMap');
+        if (!mapDiv) return;
+
+        gisBedMap = L.map('spGisBedMap', { scrollWheelZoom: false, zoomControl: false }).setView([17.5, 103.5], 8);
+        L.control.zoom({ position: 'topright' }).addTo(gisBedMap);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd', maxZoom: 20
+        }).addTo(gisBedMap);
+
+        gisBedMap.on('focus', function () { gisBedMap.scrollWheelZoom.enable(); });
+        gisBedMap.on('blur', function () { gisBedMap.scrollWheelZoom.disable(); });
+
+        if (!r8GeoJsonData) {
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+                const thGeoJson = await response.json();
+                const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
+                r8GeoJsonData = { type: "FeatureCollection", features: thGeoJson.features.filter(f => r8Codes.includes(String(f.properties.pro_code || f.properties.PRO_CODE || ''))) };
+                r8GeoJsonData.features.forEach(f => { f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || ''; f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || ''; });
+            } catch (err) { }
+        }
     }
 
     function renderGisBedMap() {
@@ -1519,17 +1146,12 @@
 
         const provFilter = document.getElementById('gisBedProvFilter').value;
         const typeFilter = document.getElementById('gisBedTypeFilter').value;
-
-        // the 5 types for "ALL" summary
         const summaryTypes = ['เตียง NICU', 'เตียง OR ศัลยกรรม', 'เตียง ICU', 'เตียง Stroke', 'เตียง HD'];
 
-        // Build district-level bed data
         const bedDistData = {};
+        let sumNicu = 0, sumOr = 0, sumIcu = 0, sumStroke = 0, sumHd = 0, sumFrame = 0, sumReal = 0;
+        let provTotals = {};
 
-        let sumNicu = 0, sumOr = 0, sumIcu = 0, sumStroke = 0, sumHd = 0;
-        let sumFrame = 0, sumReal = 0;
-
-        // Iterate over raw bed data
         const bedSheet = rawData.bed || [];
         bedSheet.slice(1).forEach(row => {
             const r4 = String(row[4] || '');
@@ -1539,50 +1161,27 @@
             if (!provName) return;
             if (provFilter !== 'ALL' && provName !== provFilter) return;
 
-            // Map data from row to our types
-            const getVal = (typeStr) => {
-                const idx = MODEL.idx.bed[typeStr];
-                return idx > -1 ? cleanNum(row[idx]) : 0;
-            };
-
+            const getVal = (typeStr) => { const idx = MODEL.idx.bed[typeStr]; return idx > -1 ? cleanNum(row[idx]) : 0; };
             const vals = {
-                'เตียงกรอบ': getVal('เตียงกรอบ'),
-                'เตียงจริง': getVal('เตียงจริง'),
-                'เตียง NICU': getVal('เตียง NICU'),
-                'เตียง OR ศัลยกรรม': getVal('เตียง OR ศัลยกรรม'),
-                'เตียง ICU': getVal('เตียง ICU'),
-                'เตียง Stroke': getVal('เตียง Stroke'),
-                'เตียง HD': getVal('เตียง HD'),
-                'เตียง Palliative Care': getVal('เตียง Palliative Care'),
-                'เตียงมินิธัญญารักษ์': getVal('เตียงมินิธัญญารักษ์')
+                'เตียงกรอบ': getVal('เตียงกรอบ'), 'เตียงจริง': getVal('เตียงจริง'), 'เตียง NICU': getVal('เตียง NICU'),
+                'เตียง OR ศัลยกรรม': getVal('เตียง OR ศัลยกรรม'), 'เตียง ICU': getVal('เตียง ICU'), 'เตียง Stroke': getVal('เตียง Stroke'),
+                'เตียง HD': getVal('เตียง HD'), 'เตียง Palliative Care': getVal('เตียง Palliative Care'), 'เตียงมินิธัญญารักษ์': getVal('เตียงมินิธัญญารักษ์')
             };
 
-            // Update summary cards
-            sumFrame += vals['เตียงกรอบ'];
-            sumReal += vals['เตียงจริง'];
-            sumNicu += vals['เตียง NICU'];
-            sumOr += vals['เตียง OR ศัลยกรรม'];
-            sumIcu += vals['เตียง ICU'];
-            sumStroke += vals['เตียง Stroke'];
-            sumHd += vals['เตียง HD'];
+            sumFrame += vals['เตียงกรอบ']; sumReal += vals['เตียงจริง']; sumNicu += vals['เตียง NICU'];
+            sumOr += vals['เตียง OR ศัลยกรรม']; sumIcu += vals['เตียง ICU']; sumStroke += vals['เตียง Stroke']; sumHd += vals['เตียง HD'];
 
             if (!bedDistData[provName]) bedDistData[provName] = {};
-            if (!bedDistData[provName][distName]) {
-                bedDistData[provName][distName] = { total: 0 };
-            }
+            if (!bedDistData[provName][distName]) bedDistData[provName][distName] = { total: 0 };
+            if (!provTotals[provName]) provTotals[provName] = 0;
 
-            // Determine what the map shows based on typeFilter
             let districtTotal = 0;
-            if (typeFilter === 'ALL') {
-                summaryTypes.forEach(t => districtTotal += vals[t]);
-            } else {
-                districtTotal = vals[typeFilter] || 0;
-            }
+            if (typeFilter === 'ALL') summaryTypes.forEach(t => districtTotal += vals[t]); else districtTotal = vals[typeFilter] || 0;
 
             bedDistData[provName][distName].total += districtTotal;
+            provTotals[provName] += districtTotal;
         });
 
-        // 1. Update summary boxes
         document.getElementById('gisBedFrame').innerText = sumFrame.toLocaleString();
         document.getElementById('gisBedReal').innerText = sumReal.toLocaleString();
         document.getElementById('gisBedNicu').innerText = sumNicu.toLocaleString();
@@ -1590,473 +1189,456 @@
         document.getElementById('gisBedIcu').innerText = sumIcu.toLocaleString();
         document.getElementById('gisBedStroke').innerText = sumStroke.toLocaleString();
         document.getElementById('gisBedHd').innerText = sumHd.toLocaleString();
-        const totalSummary = sumNicu + sumOr + sumIcu + sumStroke + sumHd;
-        document.getElementById('gisBedTotal').innerText = totalSummary.toLocaleString();
+        document.getElementById('gisBedTotal').innerText = (sumNicu + sumOr + sumIcu + sumStroke + sumHd).toLocaleString();
 
-        // 2. Determine max amount for color scale
         let maxBed = 0;
-        for (const prov in bedDistData) {
-            for (const dist in bedDistData[prov]) {
-                if (bedDistData[prov][dist].total > maxBed) {
-                    maxBed = bedDistData[prov][dist].total;
-                }
-            }
-        }
+        for (const prov in bedDistData) { for (const dist in bedDistData[prov]) { if (bedDistData[prov][dist].total > maxBed) maxBed = bedDistData[prov][dist].total; } }
 
-        // 3. Update Legend
-        if (gisBedLegendControl && gisBedLegendControl._div) {
-            let labels = ['<strong>จำนวนเตียง</strong><br>'],
-                grades = [
-                    0,
-                    Math.floor(maxBed * 0.05),
-                    Math.floor(maxBed * 0.2),
-                    Math.floor(maxBed * 0.4),
-                    Math.floor(maxBed * 0.6),
-                    Math.floor(maxBed * 0.8)
-                ];
-
-            // Deduplicate grades
-            grades = [...new Set(grades)];
-
-            for (let i = 0; i < grades.length; i++) {
-                labels.push(
-                    '<i style="background:' + getBedMapColor(grades[i] + 1, maxBed) + '"></i> ' +
-                    grades[i] + (grades[i + 1] ? ' &ndash; ' + grades[i + 1] + '<br>' : '+')
-                );
-            }
-            gisBedLegendControl._div.innerHTML = labels.join('');
-        }
-
-        // 4. Highlight styling function
-        function bedStyle(feature) {
-            const propAmp = feature.properties.AMP_TH;
-            const propProv = feature.properties.PROV_TH;
-
-            let val = 0;
-            if (provFilter === 'ALL' || provFilter === propProv) {
-                if (bedDistData[propProv]) {
-                    if (bedDistData[propProv][propAmp]) {
-                        val = bedDistData[propProv][propAmp].total;
-                    } else {
-                        const tryAmp = 'เมือง' + propProv;
-                        if (bedDistData[propProv][propAmp.replace("เมือง", "")] && tryAmp === propAmp) {
-                            val = bedDistData[propProv][propAmp.replace("เมือง", "")].total;
-                        }
-                    }
-                }
-            }
-
-            // Determine styling based on whether it is a boundary and selection state
-            const isProvinceBoundary = true; // For future enhancement to specifically target exterior borders
-
-            return {
-                fillColor: getBedMapColor(val, maxBed),
-                weight: 2, // Thicker default weight for all regions
-                opacity: 1,
-                color: '#333333', // Darker border color
-                dashArray: '', // Solid line to make it look cleaner
-                fillOpacity: (provFilter !== 'ALL' && provFilter !== propProv) ? 0.2 : 0.8 // Dim unselected provinces more aggressively
-            };
-        }
-
-        function bedOnEachFeature(feature, layer) {
-            const propAmp = feature.properties.AMP_TH;
-            const propProv = feature.properties.PROV_TH;
-
-            let valObj = null;
-            if (bedDistData[propProv] && bedDistData[propProv][propAmp]) {
-                valObj = bedDistData[propProv][propAmp];
-            } else {
-                const tryAmp = 'เมือง' + propProv;
-                if (bedDistData[propProv] && bedDistData[propProv][propAmp.replace("เมือง", "")] && tryAmp === propAmp) {
-                    valObj = bedDistData[propProv][propAmp.replace("เมือง", "")];
-                }
-            }
-
-            feature.properties.gis_bed_data = valObj;
-
-            // Permanent Labels if a specific province is filtered
-            if (provFilter !== 'ALL' && provFilter === propProv) {
-                const valStr = valObj ? valObj.total.toLocaleString() : "0";
-                const labelText = `<div style="text-align:center; font-size:12px; font-weight:bold; color:#1e293b; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;">อ.${propAmp}<br/>${valStr}</div>`;
-                layer.bindTooltip(labelText, {
-                    permanent: true,
-                    direction: 'center',
-                    className: 'bg-transparent border-0 shadow-none'
-                });
-            } else if (provFilter === 'ALL') {
-                // Show Province label when viewing ALL
-                // To avoid repeating labels for every district, only attach it to the "เมือง" district 
-                // (or a fallback like "อุดรธานี" if the district name matches the province)
-                if (propAmp.includes('เมือง') || propAmp === propProv) {
-                    let provTotal = 0;
-                    if (bedDistData[propProv]) {
-                        Object.values(bedDistData[propProv]).forEach(d => provTotal += (d.total || 0));
-                    }
-                    const valStr = provTotal.toLocaleString();
-                    const labelText = `<div style="text-align:center; font-size:14px; font-weight:bold; color:#0f172a; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;">จ.${propProv}<br/>${valStr}</div>`;
-                    layer.bindTooltip(labelText, {
-                        permanent: true,
-                        direction: 'center',
-                        className: 'bg-transparent border-0 shadow-none'
-                    });
-                }
-            }
-
-            layer.on({
-                mouseover: function (e) {
-                    var layer = e.target;
-                    layer.setStyle({ weight: 3, color: '#f59e0b', dashArray: '', fillOpacity: 0.9 });
-                    layer.bringToFront();
-                    gisBedInfoControl.update(layer.feature.properties);
-                },
-                mouseout: function (e) {
-                    gisBedGeoJsonLayer.resetStyle(e.target);
-                    // Do not close tooltip as we want it permanent for selected provs
-                    gisBedInfoControl.update();
-                }
-            });
-        }
-
-        if (gisBedGeoJsonLayer) { gisBedMap.removeLayer(gisBedGeoJsonLayer); }
+        if (gisBedGeoJsonLayer) gisBedMap.removeLayer(gisBedGeoJsonLayer);
 
         gisBedGeoJsonLayer = L.geoJson(r8GeoJsonData, {
-            style: bedStyle,
-            onEachFeature: bedOnEachFeature
-        }).addTo(gisBedMap);
+            style: function (feature) {
+                const propAmp = feature.properties.AMP_TH; const propProv = feature.properties.PROV_TH;
+                let val = 0;
+                if (provFilter === 'ALL' || provFilter === propProv) {
+                    if (bedDistData[propProv]) {
+                        if (bedDistData[propProv][propAmp]) val = bedDistData[propProv][propAmp].total;
+                        else if (bedDistData[propProv][propAmp.replace("เมือง", "")] && ('เมือง' + propProv) === propAmp) val = bedDistData[propProv][propAmp.replace("เมือง", "")].total;
+                    }
+                }
+                const isFiltered = (provFilter === 'ALL' || provFilter === propProv);
+                return {
+                    fillColor: isFiltered ? getMapColor(val, maxBed) : '#f8fafc',
+                    weight: 1.5, opacity: 1, color: '#cbd5e1', dashArray: '', fillOpacity: isFiltered ? 0.85 : 0.3
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                const propAmp = feature.properties.AMP_TH; const propProv = feature.properties.PROV_TH;
+                let valObj = null;
+                if (bedDistData[propProv] && bedDistData[propProv][propAmp]) valObj = bedDistData[propProv][propAmp];
+                else if (bedDistData[propProv] && bedDistData[propProv][propAmp.replace("เมือง", "")] && ('เมือง' + propProv) === propAmp) valObj = bedDistData[propProv][propAmp.replace("เมือง", "")];
 
-        // Auto zoom
+                const isFiltered = (provFilter === 'ALL' || provFilter === propProv);
+                const count = valObj ? valObj.total : 0;
+
+                let tooltipContent = isFiltered ?
+                    `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${propAmp.replace('อำเภอ', '')}, ${propProv}</div>
+                     <div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${count.toLocaleString()}</span> เตียง</div>`
+                    : `<div class="font-heading font-medium text-slate-500">${propAmp.replace('อำเภอ', '')}, ${propProv}</div>`;
+
+                layer.bindTooltip(tooltipContent, { sticky: true, className: 'custom-map-tooltip', direction: 'top' });
+
+                layer.on({
+                    mouseover: function (e) {
+                        if (!isFiltered) return;
+                        var l = e.target; l.setStyle({ weight: 2.5, color: '#f59e0b', fillOpacity: 0.9 });
+                        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) l.bringToFront();
+                    },
+                    mouseout: function (e) { if (gisBedGeoJsonLayer) gisBedGeoJsonLayer.resetStyle(e.target); }
+                });
+
+                if (provFilter !== 'ALL' && provFilter === propProv) {
+                    const labelText = `<div class="text-center bg-white/90 border border-slate-200 shadow-sm rounded px-1.5 py-0.5 transform -translate-y-2">
+                        <div class="font-bold text-[10px] text-slate-600 leading-tight">${propAmp.replace('อำเภอ', '')}</div>
+                        <div class="font-black text-xs text-moph-700 leading-tight">${count.toLocaleString()}</div>
+                    </div>`;
+                    layer.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                } else if (provFilter === 'ALL') {
+                    if (propAmp.includes('เมือง') || propAmp === propProv) {
+                        const pTot = provTotals[propProv] || 0;
+                        const labelText = `<div class="text-center bg-white border border-moph-200 shadow-md rounded-xl px-2 py-1 transform -translate-y-4">
+                            <div class="font-bold text-[11px] text-slate-700 leading-tight">จ.${propProv}</div>
+                            <div class="font-black text-sm text-moph-700 leading-tight">${pTot.toLocaleString()}</div>
+                        </div>`;
+                        layer.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                    }
+                }
+            }
+        }).addTo(gisBedMap);
+        addProvinceBorderLayer(gisBedMap);
+        addProvinceLabels(gisBedMap);
+
         let targetBounds = null;
         if (provFilter !== 'ALL') {
-            const provFeatureGroup = new L.FeatureGroup();
-            gisBedGeoJsonLayer.eachLayer(function (layer) {
-                if (layer.feature.properties.PROV_TH === provFilter) {
-                    provFeatureGroup.addLayer(layer);
-                }
-            });
-            if (provFeatureGroup.getBounds().isValid()) {
-                targetBounds = provFeatureGroup.getBounds();
-            }
-        } else if (gisBedGeoJsonLayer && gisBedGeoJsonLayer.getBounds().isValid()) {
-            targetBounds = gisBedGeoJsonLayer.getBounds();
-        }
-
-        if (targetBounds) {
-            gisBedMap.fitBounds(targetBounds);
-            if (gisBedMap.getZoom() > 10) {
-                gisBedMap.setZoom(9);
-            }
-        }
+            const group = new L.FeatureGroup();
+            gisBedGeoJsonLayer.eachLayer(l => { if (l.feature.properties.PROV_TH === provFilter) group.addLayer(l); });
+            if (group.getBounds().isValid()) targetBounds = group.getBounds();
+        } else if (gisBedGeoJsonLayer && gisBedGeoJsonLayer.getBounds().isValid()) targetBounds = gisBedGeoJsonLayer.getBounds();
+        if (targetBounds) { gisBedMap.fitBounds(targetBounds); if (gisBedMap.getZoom() > 10) gisBedMap.setZoom(9); }
+        addMapLegend(gisBedMap, maxBed, 'จำนวนเตียง', 'เตียง');
     }
+    function clearGisBedFilters() { $('#gisBedProvFilter, #gisBedTypeFilter').val('ALL').trigger('change.select2'); renderGisBedMap(); }
 
-    function clearGisBedFilters() {
-        $('#gisBedProvFilter').val('ALL').trigger('change');
-        $('#gisBedTypeFilter').val('ALL').trigger('change');
-        renderGisBedMap();
-    }
-
-    /* =========================================================================
-        GIS DOCTOR MAP MODULE
-        ========================================================================= */
-
-    // [แก้ไขที่ 1] เพิ่มการประกาศตัวแปรที่หายไป เพื่อป้องกัน ReferenceError
+    // ==========================================
+    // GIS DOCTOR MAP
+    // ==========================================
     let gisDoctorMap = null;
     let gisDoctorGeoJson = null;
-    let gisDoctorData = null;
 
     async function initGisDoctorMap() {
-        if (gisDoctorMap) return; // ตอนนี้จะไม่ Error แล้วเพราะประกาศตัวแปรด้านบนแล้ว
-
         const mapDiv = document.getElementById('spGisDoctorMap');
         if (!mapDiv) return;
+        if (gisDoctorMap) return;
 
-        gisDoctorMap = L.map('spGisDoctorMap', {
-            center: [17.5, 103.5], // Center R8
-            zoom: 8,
-            minZoom: 6,
-            zoomControl: false,
-            scrollWheelZoom: false // ป้องกันการซูมเวลาเลื่อนเมาส์ผ่าน
-        });
-
+        gisDoctorMap = L.map('spGisDoctorMap', { center: [17.5, 103.5], zoom: 8, minZoom: 6, zoomControl: false, scrollWheelZoom: false });
         L.control.zoom({ position: 'topright' }).addTo(gisDoctorMap);
-
-        // เปิดให้ซูมได้เมื่อคลิกที่แผนที่
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 20 }).addTo(gisDoctorMap);
         gisDoctorMap.on('focus', function () { gisDoctorMap.scrollWheelZoom.enable(); });
         gisDoctorMap.on('blur', function () { gisDoctorMap.scrollWheelZoom.disable(); });
 
-        const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 20
-        });
-        cartoLight.addTo(gisDoctorMap);
-
-        // Fetch boundaries if needed (reuse bed map GeoJSON)
         if (!r8GeoJsonData) {
             try {
                 const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
                 const thGeoJson = await response.json();
                 const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
-                r8GeoJsonData = {
-                    type: "FeatureCollection",
-                    features: thGeoJson.features.filter(f => {
-                        const code = String(f.properties.pro_code || f.properties.PRO_CODE || '');
-                        return r8Codes.includes(code);
-                    })
-                };
-                r8GeoJsonData.features.forEach(f => {
-                    f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || '';
-                    f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || '';
-                });
-            } catch (err) {
-                console.error("Failed to load map boundaries", err);
-                toast("ไม่สามารถโหลดแผนที่พื้นที่ได้");
-                return;
-            }
+                r8GeoJsonData = { type: "FeatureCollection", features: thGeoJson.features.filter(f => r8Codes.includes(String(f.properties.pro_code || f.properties.PRO_CODE || ''))) };
+                r8GeoJsonData.features.forEach(f => { f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || ''; f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || ''; });
+            } catch (err) { }
         }
-
-        // วาดแผนที่และคำนวณตัวเลข
         renderGisDoctorMap();
-
-        // [แก้ไขที่ 2] ตรวจจับการเปลี่ยนแปลงของ Dropdown
-        $('#gisDoctorProvFilter, #gisDoctorTypeFilter').off('change').on('change', function () {
-            renderGisDoctorMap();
-        });
-    }
-
-    function clearGisDoctorFilters() {
-        $('#gisDoctorProvFilter').val('ALL').trigger('change.select2');
-        $('#gisDoctorTypeFilter').val('ALL').trigger('change.select2');
-        renderGisDoctorMap();
-    }
-
-    function getDoctorMapColor(d, maxVal) {
-        if (!maxVal || maxVal === 0) maxVal = 1;
-        const pct = d / maxVal;
-        // Purple scale for doctors
-        return pct > 0.8 ? '#4a148c' :
-            pct > 0.6 ? '#6a1b9a' :
-                pct > 0.4 ? '#8e24aa' :
-                    pct > 0.2 ? '#ab47bc' :
-                        pct > 0.05 ? '#ce93d8' :
-                            pct > 0 ? '#e1bee7' :
-                                '#f7fbff';
+        $('#gisDoctorProvFilter, #gisDoctorTypeFilter').off('change.map').on('change.map', renderGisDoctorMap);
     }
 
     function renderGisDoctorMap() {
         if (!rawData.medical || rawData.medical.length === 0) return;
-
-        // [แก้ไขที่ 3] คำนวณ Summary Card เสมอแม้แผนที่จะยังโหลดไม่เสร็จ
         const selProv = $('#gisDoctorProvFilter').val();
         const selType = $('#gisDoctorTypeFilter').val();
 
         let sumPeds = 0, sumSurg = 0, sumIcu = 0, sumStroke = 0, sumHd = 0, sumDent = 0, sumPharm = 0;
-        let districtDoctorCounts = {};
+        let distCounts = {};
         let provTotals = {};
 
         const headers = rawData.medical[0].map(h => String(h || '').trim());
         const findH = (text) => headers.findIndex(h => h.replace(/\s+/g, '').includes(text.replace(/\s+/g, '')));
-
         const hProv = findH('จังหวัด');
         const hAmp = findH('อำเภอ/เขต') > -1 ? findH('อำเภอ/เขต') : findH('อำเภอ');
         const hHospCode = findH('รหัส5หลัก');
+        const pedsIdx = findH('กุมารแพทย์'), surgIdx = findH('ศัลยแพทย์ OR'), icuIdx = findH('อายุรแพทย์ ICU'), strokeIdx = findH('อายุรแพทย์ Stroke'), hdIdx = findH('อายุรแพทย์ HD'), dentIdx = findH('ทันตแพทย์'), pharmIdx = findH('เภสัชกร');
 
-        const pedsIdx = findH('กุมารแพทย์');
-        const surgIdx = findH('ศัลยแพทย์ OR');
-        const icuIdx = findH('อายุรแพทย์ ICU');
-        const strokeIdx = findH('อายุรแพทย์ Stroke');
-        const hdIdx = findH('อายุรแพทย์ HD');
-        const dentIdx = findH('ทันตแพทย์');
-        const pharmIdx = findH('เภสัชกร');
-
-        if (hProv === -1 || pedsIdx === -1) {
-            console.error("GIS DOCTOR: Missing Critical Headers!");
-            return;
-        }
+        if (hProv === -1 || pedsIdx === -1) return;
 
         rawData.medical.slice(1).forEach(row => {
             if (!row[hProv]) return;
-
             let rowProv = normProv(row[hProv]).replace('จ.', '').replace('จังหวัด', '').trim();
             if (selProv !== 'ALL' && rowProv !== selProv) return;
 
             let district = '';
-
-            // Try to get district directly from medical data first
-            if (hAmp > -1 && row[hAmp]) {
-                district = String(row[hAmp]).trim().replace('อำเภอ', '').replace('เขต', '');
-            }
-
-            // Fallback: If missing, try matching code5 with our old logic
+            if (hAmp > -1 && row[hAmp]) district = String(row[hAmp]).trim().replace('อำเภอ', '').replace('เขต', '');
             const c5 = (hHospCode > -1 && row[hHospCode]) ? String(row[hHospCode]).trim() : '';
-            if (!district && c5) {
-                for (let prefix in DISTRICT_MAP) {
-                    if (c5.startsWith(prefix)) {
-                        district = DISTRICT_MAP[prefix].replace('อำเภอ', '');
-                        break;
-                    }
-                }
-            }
-
-            // Ultimate fallback
+            if (!district && c5) { for (let pre in DISTRICT_MAP) { if (c5.startsWith(pre)) { district = DISTRICT_MAP[pre].replace('อำเภอ', ''); break; } } }
             if (!district) district = 'เมือง' + rowProv;
 
             const dKey = `${district}_${rowProv}`;
-            if (!districtDoctorCounts[dKey]) districtDoctorCounts[dKey] = 0;
+            if (!distCounts[dKey]) distCounts[dKey] = 0;
             if (!provTotals[rowProv]) provTotals[rowProv] = 0;
 
-            const nPeds = cleanNum(row[pedsIdx]);
-            const nSurg = cleanNum(row[surgIdx]);
-            const nIcu = cleanNum(row[icuIdx]);
-            const nStroke = cleanNum(row[strokeIdx]);
-            const nHd = cleanNum(row[hdIdx]);
-            const nDent = dentIdx > -1 ? cleanNum(row[dentIdx]) : 0;
-            const nPharm = pharmIdx > -1 ? cleanNum(row[pharmIdx]) : 0;
+            const nPeds = cleanNum(row[pedsIdx]), nSurg = cleanNum(row[surgIdx]), nIcu = cleanNum(row[icuIdx]), nStroke = cleanNum(row[strokeIdx]), nHd = cleanNum(row[hdIdx]), nDent = dentIdx > -1 ? cleanNum(row[dentIdx]) : 0, nPharm = pharmIdx > -1 ? cleanNum(row[pharmIdx]) : 0;
+            sumPeds += nPeds; sumSurg += nSurg; sumIcu += nIcu; sumStroke += nStroke; sumHd += nHd; sumDent += nDent; sumPharm += nPharm;
 
-            sumPeds += nPeds;
-            sumSurg += nSurg;
-            sumIcu += nIcu;
-            sumStroke += nStroke;
-            sumHd += nHd;
-            sumDent += nDent;
-            sumPharm += nPharm;
+            let rTot = 0;
+            if (selType === 'ALL') rTot = nPeds + nSurg + nIcu + nStroke + nHd + nDent + nPharm;
+            else if (selType === 'กุมารแพทย์') rTot = nPeds; else if (selType === 'ศัลยแพทย์ OR') rTot = nSurg;
+            else if (selType === 'อายุรแพทย์ ICU') rTot = nIcu; else if (selType === 'อายุรแพทย์ Stroke') rTot = nStroke;
+            else if (selType === 'อายุรแพทย์ HD') rTot = nHd; else if (selType === 'ทันตแพทย์') rTot = nDent; else if (selType === 'เภสัชกร') rTot = nPharm;
 
-            let rowTotalForMap = 0;
-            if (selType === 'ALL') {
-                rowTotalForMap = nPeds + nSurg + nIcu + nStroke + nHd + nDent + nPharm;
-            } else if (selType === 'กุมารแพทย์') rowTotalForMap = nPeds;
-            else if (selType === 'ศัลยแพทย์ OR') rowTotalForMap = nSurg;
-            else if (selType === 'อายุรแพทย์ ICU') rowTotalForMap = nIcu;
-            else if (selType === 'อายุรแพทย์ Stroke') rowTotalForMap = nStroke;
-            else if (selType === 'อายุรแพทย์ HD') rowTotalForMap = nHd;
-            else if (selType === 'ทันตแพทย์') rowTotalForMap = nDent;
-            else if (selType === 'เภสัชกร') rowTotalForMap = nPharm;
-
-            districtDoctorCounts[dKey] += rowTotalForMap;
-            provTotals[rowProv] += rowTotalForMap;
+            distCounts[dKey] += rTot;
+            provTotals[rowProv] += rTot;
         });
 
-        // อัปเดต Summary Cards
-        $('#gisDocPeds').text(sumPeds.toLocaleString());
-        $('#gisDocSurgery').text(sumSurg.toLocaleString());
-        $('#gisDocIcu').text(sumIcu.toLocaleString());
-        $('#gisDocStroke').text(sumStroke.toLocaleString());
-        $('#gisDocHd').text(sumHd.toLocaleString());
-        $('#gisDocDentist').text(sumDent.toLocaleString());
-        $('#gisDocPharm').text(sumPharm.toLocaleString());
-        $('#gisDocTotal').text((sumPeds + sumSurg + sumIcu + sumStroke + sumHd + sumDent + sumPharm).toLocaleString());
+        $('#gisDocPeds').text(sumPeds.toLocaleString()); $('#gisDocSurgery').text(sumSurg.toLocaleString());
+        $('#gisDocIcu').text(sumIcu.toLocaleString()); $('#gisDocStroke').text(sumStroke.toLocaleString());
+        $('#gisDocHd').text(sumHd.toLocaleString()); $('#gisDocDentist').text(sumDent.toLocaleString());
+        $('#gisDocPharm').text(sumPharm.toLocaleString()); $('#gisDocTotal').text((sumPeds + sumSurg + sumIcu + sumStroke + sumHd + sumDent + sumPharm).toLocaleString());
 
-        // ตรวจสอบแผนที่ ถ้ายังไม่โหลดให้ออกไปก่อน (Summary Card จะอัปเดตไปแล้ว)
         if (!gisDoctorMap || !r8GeoJsonData) return;
+        if (gisDoctorGeoJson) gisDoctorMap.removeLayer(gisDoctorGeoJson);
 
-        if (gisDoctorGeoJson) {
-            gisDoctorMap.removeLayer(gisDoctorGeoJson);
-        }
-
-        gisDoctorData = districtDoctorCounts;
-        const countsArray = Object.values(districtDoctorCounts);
-        const maxCounts = countsArray.length > 0 ? Math.max(...countsArray) : 1;
-
-        function style(feature) {
-            const fProv = feature.properties.PROV_TH;
-            let fAmp = String(feature.properties.AMP_TH).replace('อำเภอ', '').trim();
-            if (fAmp === 'เมือง') fAmp = 'เมือง' + fProv;
-
-            const isFilteredProv = (selProv === 'ALL' || selProv === fProv);
-            const dKey = `${fAmp}_${fProv}`;
-            const count = (isFilteredProv && districtDoctorCounts[dKey]) ? districtDoctorCounts[dKey] : 0;
-
-            const isFocusProv = selProv !== 'ALL' && selProv === fProv;
-            const provColor = PROV_COLORS[fProv] || '#555';
-
-            return {
-                fillColor: isFilteredProv ? getDoctorMapColor(count, maxCounts) : '#e2e8f0',
-                weight: isFocusProv ? 1 : 2,
-                opacity: 1,
-                color: isFocusProv ? '#cbd5e1' : provColor,
-                dashArray: isFocusProv ? '3' : '',
-                fillOpacity: isFilteredProv ? 0.8 : 0.3
-            };
-        }
-
-        function onEachFeature(feature, layer) {
-            const fProv = feature.properties.PROV_TH;
-            let fAmp = String(feature.properties.AMP_TH).replace('อำเภอ', '').trim();
-            if (fAmp === 'เมือง') fAmp = 'เมือง' + fProv;
-            const dKey = `${fAmp}_${fProv}`;
-            const count = districtDoctorCounts[dKey] || 0;
-
-            const isFilteredProv = (selProv === 'ALL' || selProv === fProv);
-
-            let tooltipContent = isFilteredProv ?
-                `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${fAmp}, ${fProv}</div>
-                 <div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${count.toLocaleString()}</span> คน</div>`
-                :
-                `<div class="font-heading font-medium text-slate-500">${fAmp}, ${fProv}</div>`;
-
-            layer.bindTooltip(tooltipContent, {
-                sticky: true,
-                className: 'custom-map-tooltip',
-                direction: 'top'
-            });
-
-            layer.on({
-                mouseover: function (e) {
-                    if (!isFilteredProv) return;
-                    const l = e.target;
-                    l.setStyle({ weight: 3, color: '#f59e0b', dashArray: '', fillOpacity: 0.9 });
-                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) l.bringToFront();
-                },
-                mouseout: function (e) { if (gisDoctorGeoJson) gisDoctorGeoJson.resetStyle(e.target); }
-            });
-
-            if (selProv !== 'ALL' && selProv === fProv) {
-                layer.bindTooltip(
-                    `<div class="text-center">
-                        <div class="font-bold text-[10px] text-slate-800 leading-tight drop-shadow-md bg-white/70 px-1 rounded">${fAmp}</div>
-                        <div class="font-black text-[12px] text-purple-700 leading-tight drop-shadow-md bg-white/70 px-1 rounded">${count.toLocaleString()}</div>
-                     </div>`,
-                    { permanent: true, direction: "center", className: "transparent-tooltip" }
-                ).openTooltip();
-            }
-            else if (selProv === 'ALL' && String(fAmp).startsWith('เมือง')) {
-                const pTot = provTotals[fProv] || 0;
-                layer.bindTooltip(
-                    `<div class="text-center bg-white/80 border border-purple-200 shadow-sm rounded-lg px-2 py-1 transform -translate-y-4">
-                        <div class="font-bold text-xs text-slate-800">${fProv}</div>
-                        <div class="font-black text-sm text-purple-700">${pTot.toLocaleString()}</div>
-                     </div>`,
-                    { permanent: true, direction: "center", className: "transparent-tooltip" }
-                ).openTooltip();
-            }
-        }
+        const cArr = Object.values(distCounts);
+        const maxC = cArr.length > 0 ? Math.max(...cArr) : 1;
 
         gisDoctorGeoJson = L.geoJson(r8GeoJsonData, {
-            style: style,
-            onEachFeature: onEachFeature
-        }).addTo(gisDoctorMap);
+            style: function (f) {
+                const p = f.properties.PROV_TH; let a = String(f.properties.AMP_TH).replace('อำเภอ', '').trim(); if (a === 'เมือง') a = 'เมือง' + p;
+                const isF = (selProv === 'ALL' || selProv === p);
+                const count = (isF && distCounts[`${a}_${p}`]) ? distCounts[`${a}_${p}`] : 0;
+                return { fillColor: isF ? getMapColor(count, maxC) : '#f8fafc', weight: 1.5, opacity: 1, color: '#cbd5e1', dashArray: '', fillOpacity: isF ? 0.85 : 0.3 };
+            },
+            onEachFeature: function (f, l) {
+                const p = f.properties.PROV_TH; let a = String(f.properties.AMP_TH).replace('อำเภอ', '').trim(); if (a === 'เมือง') a = 'เมือง' + p;
+                const count = distCounts[`${a}_${p}`] || 0;
+                const isF = (selProv === 'ALL' || selProv === p);
 
-        // Auto Zoom to fit province
-        let targetBounds = null;
-        if (selProv !== 'ALL') {
-            const provFeatureGroup = new L.FeatureGroup();
-            gisDoctorGeoJson.eachLayer(function (layer) {
-                if (layer.feature.properties.PROV_TH === selProv) {
-                    provFeatureGroup.addLayer(layer);
+                let tt = isF ? `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${a}, ${p}</div><div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${count.toLocaleString()}</span> คน</div>` : `<div class="font-heading font-medium text-slate-500">${a}, ${p}</div>`;
+                l.bindTooltip(tt, { sticky: true, className: 'custom-map-tooltip', direction: 'top' });
+
+                l.on({
+                    mouseover: function (e) { if (!isF) return; var tg = e.target; tg.setStyle({ weight: 2.5, color: '#f59e0b', fillOpacity: 0.9 }); if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) tg.bringToFront(); },
+                    mouseout: function (e) { if (gisDoctorGeoJson) gisDoctorGeoJson.resetStyle(e.target); }
+                });
+
+                if (selProv !== 'ALL' && selProv === p) {
+                    const labelText = `<div class="text-center bg-white/90 border border-slate-200 shadow-sm rounded px-1.5 py-0.5 transform -translate-y-2"><div class="font-bold text-[10px] text-slate-600 leading-tight">${a.replace('เมือง', 'เมือง')}</div><div class="font-black text-xs text-moph-700 leading-tight">${count.toLocaleString()}</div></div>`;
+                    l.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                } else if (selProv === 'ALL' && (a.includes('เมือง') || a === p)) {
+                    const pTot = provTotals[p] || 0;
+                    const labelText = `<div class="text-center bg-white border border-moph-200 shadow-md rounded-xl px-2 py-1 transform -translate-y-4"><div class="font-bold text-[11px] text-slate-700 leading-tight">จ.${p}</div><div class="font-black text-sm text-moph-700 leading-tight">${pTot.toLocaleString()}</div></div>`;
+                    l.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
                 }
-            });
-            if (provFeatureGroup.getBounds().isValid()) {
-                targetBounds = provFeatureGroup.getBounds();
             }
-        } else if (gisDoctorGeoJson && gisDoctorGeoJson.getBounds().isValid()) {
-            targetBounds = gisDoctorGeoJson.getBounds();
-        }
+        }).addTo(gisDoctorMap);
+        addProvinceBorderLayer(gisDoctorMap);
+        addProvinceLabels(gisDoctorMap);
 
-        if (targetBounds) {
-            gisDoctorMap.fitBounds(targetBounds);
-            if (gisDoctorMap.getZoom() > 10) {
-                gisDoctorMap.setZoom(9);
+        let tb = null;
+        if (selProv !== 'ALL') {
+            const fg = new L.FeatureGroup();
+            gisDoctorGeoJson.eachLayer(l => { if (l.feature.properties.PROV_TH === selProv) fg.addLayer(l); });
+            if (fg.getBounds().isValid()) tb = fg.getBounds();
+        } else if (gisDoctorGeoJson && gisDoctorGeoJson.getBounds().isValid()) tb = gisDoctorGeoJson.getBounds();
+        if (tb) { gisDoctorMap.fitBounds(tb); if (gisDoctorMap.getZoom() > 10) gisDoctorMap.setZoom(9); }
+        addMapLegend(gisDoctorMap, maxC, 'จำนวนแพทย์ (คน)', 'คน');
+    }
+    function clearGisDoctorFilters() { $('#gisDoctorProvFilter, #gisDoctorTypeFilter').val('ALL').trigger('change.select2'); renderGisDoctorMap(); }
+
+    // ==========================================
+    // GIS NURSE MAP
+    // ==========================================
+    let gisNurseMap = null;
+    let gisNurseGeoJson = null;
+
+    async function initGisNurseMap() {
+        const mapDiv = document.getElementById('spGisNurseMap');
+        if (!mapDiv) return;
+        if (gisNurseMap) return;
+
+        gisNurseMap = L.map('spGisNurseMap', { center: [17.5, 103.5], zoom: 8, minZoom: 6, zoomControl: false, scrollWheelZoom: false });
+        L.control.zoom({ position: 'topright' }).addTo(gisNurseMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 20 }).addTo(gisNurseMap);
+        gisNurseMap.on('focus', function () { gisNurseMap.scrollWheelZoom.enable(); });
+        gisNurseMap.on('blur', function () { gisNurseMap.scrollWheelZoom.disable(); });
+
+        if (!r8GeoJsonData) {
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/gh/chingchai/OpenGISData-Thailand@master/districts.geojson');
+                const thGeoJson = await response.json();
+                const r8Codes = ['43', '38', '41', '42', '39', '47', '48'];
+                r8GeoJsonData = { type: "FeatureCollection", features: thGeoJson.features.filter(f => r8Codes.includes(String(f.properties.pro_code || f.properties.PRO_CODE || ''))) };
+                r8GeoJsonData.features.forEach(f => { f.properties.AMP_TH = f.properties.amp_th || f.properties.AMP_TH || ''; f.properties.PROV_TH = f.properties.pro_th || f.properties.PRO_TH || ''; });
+            } catch (err) { }
+        }
+        renderGisNurseMap();
+        $('#gisNurseProvFilter, #gisNurseTypeFilter').off('change.map').on('change.map', renderGisNurseMap);
+    }
+
+    function renderGisNurseMap() {
+        if (!rawData.medical || rawData.medical.length === 0) return;
+        const selProv = $('#gisNurseProvFilter').val();
+        const selType = $('#gisNurseTypeFilter').val();
+
+        let sumNicu = 0, sumOr = 0, sumIcu = 0, sumStroke = 0, sumHd = 0;
+        let distCounts = {};
+        let provTotals = {};
+
+        const headers = rawData.medical[0].map(h => String(h || '').trim());
+        const findH = (text) => headers.findIndex(h => h.replace(/\s+/g, '').includes(text.replace(/\s+/g, '')));
+        const hProv = findH('จังหวัด');
+        const hAmp = findH('อำเภอ/เขต') > -1 ? findH('อำเภอ/เขต') : findH('อำเภอ');
+        const hHospCode = findH('รหัส5หลัก');
+        const nicuIdx = findH('พยาบาล NICU'), orIdx = findH('พยาบาล OR ศัลยกรรม'), icuIdx = findH('พยาบาล ICU อายุรกรรม'), strokeIdx = findH('พยาบาล Stroke อายุรกรรม'), hdIdx = findH('พยาบาล HD');
+
+        if (hProv === -1 || nicuIdx === -1) return;
+
+        rawData.medical.slice(1).forEach(row => {
+            if (!row[hProv]) return;
+            let rowProv = normProv(row[hProv]).replace('จ.', '').replace('จังหวัด', '').trim();
+            if (selProv !== 'ALL' && rowProv !== selProv) return;
+
+            let district = '';
+            if (hAmp > -1 && row[hAmp]) district = String(row[hAmp]).trim().replace('อำเภอ', '').replace('เขต', '');
+            const c5 = (hHospCode > -1 && row[hHospCode]) ? String(row[hHospCode]).trim() : '';
+            if (!district && c5) { for (let pre in DISTRICT_MAP) { if (c5.startsWith(pre)) { district = DISTRICT_MAP[pre].replace('อำเภอ', ''); break; } } }
+            if (!district) district = 'เมือง' + rowProv;
+
+            const dKey = `${district}_${rowProv}`;
+            if (!distCounts[dKey]) distCounts[dKey] = 0;
+            if (!provTotals[rowProv]) provTotals[rowProv] = 0;
+
+            const nNicu = cleanNum(row[nicuIdx]), nOr = cleanNum(row[orIdx]), nIcu = cleanNum(row[icuIdx]), nStroke = cleanNum(row[strokeIdx]), nHd = cleanNum(row[hdIdx]);
+            sumNicu += nNicu; sumOr += nOr; sumIcu += nIcu; sumStroke += nStroke; sumHd += nHd;
+
+            let rTot = 0;
+            if (selType === 'ALL') rTot = nNicu + nOr + nIcu + nStroke + nHd;
+            else if (selType === 'พยาบาล NICU') rTot = nNicu; else if (selType === 'พยาบาล OR ศัลยกรรม') rTot = nOr;
+            else if (selType === 'พยาบาล ICU อายุรกรรม') rTot = nIcu; else if (selType === 'พยาบาล Stroke อายุรกรรม') rTot = nStroke;
+            else if (selType === 'พยาบาล HD') rTot = nHd;
+
+            distCounts[dKey] += rTot;
+            provTotals[rowProv] += rTot;
+        });
+
+        $('#gisNurseNicu').text(sumNicu.toLocaleString()); $('#gisNurseOr').text(sumOr.toLocaleString());
+        $('#gisNurseIcu').text(sumIcu.toLocaleString()); $('#gisNurseStroke').text(sumStroke.toLocaleString());
+        $('#gisNurseHd').text(sumHd.toLocaleString()); $('#gisNurseTotal').text((sumNicu + sumOr + sumIcu + sumStroke + sumHd).toLocaleString());
+
+        if (!gisNurseMap || !r8GeoJsonData) return;
+        if (gisNurseGeoJson) gisNurseMap.removeLayer(gisNurseGeoJson);
+
+        const cArr = Object.values(distCounts);
+        const maxC = cArr.length > 0 ? Math.max(...cArr) : 1;
+
+        gisNurseGeoJson = L.geoJson(r8GeoJsonData, {
+            style: function (f) {
+                const p = f.properties.PROV_TH; let a = String(f.properties.AMP_TH).replace('อำเภอ', '').trim(); if (a === 'เมือง') a = 'เมือง' + p;
+                const isF = (selProv === 'ALL' || selProv === p);
+                const count = (isF && distCounts[`${a}_${p}`]) ? distCounts[`${a}_${p}`] : 0;
+                return { fillColor: isF ? getMapColor(count, maxC) : '#f8fafc', weight: 1.5, opacity: 1, color: '#cbd5e1', dashArray: '', fillOpacity: isF ? 0.85 : 0.3 };
+            },
+            onEachFeature: function (f, l) {
+                const p = f.properties.PROV_TH; let a = String(f.properties.AMP_TH).replace('อำเภอ', '').trim(); if (a === 'เมือง') a = 'เมือง' + p;
+                const count = distCounts[`${a}_${p}`] || 0;
+                const isF = (selProv === 'ALL' || selProv === p);
+
+                let tt = isF ? `<div class="font-heading font-bold text-slate-800 text-sm border-b pb-1 mb-1">${a}, ${p}</div><div class="text-xs text-moph-600">จำนวน: <span class="font-bold text-moph-primary">${count.toLocaleString()}</span> คน</div>` : `<div class="font-heading font-medium text-slate-500">${a}, ${p}</div>`;
+                l.bindTooltip(tt, { sticky: true, className: 'custom-map-tooltip', direction: 'top' });
+
+                l.on({
+                    mouseover: function (e) { if (!isF) return; var tg = e.target; tg.setStyle({ weight: 2.5, color: '#f59e0b', fillOpacity: 0.9 }); if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) tg.bringToFront(); },
+                    mouseout: function (e) { if (gisNurseGeoJson) gisNurseGeoJson.resetStyle(e.target); }
+                });
+
+                if (selProv !== 'ALL' && selProv === p) {
+                    const labelText = `<div class="text-center bg-white/90 border border-slate-200 shadow-sm rounded px-1.5 py-0.5 transform -translate-y-2"><div class="font-bold text-[10px] text-slate-600 leading-tight">${a.replace('เมือง', 'เมือง')}</div><div class="font-black text-xs text-moph-700 leading-tight">${count.toLocaleString()}</div></div>`;
+                    l.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                } else if (selProv === 'ALL' && (a.includes('เมือง') || a === p)) {
+                    const pTot = provTotals[p] || 0;
+                    const labelText = `<div class="text-center bg-white border border-moph-200 shadow-md rounded-xl px-2 py-1 transform -translate-y-4"><div class="font-bold text-[11px] text-slate-700 leading-tight">จ.${p}</div><div class="font-black text-sm text-moph-700 leading-tight">${pTot.toLocaleString()}</div></div>`;
+                    l.bindTooltip(labelText, { permanent: true, direction: 'center', className: 'bg-transparent border-0 shadow-none' }).openTooltip();
+                }
             }
+        }).addTo(gisNurseMap);
+        addProvinceBorderLayer(gisNurseMap);
+        addProvinceLabels(gisNurseMap);
+
+        let tb = null;
+        if (selProv !== 'ALL') {
+            const fg = new L.FeatureGroup();
+            gisNurseGeoJson.eachLayer(l => { if (l.feature.properties.PROV_TH === selProv) fg.addLayer(l); });
+            if (fg.getBounds().isValid()) tb = fg.getBounds();
+        } else if (gisNurseGeoJson && gisNurseGeoJson.getBounds().isValid()) tb = gisNurseGeoJson.getBounds();
+        if (tb) { gisNurseMap.fitBounds(tb); if (gisNurseMap.getZoom() > 10) gisNurseMap.setZoom(9); }
+        addMapLegend(gisNurseMap, maxC, 'จำนวนพยาบาล (คน)', 'คน');
+    }
+    function clearGisNurseFilters() { $('#gisNurseProvFilter, #gisNurseTypeFilter').val('ALL').trigger('change.select2'); renderGisNurseMap(); }
+
+    // --- Modal Logic for EQ ---
+    function openAddEqModal() {
+        document.getElementById('modalMode').value = 'add'; document.getElementById('modalRowIdx').value = ''; document.getElementById('modalAmt').value = 0; document.getElementById('modalPriority').value = ''; document.getElementById('modalProvPriority').value = ''; document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
+        $('#modalProv').val('').trigger('change.select2'); updateModalHospDropdown();
+        const m = document.getElementById('addEqModal'); m.classList.remove('hidden'); setTimeout(() => m.classList.remove('opacity-0'), 10);
+        const b = document.getElementById('addEqModalBody'); b.classList.remove('scale-95'); b.classList.add('scale-100');
+    }
+    function openEditEqModal(encodedData) {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            document.getElementById('modalMode').value = 'edit'; document.getElementById('modalRowIdx').value = data.rowIdx; document.getElementById('addEqModalTitle').innerText = 'แก้ไขรายการครุภัณฑ์ (แถวที่ ' + data.rowIdx + ')';
+            $('#modalProv').val(data.prov).trigger('change.select2'); updateModalHospDropdown(data.hosp);
+            $('#modalYear').val(data.year).trigger('change.select2'); document.getElementById('modalFund').value = data.fundSrc || ''; $('#modalSp').val(data.sp).trigger('change.select2');
+            var itemExists = false; $('#modalItem option').each(function () { if (this.value === data.item) itemExists = true; });
+            if (itemExists) { $('#modalItem').val(data.item).trigger('change.select2'); } else { var newOption = new Option(data.item, data.item, true, true); if (data.itemCode) { $(newOption).attr('data-code', data.itemCode); } $('#modalItem').append(newOption).trigger('change.select2'); }
+            document.getElementById('modalPrice').value = data.price || 0; document.getElementById('modalQty').value = data.qty || 1; document.getElementById('modalAmt').value = data.amt || 0; document.getElementById('modalPriority').value = data.priority || ''; document.getElementById('modalProvPriority').value = data.provPriority || '';
+            const m = document.getElementById('addEqModal'); m.classList.remove('hidden'); setTimeout(() => m.classList.remove('opacity-0'), 10);
+            const b = document.getElementById('addEqModalBody'); b.classList.remove('scale-95'); b.classList.add('scale-100');
+        } catch (e) { alert("ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้"); }
+    }
+    function closeAddEqModal() {
+        const m = document.getElementById('addEqModal'); const b = document.getElementById('addEqModalBody');
+        m.classList.add('opacity-0'); b.classList.remove('scale-100'); b.classList.add('scale-95');
+        setTimeout(() => m.classList.add('hidden'), 300); document.getElementById('addEqForm').reset();
+        $('#modalYear, #modalProv, #modalHosp, #modalSp, #modalItem').val('').trigger('change.select2');
+    }
+    function updateModalHospDropdown(selectedHosp = '') {
+        const prov = document.getElementById('modalProv').value;
+        const hospSelect = $('#modalHosp');
+        hospSelect.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
+        let hospList = MODEL.allHospList || [];
+        if (prov) hospList = hospList.filter(h => h.val === prov);
+        hospList.forEach(h => {
+            const opt = new Option(h.text, h.text, false, false);
+            if (selectedHosp && h.text.includes(selectedHosp)) { opt.selected = true; }
+            hospSelect.append(opt);
+        });
+        hospSelect.trigger('change.select2');
+    }
+    function autoFillPrice() {
+        const selected = $('#modalItem').find(':selected'); const price = parseFloat(selected.data('price')) || 0; const pInput = document.getElementById('modalPrice');
+        if (selected.val() !== "") { pInput.value = price; } else { pInput.value = ''; }
+        calculateTotalAmt();
+    }
+    function calculateTotalAmt() {
+        const p = parseFloat(document.getElementById('modalPrice').value) || 0; const q = parseInt(document.getElementById('modalQty').value, 10) || 0;
+        if (p || q) { document.getElementById('modalAmt').value = (p * q).toFixed(2); } else { document.getElementById('modalAmt').value = ''; }
+    }
+    async function submitAddEqMode(e) {
+        e.preventDefault(); const btn = document.getElementById('submitEqBtn'); const ogText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> บันทึก...`;
+        const mode = document.getElementById('modalMode').value; const rowIdx = document.getElementById('modalRowIdx').value;
+        let record;
+        try {
+            const itemSelect = document.getElementById('modalItem'); const sIndex = itemSelect.selectedIndex; const selectedOption = sIndex >= 0 ? itemSelect.options[sIndex] : null; const itemCode = selectedOption ? ($(selectedOption).attr('data-code') || $(selectedOption).data('code') || '') : '';
+            record = { rowIdx: rowIdx, year: document.getElementById('modalYear').value, fundSrc: document.getElementById('modalFund').value, prov: document.getElementById('modalProv').value, sp: document.getElementById('modalSp').value, hosp: document.getElementById('modalHosp').value, item: document.getElementById('modalItem').value, price: parseFloat(document.getElementById('modalPrice').value) || 0, qty: parseInt(document.getElementById('modalQty').value, 10) || 0, amt: parseFloat(document.getElementById('modalAmt').value) || 0, itemCode: itemCode, priority: document.getElementById('modalPriority').value, provPriority: document.getElementById('modalProvPriority').value };
+        } catch (err) { alert('ข้อผิดพลาด: ' + err.message); btn.innerHTML = ogText; btn.disabled = false; return; }
+        try {
+            await new Promise((resolve, reject) => {
+                if (mode === 'edit') { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).editEquipmentRecord(record); }
+                else { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).addEquipmentRecord(record); }
+            });
+            btn.innerHTML = ogText; btn.disabled = false; closeAddEqModal(); refreshNow();
+            if (typeof Swal !== 'undefined') Swal.fire({ title: 'สำเร็จ!', text: mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว', icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
+            else alert(mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว');
+        } catch (err) {
+            btn.innerHTML = ogText; btn.disabled = false;
+            if (typeof Swal !== 'undefined') Swal.fire({ title: 'พบข้อผิดพลาด!', text: err.message || 'ไม่สามารถบันทึกข้อมูลได้', icon: 'error', confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
+            else alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
         }
     }
+
+    // ฟังก์ชันสั่งสตาร์ทระบบ (ที่เคยหล่นหายไป)
+    function processAndRender(forceRebuild = false) {
+        if (!MODEL) return;
+        const filterEl = document.getElementById('provinceFilter');
+        const filter = filterEl ? filterEl.value : 'ALL';
+        const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
+        const modeChanged = (mode !== lastTableMode);
+
+        updateTopStatsAndCards(filter);
+        updateProvDrilldownCards(filter);
+        renderTables(filter, modeChanged || forceRebuild);
+        drawCharts(filter);
+
+        const main = document.getElementById('mainContent');
+        if (main) main.style.opacity = '1';
+        lastTableMode = mode;
+    }
+
+    window.onscroll = function () {
+        const btn = document.getElementById("backToTop");
+        if (btn) {
+            if (window.scrollY > 400) btn.classList.add("show"); else btn.classList.remove("show");
+        }
+    };
+
+    window.onload = async function () {
+        try {
+            if (document.getElementById('headerVersion')) document.getElementById('headerVersion').innerText = String(VERSION);
+            if (document.getElementById('templateVersionBadge')) document.getElementById('templateVersionBadge').innerText = String(VERSION);
+            showLoader("กำลังโหลดข้อมูล... v." + VERSION);
+            await loadData({ force: false });
+            MODEL = buildModelOnce();
+            if (MODEL) processAndRender(true);
+            hideLoader();
+        } catch (e) {
+            showFatal("Load failed: " + (e.message || e));
+            hideLoader();
+        }
+    };
 </script>
