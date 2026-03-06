@@ -208,14 +208,14 @@
         font-size: clamp(24px, 2.2vw, 36px);
     }
 
-    /* Select2 Customization for Tailwind */
+    /* Select2 Customization */
     .select2-container {
         width: 100% !important;
     }
 
     .select2-container .select2-selection--single {
         height: 48px !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 1.5px solid #86efac !important;
         border-radius: 0.75rem !important;
         background-color: #f8fafc !important;
         display: flex !important;
@@ -244,12 +244,16 @@
         padding-left: 1rem !important;
     }
 
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--primary-green) !important;
+        box-shadow: 0 0 0 2px rgba(5, 104, 57, 0.15) !important;
+    }
+
     .select2-dropdown {
         border: 1px solid #e2e8f0 !important;
         border-radius: 0.75rem !important;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
         z-index: 100000 !important;
-        /* Raised Z-Index to avoid Modal clipping */
         font-family: inherit !important;
         font-size: 16px !important;
     }
@@ -285,22 +289,22 @@
         background: white;
         background: rgba(255, 255, 255, 0.95);
         box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
+        border-radius: 12px;
     }
 
     .info h4 {
         margin: 0 0 5px;
         color: #334155;
         font-weight: 700;
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .legend {
         text-align: left;
         line-height: 24px;
         color: #475569;
-        font-size: 13px;
-        font-weight: 500;
+        font-size: 12px;
+        font-weight: 600;
     }
 
     .legend i {
@@ -310,5 +314,20 @@
         margin-right: 8px;
         opacity: 0.85;
         border-radius: 4px;
+    }
+
+    .province-label {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-weight: 800;
+        font-size: 13px;
+        color: #1e293b;
+        text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
+        white-space: nowrap;
+    }
+
+    .province-label::before {
+        display: none;
     }
 </style>
