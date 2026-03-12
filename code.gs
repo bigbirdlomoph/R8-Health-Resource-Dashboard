@@ -4,7 +4,7 @@
  */
 
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
-const VERSION = '690302-2200'; // อัปเดตเพื่อเคลียร์ Cache ทั้งหมด
+const VERSION = '690310-1030'; // เพิ่ม Service Delivery module
 const CACHE_TTL_SEC = 180;
 
 function doGet() {
@@ -66,12 +66,18 @@ function getDashboardData() {
         const meqmophRaw = ss.getSheetByName('m_eq_moph').getDataRange().getValues();
         const meqmoph = meqmophRaw.map(r => [null, null, null, r[3], r[4], null, r[6]]);
 
+        // Service Delivery sheets
+        const msd = ss.getSheetByName('m_sd').getDataRange().getValues();
+        const cspsd = ss.getSheetByName('c_sp_sd').getDataRange().getValues();
+        const csdcriteria = ss.getSheetByName('c_sd_criteria').getDataRange().getValues();
+        const csdmethod = ss.getSheetByName('c_sd_method').getDataRange().getValues();
+
         let lastUpdatedISO = new Date().toISOString();
         try { lastUpdatedISO = DriveApp.getFileById(SPREADSHEET_ID).getLastUpdated().toISOString(); } catch (e) { }
 
         const payload = {
             status: 'success',
-            data: { hospital, population, sap, medical, bed, hospital_structure, meqsp, msp, meqmoph },
+            data: { hospital, population, sap, medical, bed, hospital_structure, meqsp, msp, meqmoph, msd, cspsd, csdcriteria, csdmethod },
             meta: { version: VERSION, lastUpdated: lastUpdatedISO }
         };
 
@@ -137,6 +143,51 @@ function editEquipmentRecord(record) {
         ]]);
         clearDashboardCache();
         return { status: 'success' };
+    } catch (e) {
+        return { status: 'error', message: e.toString() };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+/**
+ * Batch upsert Service Delivery records (wide format)
+ * records = [{hosp_name, sd_code, value}, ...]
+ */
+function batchEditSdRecords(records) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(15000);
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        const sheet = ss.getSheetByName('m_sd');
+        const data = sheet.getDataRange().getValues();
+        const headers = data[0].map(h => String(h || '').trim());
+
+        // Find hospital name column
+        const hospCol = headers.findIndex(h => h.includes('โรงพยาบาล') || h.includes('ชื่อ'));
+        if (hospCol === -1) throw new Error('ไม่พบคอลัมน์ชื่อโรงพยาบาลใน m_sd');
+
+        // Build row lookup: hospName -> row number (1-based)
+        const rowMap = {};
+        for (let i = 1; i < data.length; i++) {
+            const name = String(data[i][hospCol] || '').trim();
+            if (name) rowMap[name] = i + 1;
+        }
+
+        // Build column lookup: sdCode -> column number (1-based)
+        const colMap = {};
+        headers.forEach((h, i) => { colMap[h] = i + 1; });
+
+        records.forEach(r => {
+            const rowNum = rowMap[String(r.hosp_name).trim()];
+            const colNum = colMap[String(r.sd_code).trim()];
+            if (rowNum && colNum) {
+                sheet.getRange(rowNum, colNum).setValue(r.value);
+            }
+        });
+
+        clearDashboardCache();
+        return { status: 'success', updated: records.length };
     } catch (e) {
         return { status: 'error', message: e.toString() };
     } finally {
