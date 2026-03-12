@@ -104,6 +104,76 @@
                 </svg>
                 ครุภัณฑ์ SP
             </button>
+
+            <div class="pt-2">
+                <button onclick="toggleSubmenu('sdSubmenu', 'sdChevron')"
+                    class="w-full flex items-center justify-between px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-medium transition-colors border border-transparent text-left group">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-80 group-hover:opacity-100"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        Service Delivery
+                    </div>
+                    <svg id="sdChevron" xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 transition-transform duration-300 transform rotate-0 opacity-80" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="sdSubmenu"
+                    class="hidden mt-1 space-y-1 ml-6 border-l border-white/20 pl-3 transition-all duration-300">
+                    <button id="tabSdDashBtn" onclick="switchTab('sd_dash')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>Dashboard SD
+                    </button>
+                    <button id="tabSdListBtn" onclick="switchTab('sd_list')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-300 opacity-80 flex-shrink-0"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        รายการ SD แต่ละสาขา
+                    </button>
+                    <button id="tabSdHeartBtn" onclick="switchTab('sd_heart')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 text-emerald-400 opacity-80 flex-shrink-0" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <path d="M9 14h6"></path>
+                            <path d="M9 18h6"></path>
+                            <path d="M9 10h6"></path>
+                        </svg>
+                        ผลการประเมิน SD
+                    </button>
+                    <button id="tabSdFormBtn" onclick="switchTab('sd_form')"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                        <div
+                            class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 text-emerald-300 opacity-80 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        📝 แบบประเมิน SD
+                    </button>
+                </div>
+            </div>
+
             <div class="pt-2">
                 <button onclick="toggleSubmenu('gisSubmenu', 'gisChevron')"
                     class="w-full flex items-center justify-between px-4 py-3.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-xl font-medium transition-colors border border-transparent text-left group">
@@ -399,13 +469,6 @@
                                 <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
                                 <select id="eqProvFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกจังหวัด</option>
-                                    <option value="อุดรธานี">อุดรธานี</option>
-                                    <option value="สกลนคร">สกลนคร</option>
-                                    <option value="นครพนม">นครพนม</option>
-                                    <option value="เลย">เลย</option>
-                                    <option value="หนองคาย">หนองคาย</option>
-                                    <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                    <option value="บึงกาฬ">บึงกาฬ</option>
                                 </select>
                             </div>
                             <div class="lg:col-span-3">
@@ -487,13 +550,6 @@
                             <div><label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label><select
                                     id="gisProvFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกจังหวัด</option>
-                                    <option value="อุดรธานี">อุดรธานี</option>
-                                    <option value="สกลนคร">สกลนคร</option>
-                                    <option value="นครพนม">นครพนม</option>
-                                    <option value="เลย">เลย</option>
-                                    <option value="หนองคาย">หนองคาย</option>
-                                    <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                    <option value="บึงกาฬ">บึงกาฬ</option>
                                 </select></div>
                             <div><label class="block text-sm font-bold text-slate-500 mb-2">ปีงบประมาณ</label><select
                                     id="gisYearFilter" class="w-full select2-filter">
@@ -539,13 +595,6 @@
                                 <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
                                 <select id="gisBedProvFilter" class="w-full select2-filter">
                                     <option value="ALL">ทุกจังหวัด</option>
-                                    <option value="อุดรธานี">อุดรธานี</option>
-                                    <option value="สกลนคร">สกลนคร</option>
-                                    <option value="นครพนม">นครพนม</option>
-                                    <option value="เลย">เลย</option>
-                                    <option value="หนองคาย">หนองคาย</option>
-                                    <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                    <option value="บึงกาฬ">บึงกาฬ</option>
                                 </select>
                             </div>
                             <div>
@@ -666,13 +715,6 @@
                             <label class="block text-sm font-semibold text-slate-500 mb-2">จังหวัด</label>
                             <select id="gisDoctorProvFilter" class="w-full select2-filter">
                                 <option value="ALL">ทุกจังหวัด</option>
-                                <option value="อุดรธานี">อุดรธานี</option>
-                                <option value="สกลนคร">สกลนคร</option>
-                                <option value="นครพนม">นครพนม</option>
-                                <option value="เลย">เลย</option>
-                                <option value="หนองคาย">หนองคาย</option>
-                                <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                <option value="บึงกาฬ">บึงกาฬ</option>
                             </select>
                         </div>
                         <div class="flex-1">
@@ -773,13 +815,6 @@
                             <label class="block text-sm font-semibold text-slate-500 mb-2">จังหวัด</label>
                             <select id="gisNurseProvFilter" class="w-full select2-filter">
                                 <option value="ALL">ทุกจังหวัด</option>
-                                <option value="อุดรธานี">อุดรธานี</option>
-                                <option value="สกลนคร">สกลนคร</option>
-                                <option value="นครพนม">นครพนม</option>
-                                <option value="เลย">เลย</option>
-                                <option value="หนองคาย">หนองคาย</option>
-                                <option value="หนองบัวลำภู">หนองบัวลำภู</option>
-                                <option value="บึงกาฬ">บึงกาฬ</option>
                             </select>
                         </div>
                         <div class="flex-1">
@@ -852,6 +887,319 @@
 
                 <div class="card p-0 shadow-sm border border-slate-200 rounded-3xl overflow-hidden relative">
                     <div id="spGisNurseMap" style="height: 650px; width: 100%; z-index: 1;"></div>
+                </div>
+            </div>
+
+            <!-- ==================== SD DASHBOARD ==================== -->
+            <div id="sdDashContent" class="hidden space-y-8 opacity-0 transition-opacity duration-300">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-emerald-100 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-700" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">ภาพรวม Service Delivery</h3>
+                        <p class="text-sm text-slate-500">สถานะการดำเนินการ SD แต่ละสาขา Service Plan</p>
+                    </div>
+                </div>
+
+                <div id="sdDashCards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- JS will render cards here -->
+                </div>
+            </div>
+
+            <!-- ==================== SD LIST (รายการ SD แต่ละสาขา) ==================== -->
+            <div id="sdListContent" class="hidden space-y-6 opacity-0 transition-opacity duration-300">
+                <!-- Filter Bar -->
+                <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl">
+                    <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-end">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">สาขา Service Plan</label>
+                                <select id="sdListBranchFilter" title="เลือกสาขา SP" class="w-full select2-filter">
+                                    <option value="ALL">ทุกสาขา</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">ระดับ SAP</label>
+                                <div class="relative w-full" id="sapDropdownContainer">
+                                    <button type="button"
+                                        class="w-full bg-white border border-slate-300 rounded-[6px] py-[9px] px-3 text-sm text-left focus:outline-none focus:ring-1 focus:border-indigo-500 focus:ring-indigo-500 flex items-center justify-between"
+                                        id="sapDropdownBtn"
+                                        onclick="document.getElementById('sapDropdownMenu').classList.toggle('hidden')">
+                                        <span class="block truncate text-slate-600"
+                                            id="sapDropdownLabel">ทุกระดับ</span>
+                                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div id="sapDropdownMenu"
+                                        class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-sm ring-1 ring-black ring-opacity-5 overflow-auto hidden">
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="P+"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ P+ ] โรงพยาบาลศูนย์ ระดับ Premium
+                                                Plus</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="P"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ P ] โรงพยาบาลศูนย์ ระดับ
+                                                Premium</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="A+"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ A+ ] โรงพยาบาลทั่วไป ระดับ
+                                                Academy Plus</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="A"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ A ] โรงพยาบาลทั่วไป ระดับ
+                                                Academy</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="S+"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ S+ ] โรงพยาบาลชุมชน ระดับ
+                                                Standard Plus</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="S"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ S ] โรงพยาบาลชุมชน ระดับ
+                                                Standard</span>
+                                        </label>
+                                        <!-- <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="F1"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ F1 ] โรงพยาบาลชุมชน ระดับ
+                                                F1</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="F2"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ F2 ] โรงพยาบาลชุมชน ระดับ
+                                                F2</span>
+                                        </label>
+                                        <label
+                                            class="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" value="F3"
+                                                class="sap-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-3 h-4 w-4">
+                                            <span class="text-slate-700 font-medium">[ F3 ] โรงพยาบาลชุมชน ระดับ
+                                                F3</span>
+                                        </label> -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <button onclick="clearSdListFilters()"
+                                    class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Criteria Table -->
+                <div class="card bg-white shadow-sm border border-slate-200 rounded-3xl overflow-x-auto">
+
+                    <!-- Status Legend -->
+                    <div class="p-4 pb-0 mb-3 flex flex-wrap justify-end gap-4">
+                        <span class="inline-flex items-center gap-2 text-sm text-slate-600 font-medium"><span
+                                style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:700;background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;font-size:11px;">1</span>
+                            = ควรมีบริการ</span>
+                        <span class="inline-flex items-center gap-2 text-sm text-slate-600 font-medium"><span
+                                style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:700;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:11px;">0</span>
+                            = ไม่มีบริการ</span>
+                    </div>
+
+                    <table id="sdListTable" class="w-full text-sm" style="border-collapse:collapse;">
+                        <thead id="sdListThead"></thead>
+                        <tbody id="sdListTbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- SD Legend -->
+                <div id="sdListLegend" class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl">
+                </div>
+            </div>
+
+            <!-- ==================== SD EVALUATION RESULT ==================== -->
+            <div id="sdHeartContent" class="hidden space-y-6 opacity-0 transition-opacity duration-300">
+                <!-- Filter Bar -->
+                <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl">
+                    <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 items-end">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SP</label>
+                                <select id="sdEvalBranchFilter" title="เลือกสาขา" class="w-full select2-filter">
+                                    <option value="ALL">ทุกสาขา</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
+                                <select id="sdHeartProvFilter" title="เลือกจังหวัด" class="w-full select2-filter">
+                                    <option value="ALL">ทุกจังหวัด</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">โรงพยาบาล</label>
+                                <select id="sdHeartHospFilter" title="เลือกโรงพยาบาล" class="w-full select2-filter">
+                                    <option value="ALL">ทุกโรงพยาบาล</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button onclick="clearSdHeartFilters()"
+                                    class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">จำนวน รพ. (แสดง)</div>
+                        <div class="text-4xl font-black text-moph-700" id="sdHeartTotHosp">0</div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">ดำเนินการแล้ว</div>
+                        <div class="text-4xl font-black text-emerald-600" id="sdHeartTotDone">0</div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">คงค้าง (ยังไม่มี/ไม่ได้ทำ)</div>
+                        <div class="text-4xl font-black text-red-500" id="sdHeartTotPending">0</div>
+                    </div>
+                </div>
+
+                <!-- Pivot Table -->
+                <div id="sdHeartTableWrapper"
+                    class="hidden custom-table-container bg-white p-4 rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
+
+                    <div class="mb-3 flex flex-wrap justify-end gap-4">
+                        <span class="inline-flex items-center gap-2 text-sm text-slate-600 font-medium"><span
+                                style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:700;background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;font-size:11px;">1</span>
+                            = ควรมีบริการ</span>
+                        <span class="inline-flex items-center gap-2 text-sm text-slate-600 font-medium"><span
+                                style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:700;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:11px;">0</span>
+                            = ไม่มีบริการ</span>
+                    </div>
+
+                    <table id="sdHeartTable" class="w-full text-sm border-collapse">
+                        <thead id="sdHeartThead"></thead>
+                        <tbody id="sdHeartTbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- SD Legend (3-column) -->
+                <div id="sdHeartLegend" class="hidden bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <!-- JS renderSdHeartLegend() will render here -->
+                </div>
+            </div>
+
+            <!-- ==================== SD FORM (Assessment) ==================== -->
+            <div id="sdFormContent" class="hidden space-y-6 opacity-0 transition-opacity duration-300">
+                <!-- Filter Bar -->
+                <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl">
+                    <div class="flex flex-col md:flex-row gap-6 justify-between md:items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 items-end">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">สาขา SP</label>
+                                <select id="sdFormBranchFilter" title="เลือกสาขา" class="w-full select2-filter">
+                                    <option value="">-- เลือกสาขา --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">จังหวัด</label>
+                                <select id="sdFormProvFilter" title="เลือกจังหวัด" class="w-full select2-filter">
+                                    <option value="">-- เลือกจังหวัด --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-500 mb-2">โรงพยาบาล</label>
+                                <select id="sdFormHospFilter" title="เลือกโรงพยาบาล" class="w-full select2-filter">
+                                    <option value="">-- เลือก รพ. --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button onclick="clearSdFormFilters()"
+                                    class="w-full py-[11px] px-4 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border border-red-200 hover:border-red-300 transition-colors shadow-sm">ล้างค่า</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hospital Info Cards (hidden until hospital selected) -->
+                <div id="sdFormInfoCards" class="hidden">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                            <div class="text-xs font-bold text-slate-400 mb-1">โรงพยาบาล</div>
+                            <div class="text-lg font-black text-moph-700" id="sdFormHospName">-</div>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                            <div class="text-xs font-bold text-slate-400 mb-1">ระดับ SAP</div>
+                            <div class="text-lg font-black text-sky-700" id="sdFormSapLevel">-</div>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                            <div class="text-xs font-bold text-slate-400 mb-1">เตียงกรอบ</div>
+                            <div class="text-lg font-black text-amber-600" id="sdFormBedFrame">-</div>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                            <div class="text-xs font-bold text-slate-400 mb-1">เตียงจริง</div>
+                            <div class="text-lg font-black text-emerald-600" id="sdFormBedReal">-</div>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                            <div class="text-xs font-bold text-slate-400 mb-1">สาขา Service Plan</div>
+                            <div class="text-lg font-black text-purple-700" id="sdFormBranchName">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SD Method Legend -->
+                <div id="sdFormMethodLegend"
+                    class="hidden mt-4 bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 shadow-sm"></div>
+
+                <!-- SD Legend -->
+                <div id="sdFormLegend" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                </div>
+
+                <!-- Assessment Table -->
+                <div id="sdFormTableContainer" class="hidden mt-4">
+                    <div
+                        class="custom-table-container bg-white p-4 rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead id="sdFormThead"></thead>
+                            <tbody id="sdFormTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div id="sdFormSaveBtnContainer" class="hidden flex justify-end">
+                    <button id="sdFormSaveBtn" onclick="submitSdFormChanges()"
+                        class="py-3 px-8 bg-moph-primary hover:bg-moph-secondary text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span id="sdFormSaveBtnText">บันทึกแบบประเมิน</span>
+                    </button>
                 </div>
             </div>
 
