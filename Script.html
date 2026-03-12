@@ -47,6 +47,40 @@
             '#2F855A', 'สกลนคร': '#276749', 'นครพนม': '#2C7A7B'
     };
 
+    const R8_PROVINCES = [
+        'บึงกาฬ', 'หนองบัวลำภู', 'อุดรธานี',
+        'เลย', 'หนองคาย', 'สกลนคร', 'นครพนม'
+    ];
+
+    function initAllProvinceDropdowns() {
+        // Standard filters having "ALL" -> ทุกจังหวัด
+        const defaultAllFilters = [
+            'eqProvFilter', 'gisProvFilter', 'gisBedProvFilter',
+            'gisDoctorProvFilter', 'gisNurseProvFilter', 'sdHeartProvFilter'
+        ];
+        // Form filters having "" -> -- เลือกจังหวัด --
+        const defaultEmptyFilters = ['sdFormProvFilter'];
+
+        let htmlAll = '<option value="ALL">ทุกจังหวัด</option>';
+        let htmlEmpty = '<option value="">-- เลือกจังหวัด --</option>';
+
+        R8_PROVINCES.forEach(prov => {
+            const opt = `<option value="${prov}">${prov}</option>`;
+            htmlAll += opt;
+            htmlEmpty += opt;
+        });
+
+        defaultAllFilters.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = htmlAll;
+        });
+
+        defaultEmptyFilters.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = htmlEmpty;
+        });
+    }
+
     const KEYS = {
         DOC: ["กุมารแพทย์", "ศัลยแพทย์ OR", "อายุรแพทย์ ICU", "อายุรแพทย์ Stroke", "อายุรแพทย์ HD"],
         NURSE: ["พยาบาล NICU", "พยาบาล OR ศัลยกรรม", "พยาบาล ICU อายุรกรรม", "พยาบาล Stroke อายุรกรรม", "พยาบาล HD"],
@@ -230,6 +264,24 @@
             });
         });
 
+        if (rawData.bed && rawData.bed.length > 1) {
+            const bedH = rawData.bed[0];
+            const hospColBed = bedH.findIndex(h => String(h || '').includes('โรงพยาบาล') || String(h || '').includes('ชื่อ'));
+            const frameColBed = bedH.findIndex(h => String(h || '').includes('กรอบ'));
+            const realColBed = bedH.findIndex(h => String(h || '').includes('จริง'));
+            rawData.bed.slice(1).forEach(r => {
+                const rName = hospColBed > -1 ? String(r[hospColBed] || '').trim() : '';
+                if (!rName) return;
+                for (const p in hospByProv) {
+                    const h = hospByProv[p].find(x => rName.includes(x.name) || x.name.includes(rName));
+                    if (h) {
+                        if (frameColBed > -1) h.bedFrame = cleanNum(r[frameColBed]);
+                        if (realColBed > -1) h.bedReal = cleanNum(r[realColBed]);
+                    }
+                }
+            });
+        }
+
         function sortHospitals(list) {
             return list.sort((a, b) => {
                 const tA = T_PRIO[a.type] || 99; const tB = T_PRIO[b.type] || 99;
@@ -261,7 +313,88 @@
         aggProv('bed', KEYS.BED, idx.bed, 'beds');
         aggProv('hospital_structure', KEYS.STRUCT, idx.structure, 'structure');
 
-        return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv, eqData, spList, yearList, allHospList, meqmophList, mspListSource };
+        // ==========================================
+        // SERVICE DELIVERY MODEL
+        // ==========================================
+        const sdMethodMap = {};
+        if (rawData.csdmethod && rawData.csdmethod.length > 1) {
+            rawData.csdmethod.slice(1).forEach(r => {
+                sdMethodMap[String(r[0]).trim()] = String(r[1] || '').trim();
+            });
+        }
+
+        const sdItemsByBranch = {};
+        const sdAllBranches = [];
+        const sdCriteria = {};
+        const SAP_COLS = ['P+', 'P', 'A+', 'A', 'S+', 'S'];
+        if (rawData.cspsd && rawData.cspsd.length > 1) {
+            rawData.cspsd.slice(1).forEach(r => {
+                const sp = String(r[0] || '').trim();
+                const code = String(r[1] || '').trim();
+                const name = String(r[2] || '').trim();
+                if (!sp || !code) return;
+                if (!sdItemsByBranch[sp]) { sdItemsByBranch[sp] = []; sdAllBranches.push(sp); }
+                sdItemsByBranch[sp].push({ code, name });
+                // SAP criteria from c_sp_sd columns D-I (r[3]-r[8])
+                sdCriteria[code] = {};
+                SAP_COLS.forEach((col, i) => {
+                    sdCriteria[code][col] = parseInt(r[i + 3], 10) || 0;
+                });
+            });
+        }
+
+        // c_sd_criteria Col A: dropdown options for SD assessment
+        const sdCriteriaOptions = [];
+        if (rawData.csdcriteria && rawData.csdcriteria.length > 1) {
+            rawData.csdcriteria.slice(1).forEach(r => {
+                const val = String(r[0] || '').trim();
+                const desc = String(r[1] || '').trim();
+                if (val && !sdCriteriaOptions.find(o => o.value === val)) {
+                    sdCriteriaOptions.push({ value: val, desc: desc });
+                }
+            });
+        }
+
+        // m_sd: Wide format — header: SP สาขา | จังหวัด | ชื่อโรงพยาบาล | ระดับ SAP | H1 | H2 | ... | หมายเหตุ | SD_remark
+        const sdData = {};       // { hospName: { H1: 'มี(1)', H2: '0', ... } }
+        const sdHospMeta = {};   // { hospName: { sp, prov, sap, remark, sdRemark } }
+        const sdColMap = {};     // { 'H1': colIndex, 'H2': colIndex, ... }
+        let sdRemarkIdx = -1;
+        let sdRemarkColIdx = -1; // SD_remark column (pipe-separated per-item remarks)
+        if (rawData.msd && rawData.msd.length > 1) {
+            const msdHeaders = rawData.msd[0].map(h => String(h || '').trim());
+            // Discover SD code columns dynamically (H1, H2, ... or any codes from c_sp_sd)
+            const allSdCodes = new Set();
+            Object.values(sdItemsByBranch).forEach(items => items.forEach(i => allSdCodes.add(i.code)));
+            msdHeaders.forEach((h, i) => {
+                if (allSdCodes.has(h)) sdColMap[h] = i;
+            });
+            // Find key columns by header name
+            const spIdx = msdHeaders.findIndex(h => h.includes('สาขา'));
+            const provIdx = msdHeaders.findIndex(h => h.includes('จังหวัด'));
+            const hospIdx = msdHeaders.findIndex(h => h.includes('โรงพยาบาล') || h.includes('ชื่อ'));
+            const sapIdx = msdHeaders.findIndex(h => h.includes('SAP') || h.includes('ระดับ'));
+            sdRemarkIdx = msdHeaders.findIndex(h => h === 'หมายเหตุ');
+            sdRemarkColIdx = msdHeaders.findIndex(h => h === 'SD_remark');
+
+            rawData.msd.slice(1).forEach(r => {
+                const hospName = hospIdx > -1 ? String(r[hospIdx] || '').trim() : '';
+                if (!hospName) return;
+                sdData[hospName] = {};
+                for (const [code, ci] of Object.entries(sdColMap)) {
+                    sdData[hospName][code] = String(r[ci] ?? '0').trim();
+                }
+                sdHospMeta[hospName] = {
+                    sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
+                    prov: provIdx > -1 ? String(r[provIdx] || '').trim() : '',
+                    sap: sapIdx > -1 ? String(r[sapIdx] || '').trim() : '',
+                    remark: sdRemarkIdx > -1 ? String(r[sdRemarkIdx] || '').trim() : '',
+                    sdRemark: sdRemarkColIdx > -1 ? String(r[sdRemarkColIdx] || '').trim() : ''
+                };
+            });
+        }
+
+        return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv, eqData, spList, yearList, allHospList, meqmophList, mspListSource, sdMethodMap, sdItemsByBranch, sdAllBranches, sdCriteria, sdCriteriaOptions, sdData, sdHospMeta, sdColMap };
     }
 
     function loadData({ force = false } = {}) {
@@ -558,6 +691,22 @@
         setBtnState(gisDoctorBtn, tabId === 'gis_doctor');
         setBtnState(gisNurseBtn, tabId === 'gis_nurse');
 
+        const sdDashBtn = document.getElementById('tabSdDashBtn');
+        const sdHeartBtn = document.getElementById('tabSdHeartBtn');
+        const sdListBtn = document.getElementById('tabSdListBtn');
+        const sdFormBtn = document.getElementById('tabSdFormBtn');
+        setBtnState(sdDashBtn, tabId === 'sd_dash');
+        setBtnState(sdHeartBtn, tabId === 'sd_heart');
+        setBtnState(sdListBtn, tabId === 'sd_list');
+        setBtnState(sdFormBtn, tabId === 'sd_form');
+
+        if (tabId.startsWith('sd_')) {
+            const sdSub = document.getElementById('sdSubmenu');
+            const sdChev = document.getElementById('sdChevron');
+            if (sdSub) sdSub.classList.remove('hidden');
+            if (sdChev) sdChev.style.transform = 'rotate(180deg)';
+        }
+
         if (tabId === 'main') {
             if (pageTitle) pageTitle.innerText = "ภาพรวมทรัพยากร";
             if (pageSubtitle) pageSubtitle.innerText = "ข้อมูลสรุปภาพรวมในเขตสุขภาพที่ 8";
@@ -569,6 +718,14 @@
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
             if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
+            const sdDash = document.getElementById('sdDashContent');
+            const sdHeart = document.getElementById('sdHeartContent');
+            const sdList = document.getElementById('sdListContent');
+            const sdForm = document.getElementById('sdFormContent');
+            if (sdDash) { sdDash.classList.add('hidden'); sdDash.style.opacity = '0'; }
+            if (sdHeart) { sdHeart.classList.add('hidden'); sdHeart.style.opacity = '0'; }
+            if (sdList) { sdList.classList.add('hidden'); sdList.style.opacity = '0'; }
+            if (sdForm) { sdForm.classList.add('hidden'); sdForm.style.opacity = '0'; }
         } else if (tabId === 'eq') {
             if (pageTitle) pageTitle.innerText = "ครุภัณฑ์ SP";
             if (pageSubtitle) pageSubtitle.innerText = "ข้อมูลความต้องการครุภัณฑ์ Service Plan";
@@ -580,6 +737,14 @@
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
             if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
+            const sdDash2 = document.getElementById('sdDashContent');
+            const sdHeart2 = document.getElementById('sdHeartContent');
+            const sdList2 = document.getElementById('sdListContent');
+            const sdForm2 = document.getElementById('sdFormContent');
+            if (sdDash2) { sdDash2.classList.add('hidden'); sdDash2.style.opacity = '0'; }
+            if (sdHeart2) { sdHeart2.classList.add('hidden'); sdHeart2.style.opacity = '0'; }
+            if (sdList2) { sdList2.classList.add('hidden'); sdList2.style.opacity = '0'; }
+            if (sdForm2) { sdForm2.classList.add('hidden'); sdForm2.style.opacity = '0'; }
 
             if (document.getElementById('spBranchFilter') && document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
             $('#spBranchFilter, #eqYearFilter, #eqProvFilter').off('change.app select2:select.app').on('change.app select2:select.app', function () { setTimeout(renderEqTable, 0); });
@@ -595,7 +760,10 @@
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
             if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
-
+            const _sdD1 = document.getElementById('sdDashContent'); if (_sdD1) { _sdD1.classList.add('hidden'); _sdD1.style.opacity = '0'; }
+            const _sdH1 = document.getElementById('sdHeartContent'); if (_sdH1) { _sdH1.classList.add('hidden'); _sdH1.style.opacity = '0'; }
+            const _sdL1 = document.getElementById('sdListContent'); if (_sdL1) { _sdL1.classList.add('hidden'); _sdL1.style.opacity = '0'; }
+            const _sdF1 = document.getElementById('sdFormContent'); if (_sdF1) { _sdF1.classList.add('hidden'); _sdF1.style.opacity = '0'; }
             if (document.getElementById('gisSpFilter') && document.getElementById('gisSpFilter').options.length <= 1 && MODEL) { populateGisDropdown(); }
 
             setTimeout(async () => {
@@ -614,7 +782,10 @@
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
             if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
-
+            const _sdD2 = document.getElementById('sdDashContent'); if (_sdD2) { _sdD2.classList.add('hidden'); _sdD2.style.opacity = '0'; }
+            const _sdH2 = document.getElementById('sdHeartContent'); if (_sdH2) { _sdH2.classList.add('hidden'); _sdH2.style.opacity = '0'; }
+            const _sdL2 = document.getElementById('sdListContent'); if (_sdL2) { _sdL2.classList.add('hidden'); _sdL2.style.opacity = '0'; }
+            const _sdF2 = document.getElementById('sdFormContent'); if (_sdF2) { _sdF2.classList.add('hidden'); _sdF2.style.opacity = '0'; }
             if (!$('#gisBedProvFilter').hasClass('select2-hidden-accessible')) {
                 $('#gisBedProvFilter, #gisBedTypeFilter').select2({ minimumResultsForSearch: 10 });
             }
@@ -636,7 +807,10 @@
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisNurseContent) { gisNurseContent.classList.add('hidden'); gisNurseContent.style.opacity = '0'; }
-
+            const _sdD3 = document.getElementById('sdDashContent'); if (_sdD3) { _sdD3.classList.add('hidden'); _sdD3.style.opacity = '0'; }
+            const _sdH3 = document.getElementById('sdHeartContent'); if (_sdH3) { _sdH3.classList.add('hidden'); _sdH3.style.opacity = '0'; }
+            const _sdL3 = document.getElementById('sdListContent'); if (_sdL3) { _sdL3.classList.add('hidden'); _sdL3.style.opacity = '0'; }
+            const _sdF3 = document.getElementById('sdFormContent'); if (_sdF3) { _sdF3.classList.add('hidden'); _sdF3.style.opacity = '0'; }
             if (!$('#gisDoctorProvFilter').hasClass('select2-hidden-accessible')) {
                 $('#gisDoctorProvFilter, #gisDoctorTypeFilter').select2({ minimumResultsForSearch: 10 });
             }
@@ -658,6 +832,10 @@
             if (gisContent) { gisContent.classList.add('hidden'); gisContent.style.opacity = '0'; }
             if (gisBedContent) { gisBedContent.classList.add('hidden'); gisBedContent.style.opacity = '0'; }
             if (gisDoctorContent) { gisDoctorContent.classList.add('hidden'); gisDoctorContent.style.opacity = '0'; }
+            const _sdD4 = document.getElementById('sdDashContent'); if (_sdD4) { _sdD4.classList.add('hidden'); _sdD4.style.opacity = '0'; }
+            const _sdH4 = document.getElementById('sdHeartContent'); if (_sdH4) { _sdH4.classList.add('hidden'); _sdH4.style.opacity = '0'; }
+            const _sdL4 = document.getElementById('sdListContent'); if (_sdL4) { _sdL4.classList.add('hidden'); _sdL4.style.opacity = '0'; }
+            const _sdF4 = document.getElementById('sdFormContent'); if (_sdF4) { _sdF4.classList.add('hidden'); _sdF4.style.opacity = '0'; }
 
             if (!$('#gisNurseProvFilter').hasClass('select2-hidden-accessible')) {
                 $('#gisNurseProvFilter, #gisNurseTypeFilter').select2({ minimumResultsForSearch: 10 });
@@ -668,6 +846,100 @@
                 if (!gisNurseMap) { await initGisNurseMap(); } else { gisNurseMap.invalidateSize(); }
                 if (window.renderGisNurseMap) renderGisNurseMap();
             }, 200);
+        } else if (tabId === 'sd_dash') {
+            if (pageTitle) pageTitle.innerText = "Dashboard Service Delivery";
+            if (pageSubtitle) pageSubtitle.innerText = "ภาพรวมสถานะ Service Delivery แต่ละสาขา SP";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            const allSections = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent, document.getElementById('sdHeartContent'), document.getElementById('sdListContent'), document.getElementById('sdFormContent')];
+            allSections.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+            const sdDashEl = document.getElementById('sdDashContent');
+            if (sdDashEl) { sdDashEl.classList.remove('hidden'); setTimeout(() => sdDashEl.style.opacity = '1', 50); }
+
+            if (MODEL) renderSdDashboard();
+
+        } else if (tabId === 'sd_list') {
+            if (pageTitle) pageTitle.innerText = "รายการ SD แต่ละสาขา";
+            if (pageSubtitle) pageSubtitle.innerText = "Service Delivery — เกณฑ์การให้บริการตามระดับ SAP";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            const allSectionsL = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent, document.getElementById('sdDashContent'), document.getElementById('sdHeartContent'), document.getElementById('sdFormContent')];
+            allSectionsL.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+            const sdListEl = document.getElementById('sdListContent');
+            if (sdListEl) { sdListEl.classList.remove('hidden'); setTimeout(() => sdListEl.style.opacity = '1', 50); }
+
+            if (!$('#sdListBranchFilter').hasClass('select2-hidden-accessible')) {
+                $('#sdListBranchFilter').select2({ minimumResultsForSearch: 10 });
+            }
+            $('#sdListBranchFilter').off('change.app').on('change.app', renderSdListTable);
+
+            // Custom SAP Dropdown Logic
+            $('.sap-checkbox').off('change').on('change', function () {
+                const checkedCount = $('.sap-checkbox:checked').length;
+                if (checkedCount === 0) {
+                    $('#sapDropdownLabel').text('ทุกระดับ');
+                } else {
+                    $('#sapDropdownLabel').text(`เลือกระดับ SAP (${checkedCount} รายการ)`);
+                }
+                renderSdListTable();
+            });
+
+            $(document).off('click.sapDropdown').on('click.sapDropdown', function (e) {
+                const container = $("#sapDropdownContainer");
+                if (container.length && !container.is(e.target) && container.has(e.target).length === 0) {
+                    $('#sapDropdownMenu').addClass('hidden');
+                }
+            });
+
+            if (MODEL) { populateSdListDropdowns(); renderSdListTable(); }
+
+        } else if (tabId === 'sd_heart') {
+            if (pageTitle) pageTitle.innerText = "ผลการประเมิน Service Delivery";
+            if (pageSubtitle) pageSubtitle.innerText = "ผลการประเมิน Service Delivery (รายสาขา)";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            const allSections2 = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent, document.getElementById('sdDashContent'), document.getElementById('sdListContent'), document.getElementById('sdFormContent')];
+            allSections2.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+            const sdHeartEl = document.getElementById('sdHeartContent');
+            if (sdHeartEl) { sdHeartEl.classList.remove('hidden'); setTimeout(() => sdHeartEl.style.opacity = '1', 50); }
+
+            if (!$('#sdEvalBranchFilter').hasClass('select2-hidden-accessible')) {
+                $('#sdEvalBranchFilter').select2({ minimumResultsForSearch: 10 });
+            }
+            if (!$('#sdHeartProvFilter').hasClass('select2-hidden-accessible')) {
+                $('#sdHeartProvFilter').select2({ minimumResultsForSearch: 10 });
+            }
+            if (!$('#sdHeartHospFilter').hasClass('select2-hidden-accessible')) {
+                $('#sdHeartHospFilter').select2({ minimumResultsForSearch: 10 });
+            }
+
+            $('#sdEvalBranchFilter').off('change.app').on('change.app', renderSdTable);
+            $('#sdHeartProvFilter').off('change.app').on('change.app', function () {
+                populateSdHospDropdown();
+                renderSdTable();
+            });
+            $('#sdHeartHospFilter').off('change.app').on('change.app', renderSdTable);
+
+            if (MODEL) { populateSdHospDropdown(); renderSdTable(); }
+
+        } else if (tabId === 'sd_form') {
+            if (pageTitle) pageTitle.innerText = "แบบประเมิน Service Delivery";
+            if (pageSubtitle) pageSubtitle.innerText = "แบบฟอร์มประเมินรายการ Service Delivery รายโรงพยาบาล";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            const allSectionsF = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent, document.getElementById('sdDashContent'), document.getElementById('sdHeartContent'), document.getElementById('sdListContent')];
+            allSectionsF.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+            const sdFormEl = document.getElementById('sdFormContent');
+            if (sdFormEl) { sdFormEl.classList.remove('hidden'); setTimeout(() => sdFormEl.style.opacity = '1', 50); }
+
+            if (!$('#sdFormBranchFilter').hasClass('select2-hidden-accessible')) {
+                $('#sdFormBranchFilter, #sdFormProvFilter, #sdFormHospFilter').select2({ minimumResultsForSearch: 10 });
+            }
+            $('#sdFormBranchFilter').off('change.app').on('change.app', onSdFormFilterChange);
+            $('#sdFormProvFilter').off('change.app').on('change.app', onSdFormFilterChange);
+            $('#sdFormHospFilter').off('change.app').on('change.app', function () { renderSdForm(); });
+
+            if (MODEL) { initSdFormDropdowns(); }
         }
 
         if (window.innerWidth < 1024) {
@@ -1530,6 +1802,791 @@
     }
     function clearGisNurseFilters() { $('#gisNurseProvFilter, #gisNurseTypeFilter').val('ALL').trigger('change.select2'); renderGisNurseMap(); }
 
+    // ==========================================
+    // SERVICE DELIVERY — TABLE & LOGIC
+    // ==========================================
+
+    // Helper: check if SD value is "non-zero" (= has SD capability)
+    function sdIsNonZero(val) {
+        const s = String(val ?? '').trim();
+        if (!s || s === '0' || s === '') return false;
+        return true;
+    }
+
+    let sdDirtyChanges = {}; // key: "hospName|sdCode" -> new text value
+
+    function renderSdDashboard() {
+        if (!MODEL || !MODEL.sdItemsByBranch) return;
+        const container = document.getElementById('sdDashCards');
+        if (!container) return;
+
+        const branches = MODEL.sdAllBranches;
+
+        let html = '';
+        branches.forEach(branch => {
+            const items = MODEL.sdItemsByBranch[branch] || [];
+            if (items.length === 0) return;
+
+            // Count from m_sd data (keyed by hospName)
+            const hospNames = Object.keys(MODEL.sdData);
+            let totalRequired = 0, totalDone = 0;
+
+            hospNames.forEach(hospName => {
+                const meta = MODEL.sdHospMeta[hospName];
+                if (!meta) return;
+                items.forEach(sd => {
+                    const crit = MODEL.sdCriteria[sd.code];
+                    const sap = meta.sap;
+                    if (crit && crit[sap]) {
+                        totalRequired++;
+                        const val = MODEL.sdData[hospName] && MODEL.sdData[hospName][sd.code];
+                        if (sdIsNonZero(val)) totalDone++;
+                    }
+                });
+            });
+
+            const pending = totalRequired - totalDone;
+            const pct = totalRequired > 0 ? Math.round((totalDone / totalRequired) * 100) : 0;
+            const barColor = pct >= 80 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626';
+
+            html += `<div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-2 bg-red-50 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+                    <h4 class="text-sm font-bold text-slate-700 leading-tight">${escapeHtml(branch)}</h4>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="text-center"><div class="text-xs text-slate-400 mb-1">SD Items</div><div class="text-lg font-black text-slate-700">${items.length}</div></div>
+                    <div class="text-center"><div class="text-xs text-slate-400 mb-1">ดำเนินการ</div><div class="text-lg font-black text-emerald-600">${totalDone}</div></div>
+                    <div class="text-center"><div class="text-xs text-slate-400 mb-1">คงค้าง</div><div class="text-lg font-black ${pending > 0 ? 'text-red-500' : 'text-slate-400'}">${pending}</div></div>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500" style="width:${pct}%; background:${barColor}"></div>
+                </div>
+                <div class="text-right text-[11px] font-bold mt-1" style="color:${barColor}">${pct}%</div>
+            </div>`;
+        });
+
+        if (!html) html = '<div class="col-span-3 text-center text-slate-400 py-12">ยังไม่มีข้อมูล Service Delivery ในระบบ</div>';
+        container.innerHTML = html;
+    }
+
+    function populateSdHospDropdown() {
+        if (!MODEL || !MODEL.sdData) return;
+
+        const branchFilterEl = document.getElementById('sdEvalBranchFilter');
+        if (branchFilterEl) {
+            const currentBranch = branchFilterEl.value;
+            let branchHtml = '<option value="ALL">เลือกสาขา...</option>';
+            if (MODEL.sdItemsByBranch) {
+                Object.keys(MODEL.sdItemsByBranch).sort().forEach(bName => {
+                    branchHtml += `<option value="${escapeHtml(bName)}">${escapeHtml(bName)}</option>`;
+                });
+            }
+            branchFilterEl.innerHTML = branchHtml;
+            if (branchFilterEl.querySelector(`option[value="${currentBranch}"]`)) {
+                $(branchFilterEl).val(currentBranch).trigger('change.select2');
+            } else {
+                $(branchFilterEl).val('ALL').trigger('change.select2');
+            }
+        }
+
+        const provFilter = document.getElementById('sdHeartProvFilter')?.value || 'ALL';
+        const sel = document.getElementById('sdHeartHospFilter');
+        if (!sel) return;
+
+        const currentVal = sel.value;
+        let html = '<option value="ALL">ทุกโรงพยาบาล</option>';
+
+        Object.keys(MODEL.sdData).forEach(hospName => {
+            const meta = MODEL.sdHospMeta[hospName];
+            if (!meta) return;
+            if (provFilter !== 'ALL' && meta.prov !== provFilter) return;
+            html += `<option value="${escapeHtml(hospName)}">${escapeHtml(hospName)}</option>`;
+        });
+
+        sel.innerHTML = html;
+        // Try to restore previous value, otherwise reset to ALL
+        if (sel.querySelector(`option[value="${currentVal}"]`)) {
+            $(sel).val(currentVal).trigger('change.select2');
+        } else {
+            $(sel).val('ALL').trigger('change.select2');
+        }
+    }
+
+    function renderSdTable() {
+        if (!MODEL || !MODEL.sdItemsByBranch) return;
+        const theadEl = document.getElementById('sdHeartThead');
+        const tbodyEl = document.getElementById('sdHeartTbody');
+        if (!theadEl || !tbodyEl) return;
+
+        const branchFilter = document.getElementById('sdEvalBranchFilter')?.value || 'ALL';
+        const provFilter = document.getElementById('sdHeartProvFilter')?.value || 'ALL';
+        const hospFilter = document.getElementById('sdHeartHospFilter')?.value || 'ALL';
+
+        const wrapper = document.getElementById('sdHeartTableWrapper');
+        const legend = document.getElementById('sdHeartLegend');
+
+        if (branchFilter === 'ALL' || (provFilter === 'ALL' && hospFilter === 'ALL')) {
+            if (wrapper) wrapper.classList.add('hidden');
+            if (legend) legend.classList.add('hidden');
+            document.getElementById('sdHeartTotHosp').innerText = '0';
+            document.getElementById('sdHeartTotDone').innerText = '0';
+            document.getElementById('sdHeartTotPending').innerText = '0';
+            return;
+        } else {
+            if (wrapper) wrapper.classList.remove('hidden');
+            if (legend) legend.classList.remove('hidden');
+        }
+
+        const itemsForBranch = MODEL.sdItemsByBranch[branchFilter] || [];
+        const sdCodes = itemsForBranch.map(item => item.code);
+
+        if (sdCodes.length === 0) {
+            theadEl.innerHTML = '';
+            tbodyEl.innerHTML = '<tr><td colspan="5" style="padding:40px;text-align:center;color:#94a3b8;">ยังไม่มีข้อมูลประเมินสำหรับสาขานี้</td></tr>';
+            return;
+        }
+
+        const sdNameMap = {};
+        itemsForBranch.forEach(sd => { sdNameMap[sd.code] = sd.name; });
+
+        // Build hospital list from m_sd data
+        let hospList = [];
+        const sapOrder = { 'P+': 1, 'P': 2, 'A+': 3, 'A': 4, 'S+': 5, 'S': 6 };
+        Object.keys(MODEL.sdData).forEach(hospName => {
+            const meta = MODEL.sdHospMeta[hospName];
+            if (!meta) return;
+            if (provFilter !== 'ALL' && meta.prov !== provFilter) return;
+            if (hospFilter !== 'ALL' && hospName !== hospFilter) return;
+            hospList.push({ name: hospName, prov: meta.prov, sap: meta.sap, remark: meta.remark, sp: meta.sp });
+        });
+        hospList.sort((a, b) => (sapOrder[a.sap] || 99) - (sapOrder[b.sap] || 99));
+
+        // Build header
+        const thStyle = 'background:var(--primary-green);color:white;padding:10px 8px;text-align:center;font-size:12px;white-space:nowrap;';
+        let thead = '<tr>';
+        thead += `<th style="${thStyle}position:sticky;left:0;z-index:2;min-width:140px;text-align:left;">SP สาขา</th>`;
+        thead += `<th style="${thStyle}min-width:80px;">จังหวัด</th>`;
+        thead += `<th style="${thStyle}position:sticky;left:140px;z-index:2;min-width:180px;text-align:left;">ชื่อโรงพยาบาล</th>`;
+        thead += `<th style="${thStyle}min-width:70px;">ระดับ SAP</th>`;
+        sdCodes.forEach(code => {
+            const sdFullName = sdNameMap[code] || '';
+            thead += `<th style="${thStyle}min-width:110px;" title="${escapeHtml(sdFullName)}">${escapeHtml(code)}</th>`;
+        });
+        thead += `<th style="${thStyle}min-width:120px;">หมายเหตุ</th>`;
+        thead += '</tr>';
+        theadEl.innerHTML = thead;
+
+        // Build body
+        let tbody = '';
+        let totHosp = 0, totDone = 0, totPending = 0;
+
+        hospList.forEach(h => {
+            totHosp++;
+            const trBg = totHosp % 2 === 0 ? '#f8fafc' : 'white';
+            tbody += `<tr style="border-bottom:1px solid #e2e8f0;background:${trBg};">`;
+            tbody += `<td style="padding:8px 10px;font-size:12px;color:#475569;position:sticky;left:0;background:${trBg};z-index:1;white-space:nowrap;">${escapeHtml(h.sp || '')}</td>`;
+            tbody += `<td style="padding:8px;text-align:center;font-size:12px;color:#475569;">${escapeHtml(h.prov)}</td>`;
+            tbody += `<td style="padding:8px 10px;font-weight:600;color:#1e293b;position:sticky;left:140px;background:${trBg};z-index:1;white-space:nowrap;">${escapeHtml(h.name)}</td>`;
+            const sapBg = h.sap === 'P+' || h.sap === 'P' ? '#fff7ed' : h.sap === 'A+' || h.sap === 'A' ? '#eff6ff' : '#f0fdf4';
+            const sapColor = h.sap === 'P+' || h.sap === 'P' ? '#ea580c' : h.sap === 'A+' || h.sap === 'A' ? '#2563eb' : '#16a34a';
+            tbody += `<td style="padding:8px;text-align:center;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:700;background:${sapBg};color:${sapColor};">${escapeHtml(h.sap)}</span></td>`;
+
+            sdCodes.forEach(code => {
+                const rawVal = MODEL.sdData[h.name] && MODEL.sdData[h.name][code] !== undefined ? MODEL.sdData[h.name][code] : '0';
+                const displayVal = String(rawVal).trim() || '0';
+                const isNonZero = sdIsNonZero(displayVal);
+
+                if (isNonZero) totDone++; else totPending++;
+
+                const badgeBg = isNonZero ? '#e0f2fe' : '#fef9c3';
+                const badgeColor = isNonZero ? '#0369a1' : '#a16207';
+                const badgeBorder = isNonZero ? '#7dd3fc' : '#fde047';
+                const sdFullName = sdNameMap[code] || code;
+
+                tbody += `<td style="padding:4px 6px;text-align:center;">`;
+                tbody += `<span title="${escapeHtml(sdFullName)}"
+                    style="display:inline-block;min-width:60px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;
+                    background:${badgeBg};color:${badgeColor};border:1.5px solid ${badgeBorder};cursor:default;">${escapeHtml(displayVal)}</span>`;
+                tbody += `</td>`;
+            });
+
+            tbody += `<td style="padding:8px;font-size:11px;color:#64748b;">${escapeHtml(h.remark || '')}</td>`;
+            tbody += '</tr>';
+        });
+
+        if (hospList.length === 0) {
+            tbody = `<tr><td colspan="${4 + sdCodes.length + 1}" style="padding:40px;text-align:center;color:#94a3b8;">ไม่พบข้อมูลในชีต m_sd สำหรับตัวกรองนี้</td></tr>`;
+        }
+
+        tbodyEl.innerHTML = tbody;
+
+        document.getElementById('sdHeartTotHosp').innerText = totHosp.toLocaleString();
+        document.getElementById('sdHeartTotDone').innerText = totDone.toLocaleString();
+        document.getElementById('sdHeartTotPending').innerText = totPending.toLocaleString();
+
+        // Render the 3-column SD legend at bottom of heart table
+        renderSdListLegend(branchFilter, 'sdHeartLegend');
+    }
+
+    function clearSdHeartFilters() {
+        $('#sdEvalBranchFilter').val('ALL').trigger('change.select2');
+        $('#sdHeartProvFilter').val('ALL').trigger('change.select2');
+        $('#sdHeartHospFilter').val('ALL').trigger('change.select2');
+        populateSdHospDropdown();
+        renderSdTable();
+    }
+
+    // ==========================================
+    // SD LIST PAGE — รายการ SD แต่ละสาขา
+    // ==========================================
+    function populateSdListDropdowns() {
+        if (!MODEL || !MODEL.sdAllBranches) return;
+        const sel = document.getElementById('sdListBranchFilter');
+        if (!sel) return;
+        let html = '<option value="ALL">ทุกสาขา</option>';
+        MODEL.sdAllBranches.forEach(b => {
+            html += `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`;
+        });
+        sel.innerHTML = html;
+    }
+
+    function renderSdListTable() {
+        if (!MODEL || !MODEL.sdItemsByBranch) return;
+        const theadEl = document.getElementById('sdListThead');
+        const tbodyEl = document.getElementById('sdListTbody');
+        if (!theadEl || !tbodyEl) return;
+
+        const branchFilter = document.getElementById('sdListBranchFilter')?.value || 'ALL';
+        const sapFilter = $('.sap-checkbox:checked').map(function () { return this.value; }).get();
+        const SAP_LEVELS = ['P+', 'P', 'A+', 'A', 'S+', 'S'];
+        const sapLevelsToShow = (sapFilter.length === 0) ? SAP_LEVELS : SAP_LEVELS.filter(lvl => sapFilter.includes(lvl));
+
+        // Determine which branches to show
+        const branchesToShow = branchFilter === 'ALL' ? MODEL.sdAllBranches : [branchFilter];
+
+        if (branchesToShow.length === 0) {
+            theadEl.innerHTML = '';
+            tbodyEl.innerHTML = '<tr><td style="padding:40px;text-align:center;color:#94a3b8;">ยังไม่มีข้อมูลสาขา SD</td></tr>';
+            renderSdListLegend(null);
+            return;
+        }
+
+        // Collect all SD items for selected branches
+        let allItems = [];
+        branchesToShow.forEach(branch => {
+            const items = MODEL.sdItemsByBranch[branch] || [];
+            items.forEach(sd => allItems.push({ ...sd, branch }));
+        });
+
+        if (allItems.length === 0) {
+            theadEl.innerHTML = '';
+            tbodyEl.innerHTML = '<tr><td style="padding:40px;text-align:center;color:#94a3b8;">ไม่พบรายการ SD สำหรับสาขาที่เลือก</td></tr>';
+            renderSdListLegend(null);
+            return;
+        }
+
+        // Build header
+        const thStyle = 'background:var(--primary-green);color:white;padding:10px 8px;text-align:center;font-size:12px;white-space:nowrap;';
+        let thead = '<tr>';
+        thead += `<th style="${thStyle}position:sticky;left:0;z-index:2;min-width:140px;text-align:left;">สาขา</th>`;
+        thead += `<th style="${thStyle}min-width:80px;">รหัส SD</th>`;
+        thead += `<th style="${thStyle}min-width:250px;text-align:left;">รายการ Service Delivery</th>`;
+        sapLevelsToShow.forEach(sap => {
+            thead += `<th style="${thStyle}min-width:70px;">${escapeHtml(sap)}</th>`;
+        });
+        thead += '</tr>';
+        theadEl.innerHTML = thead;
+
+        // Build body
+        let tbody = '';
+        allItems.forEach((sd, idx) => {
+            const trBg = idx % 2 === 0 ? 'white' : '#f8fafc';
+            tbody += `<tr style="border-bottom:1px solid #e2e8f0;background:${trBg};">`;
+            tbody += `<td style="padding:8px 10px;font-size:12px;color:#475569;position:sticky;left:0;background:${trBg};z-index:1;white-space:nowrap;">${escapeHtml(sd.branch || '')}</td>`;
+            tbody += `<td style="padding:8px 12px;font-weight:700;color:#0369a1;text-align:center;">${escapeHtml(sd.code)}</td>`;
+            tbody += `<td style="padding:8px 12px;color:#334155;">${escapeHtml(sd.name)}</td>`;
+
+            sapLevelsToShow.forEach(sap => {
+                const crit = MODEL.sdCriteria[sd.code];
+                const val = crit ? (crit[sap] || 0) : 0;
+                if (val === 1) {
+                    tbody += `<td style="padding:6px;text-align:center;"><span style="display:inline-block;padding:3px 12px;border-radius:8px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;">1</span></td>`;
+                } else {
+                    tbody += `<td style="padding:6px;text-align:center;"><span style="display:inline-block;padding:3px 12px;border-radius:8px;font-size:11px;font-weight:700;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;">0</span></td>`;
+                }
+            });
+
+            tbody += '</tr>';
+        });
+
+        tbodyEl.innerHTML = tbody;
+
+        // Render legend below table
+        const legendBranch = branchFilter !== 'ALL' ? branchFilter : null;
+        renderSdListLegend(legendBranch, 'sdListLegend');
+    }
+
+    function renderSdListLegend(branch, targetId) {
+        const legendEl = document.getElementById(targetId || 'sdListLegend');
+        if (!legendEl || !MODEL || !MODEL.sdItemsByBranch) return;
+
+        // If no specific branch, render all branches
+        const branches = branch ? [branch] : (MODEL.sdAllBranches || []);
+        if (branches.length === 0) return;
+
+        let html = '';
+        branches.forEach((b, bIdx) => {
+            if (!MODEL.sdItemsByBranch[b]) return;
+            if (bIdx > 0) html += '<div class="my-4 border-t border-slate-200"></div>';
+            html += renderSdListLegendBlock(b);
+        });
+
+        legendEl.innerHTML = html;
+    }
+
+    function renderSdListLegendBlock(branch) {
+
+        const items = MODEL.sdItemsByBranch[branch] || [];
+        const SAP_ALL = ['P+', 'P', 'A+', 'A', 'S+', 'S'];
+
+        // Build items with SAP info
+        const legendItems = items.map(sd => {
+            const crit = MODEL.sdCriteria[sd.code] || {};
+            const sapList = SAP_ALL.filter(s => crit[s] === 1);
+            return { code: sd.code, name: sd.name, sapList };
+        });
+
+        // Split into 3 columns
+        const colSize = Math.ceil(legendItems.length / 3);
+        const cols = [
+            legendItems.slice(0, colSize),
+            legendItems.slice(colSize, colSize * 2),
+            legendItems.slice(colSize * 2)
+        ];
+
+        // Branch icon (heart for สาขาโรคหัวใจ, generic for others)
+        const heartSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+        const genericSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-moph-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>';
+        const icon = branch.includes('หัวใจ') ? heartSvg : genericSvg;
+
+        let html = `<div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200">`;
+        html += `${icon}<h4 class="text-base font-bold text-slate-700">รายการ Service Delivery ${escapeHtml(branch)}</h4>`;
+        html += `</div>`;
+
+        html += `<div class="grid grid-cols-1 md:grid-cols-3 gap-6">`;
+        cols.forEach(col => {
+            html += `<div class="space-y-3">`;
+            col.forEach(item => {
+                const sapBadges = item.sapList.map(s => {
+                    const bg = s === 'P+' || s === 'P' ? '#fff7ed' : s === 'A+' || s === 'A' ? '#eff6ff' : '#f0fdf4';
+                    const color = s === 'P+' || s === 'P' ? '#ea580c' : s === 'A+' || s === 'A' ? '#2563eb' : '#16a34a';
+                    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:${bg};color:${color};">${s}</span>`;
+                }).join(' ');
+
+                html += `<div class="flex items-start gap-2">`;
+                html += `<span class="flex-shrink-0 font-bold text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-0.5 mt-0.5">${escapeHtml(item.code)}</span>`;
+                html += `<div><div class="text-xs text-slate-600 leading-snug">${escapeHtml(item.name)}</div>`;
+                if (item.sapList.length > 0) {
+                    html += `<div class="mt-1 flex flex-wrap gap-1">รพ.ระดับ ${sapBadges}</div>`;
+                }
+                html += `</div></div>`;
+            });
+            html += `</div>`;
+        });
+        html += `</div>`;
+
+        return html;
+    }
+
+    function renderSdMethodLegend() {
+        if (!MODEL || !MODEL.sdMethodMap) return '';
+        const methodKeys = Object.keys(MODEL.sdMethodMap).sort();
+        let html = '<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">';
+        html += '<div class="font-bold text-indigo-800">คำอธิบายรหัสวิธีการ:</div>';
+        methodKeys.forEach(k => {
+            html += `<div class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-white border border-indigo-300 flex items-center justify-center font-bold text-[10px] text-indigo-700 shadow-sm">${escapeHtml(k)}</span><span class="text-slate-600">${escapeHtml(MODEL.sdMethodMap[k])}</span></div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function clearSdListFilters() {
+        $('#sdListBranchFilter').val('ALL').trigger('change.select2');
+        $('.sap-checkbox').prop('checked', false);
+        $('#sapDropdownLabel').text('ทุกระดับ');
+        renderSdListTable();
+    }
+
+    // ==========================================
+    // SD FORM (Assessment) — แบบประเมิน SD
+    // ==========================================
+    let sdFormDirtyChanges = {}; // key: "hospName|sdCode" -> new value
+    let sdFormDirtyRemarks = {}; // key: sdCode -> remark text
+
+    function parseSdRemark(str) {
+        // "H1:text1|H3:text2" -> { H1: "text1", H3: "text2" }
+        const map = {};
+        if (!str) return map;
+        str.split('|').forEach(part => {
+            const idx = part.indexOf(':');
+            if (idx > 0) {
+                const key = part.substring(0, idx).trim();
+                const val = part.substring(idx + 1).trim();
+                if (key) map[key] = val;
+            }
+        });
+        return map;
+    }
+
+    function serializeSdRemark(map) {
+        // { H1: "text1", H3: "text2" } -> "H1:text1|H3:text2"
+        return Object.entries(map).filter(([k, v]) => v && v.trim()).map(([k, v]) => k + ':' + v.trim()).join('|');
+    }
+
+    function initSdFormDropdowns() {
+        if (!MODEL || !MODEL.sdAllBranches) return;
+        const branchSel = document.getElementById('sdFormBranchFilter');
+        if (!branchSel) return;
+        let html = '<option value="">-- เลือกสาขา --</option>';
+        MODEL.sdAllBranches.forEach(b => {
+            html += `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`;
+        });
+        branchSel.innerHTML = html;
+        $(branchSel).val('').trigger('change.select2');
+    }
+
+    function onSdFormFilterChange() {
+        if (!MODEL || !MODEL.hospByProv) return;
+        const branch = document.getElementById('sdFormBranchFilter')?.value || '';
+        const prov = document.getElementById('sdFormProvFilter')?.value || '';
+        const hospSel = document.getElementById('sdFormHospFilter');
+        if (!hospSel) return;
+
+        const currentVal = hospSel.value;
+        let html = '<option value="">-- เลือก รพ. --</option>';
+
+        if (prov && MODEL.hospByProv[prov]) {
+            MODEL.hospByProv[prov].forEach(h => {
+                html += `<option value="${escapeHtml(h.name)}">${escapeHtml(h.name)}</option>`;
+            });
+        }
+        hospSel.innerHTML = html;
+
+        if (hospSel.querySelector(`option[value="${currentVal}"]`)) {
+            $(hospSel).val(currentVal).trigger('change.select2');
+        } else {
+            $(hospSel).val('').trigger('change.select2');
+        }
+
+        renderSdForm();
+    }
+
+    function renderSdForm() {
+        if (!MODEL) return;
+        const branch = document.getElementById('sdFormBranchFilter')?.value || '';
+        const prov = document.getElementById('sdFormProvFilter')?.value || '';
+        const hospName = document.getElementById('sdFormHospFilter')?.value || '';
+
+        const infoEl = document.getElementById('sdFormInfoCards');
+        const tableEl = document.getElementById('sdFormTableContainer');
+        const saveEl = document.getElementById('sdFormSaveBtnContainer');
+        const legendEl = document.getElementById('sdFormLegend');
+
+        sdFormDirtyChanges = {};
+        sdFormDirtyRemarks = {};
+        const btn = document.getElementById('sdFormSaveBtn');
+        const btnText = document.getElementById('sdFormSaveBtnText');
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+
+        if (!branch || !hospName) {
+            if (infoEl) infoEl.classList.add('hidden');
+            if (tableEl) tableEl.classList.add('hidden');
+            if (saveEl) saveEl.classList.add('hidden');
+            if (legendEl) legendEl.classList.add('hidden');
+            document.getElementById('sdFormMethodLegend')?.classList.add('hidden');
+            return;
+        }
+
+        // Find hospital info from hospByProv (hospital sheet)
+        let hospInfo = null;
+        Object.values(MODEL.hospByProv).forEach(arr => {
+            arr.forEach(h => { if (h.name === hospName) hospInfo = h; });
+        });
+
+        // --- Info Cards ---
+        const sapLevel = hospInfo ? (hospInfo.sapLvl || '-') : '-';
+        const SAP_FULL = { 'P+': 'Premium Plus : P+', 'P': 'Premium : P', 'A+': 'Academy Plus : A+', 'A': 'Academy : A', 'S+': 'Standard Plus : S+', 'S': 'Standard : S' };
+        document.getElementById('sdFormHospName').innerText = hospName;
+        document.getElementById('sdFormSapLevel').innerText = SAP_FULL[sapLevel] || sapLevel;
+        document.getElementById('sdFormBranchName').innerText = branch;
+
+        // Bed data - find from MODEL
+        let bedFrame = '-', bedReal = '-';
+        if (hospInfo) {
+            if (hospInfo.bedFrame !== undefined) bedFrame = hospInfo.bedFrame.toLocaleString();
+            if (hospInfo.bedReal !== undefined) bedReal = hospInfo.bedReal.toLocaleString();
+        }
+        document.getElementById('sdFormBedFrame').innerText = bedFrame;
+        document.getElementById('sdFormBedReal').innerText = bedReal;
+        if (infoEl) infoEl.classList.remove('hidden');
+
+        const methodLegendEl = document.getElementById('sdFormMethodLegend');
+        if (methodLegendEl) {
+            methodLegendEl.innerHTML = renderSdMethodLegend();
+            methodLegendEl.classList.remove('hidden');
+        }
+
+        // --- Assessment Table ---
+        const items = MODEL.sdItemsByBranch[branch] || [];
+        if (items.length === 0) {
+            if (tableEl) tableEl.classList.add('hidden');
+            if (saveEl) saveEl.classList.add('hidden');
+            if (legendEl) legendEl.classList.add('hidden');
+            document.getElementById('sdFormMethodLegend')?.classList.add('hidden');
+            return;
+        }
+
+        const theadEl = document.getElementById('sdFormThead');
+        const tbodyEl = document.getElementById('sdFormTbody');
+        if (!theadEl || !tbodyEl) return;
+
+        // Parse existing remarks from sdHospMeta (if available)
+        const meta = MODEL.sdHospMeta[hospName];
+        const remarkMap = parseSdRemark(meta ? meta.sdRemark || '' : '');
+
+        // Build criteria options from sdCriteriaOptions
+        const criteriaOpts = MODEL.sdCriteriaOptions || [];
+
+        // Header
+        const thStyle = 'background:var(--primary-green);color:white;padding:12px 10px;text-align:center;font-size:13px;white-space:nowrap;';
+        let thead = '<tr>';
+        thead += `<th style="${thStyle}text-align:left;min-width:350px;">รายการ Service Delivery</th>`;
+        thead += `<th style="${thStyle}min-width:100px;">เกณฑ์</th>`;
+        thead += `<th style="${thStyle}min-width:180px;">ประเมินตนเอง</th>`;
+        thead += `<th style="${thStyle}min-width:200px;">หมายเหตุ</th>`;
+        thead += '</tr>';
+        theadEl.innerHTML = thead;
+
+        // Body
+        let tbody = '';
+        items.forEach((sd, idx) => {
+            const trBg = idx % 2 === 0 ? 'white' : '#f8fafc';
+            const critVal = (MODEL.sdCriteria[sd.code] && MODEL.sdCriteria[sd.code][sapLevel]) ? MODEL.sdCriteria[sd.code][sapLevel] : 0;
+            const currentVal = (MODEL.sdData[hospName] && MODEL.sdData[hospName][sd.code] !== undefined) ? MODEL.sdData[hospName][sd.code] : '0';
+            const currentRemark = remarkMap[sd.code] || '';
+
+            // Criteria dropdown (readonly-ish)
+            const critBg = critVal === 1 ? '#dcfce7' : '#fee2e2';
+            const critColor = critVal === 1 ? '#16a34a' : '#dc2626';
+            const critBorder = critVal === 1 ? '#86efac' : '#fca5a5';
+
+            // Assessment dropdown color
+            const isNonZero = sdIsNonZero(currentVal);
+            const assessBg = isNonZero ? '#dcfce7' : '#fef9c3';
+            const assessColor = isNonZero ? '#16a34a' : '#a16207';
+            const assessBorder = isNonZero ? '#86efac' : '#fde047';
+
+            tbody += `<tr style="border-bottom:1px solid #e2e8f0;background:${trBg};">`;
+            // SD Item
+            tbody += `<td style="padding:10px 12px;font-size:13px;color:#334155;"><span style="font-weight:700;color:#0369a1;">${escapeHtml(sd.code)}</span> : ${escapeHtml(sd.name)}</td>`;
+
+            // Criteria (dropdown, visually readonly)
+            tbody += `<td style="padding:6px 8px;text-align:center;">`;
+            tbody += `<select disabled style="padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;background:${critBg};color:${critColor};border:1.5px solid ${critBorder};cursor:default;text-align:center;-webkit-appearance:none;-moz-appearance:none;">`;
+            tbody += `<option value="${critVal}">${critVal}</option>`;
+            tbody += `</select></td>`;
+
+            // Assessment dropdown
+            tbody += `<td style="padding:6px 8px;text-align:center;">`;
+            tbody += `<select data-hosp="${escapeHtml(hospName)}" data-sd="${escapeHtml(sd.code)}" data-orig="${escapeHtml(currentVal)}" `;
+            tbody += `onchange="onSdFormAssessChange(this)" `;
+            tbody += `style="padding:4px 8px;border-radius:8px;font-size:12px;font-weight:700;background:${assessBg};color:${assessColor};border:1.5px solid ${assessBorder};cursor:pointer;min-width:140px;">`;
+            // Build options from sdCriteriaOptions
+            if (criteriaOpts.length > 0) {
+                criteriaOpts.forEach(opt => {
+                    const selected = (opt.value === currentVal) ? ' selected' : '';
+                    let displayTxt = opt.value;
+                    let fullLabel = opt.value;
+                    if (opt.desc) {
+                        displayTxt += ' : ' + opt.desc;
+                        fullLabel += ' : ' + opt.desc;
+                    }
+                    if (displayTxt.length > 70) {
+                        displayTxt = displayTxt.substring(0, 67) + '...';
+                    }
+                    tbody += `<option value="${escapeHtml(opt.value)}"${selected} title="${escapeHtml(fullLabel)}">${escapeHtml(displayTxt)}</option>`;
+                });
+                // If current value is not in options, add it
+                if (!criteriaOpts.find(o => o.value === currentVal)) {
+                    tbody += `<option value="${escapeHtml(currentVal)}" selected>${escapeHtml(currentVal)}</option>`;
+                }
+            } else {
+                // Fallback: simple options
+                const opts = ['(0)', 'มี(1)'];
+                opts.forEach(opt => {
+                    const selected = (opt === currentVal) ? ' selected' : '';
+                    tbody += `<option value="${escapeHtml(opt)}"${selected}>${escapeHtml(opt)}</option>`;
+                });
+                if (!opts.includes(currentVal)) {
+                    tbody += `<option value="${escapeHtml(currentVal)}" selected>${escapeHtml(currentVal)}</option>`;
+                }
+            }
+            tbody += `</select></td>`;
+
+            // Remark
+            tbody += `<td style="padding:6px 8px;">`;
+            tbody += `<input type="text" data-sd="${escapeHtml(sd.code)}" value="${escapeHtml(currentRemark)}" `;
+            tbody += `onchange="onSdFormRemarkChange(this)" `;
+            tbody += `placeholder="หมายเหตุ..." `;
+            tbody += `style="width:100%;padding:5px 10px;border-radius:8px;font-size:12px;border:1.5px solid #e2e8f0;outline:none;transition:border-color 0.2s;" `;
+            tbody += `onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'" />`;
+            tbody += `</td>`;
+
+            tbody += '</tr>';
+        });
+
+        tbodyEl.innerHTML = tbody;
+        if (tableEl) tableEl.classList.remove('hidden');
+        if (saveEl) { saveEl.classList.remove('hidden'); saveEl.style.display = 'flex'; }
+
+        if (legendEl) {
+            legendEl.innerHTML = renderSdListLegendBlock(branch);
+            legendEl.classList.remove('hidden');
+        }
+    }
+
+    function onSdFormAssessChange(el) {
+        const hospName = el.getAttribute('data-hosp');
+        const sdCode = el.getAttribute('data-sd');
+        const orig = el.getAttribute('data-orig');
+        const newVal = el.value;
+
+        const key = hospName + '|' + sdCode;
+        if (newVal !== orig) {
+            sdFormDirtyChanges[key] = newVal;
+        } else {
+            delete sdFormDirtyChanges[key];
+        }
+
+        // Update dropdown color
+        const isNonZero = sdIsNonZero(newVal);
+        el.style.background = isNonZero ? '#dcfce7' : '#fef9c3';
+        el.style.color = isNonZero ? '#16a34a' : '#a16207';
+        el.style.borderColor = isNonZero ? '#86efac' : '#fde047';
+        if (newVal !== orig) el.style.boxShadow = '0 0 0 2px #f59e0b';
+        else el.style.boxShadow = 'none';
+
+        updateSdFormSaveBtn();
+    }
+
+    function onSdFormRemarkChange(el) {
+        const sdCode = el.getAttribute('data-sd');
+        sdFormDirtyRemarks[sdCode] = el.value.trim();
+        if (el.value.trim()) el.style.boxShadow = '0 0 0 2px #f59e0b';
+        else el.style.boxShadow = 'none';
+        updateSdFormSaveBtn();
+    }
+
+    function updateSdFormSaveBtn() {
+        const hasChanges = Object.keys(sdFormDirtyChanges).length > 0 || Object.keys(sdFormDirtyRemarks).length > 0;
+        const btn = document.getElementById('sdFormSaveBtn');
+        const btnText = document.getElementById('sdFormSaveBtnText');
+        const count = Object.keys(sdFormDirtyChanges).length + (Object.keys(sdFormDirtyRemarks).length > 0 ? 1 : 0);
+        if (btn) btn.disabled = !hasChanges;
+        if (btnText) btnText.innerText = hasChanges ? `บันทึกแบบประเมิน (${count} รายการ)` : 'บันทึกแบบประเมิน';
+    }
+
+    async function submitSdFormChanges() {
+        const hospName = document.getElementById('sdFormHospFilter')?.value || '';
+        if (!hospName) return;
+
+        const records = [];
+
+        // SD value changes
+        Object.entries(sdFormDirtyChanges).forEach(([key, value]) => {
+            const [hName, sdCode] = key.split('|');
+            records.push({ hosp_name: hName, sd_code: sdCode, value: value });
+        });
+
+        // Remark changes — merge with existing remarks
+        if (Object.keys(sdFormDirtyRemarks).length > 0) {
+            const meta = MODEL.sdHospMeta[hospName];
+            const existingRemarks = parseSdRemark(meta ? meta.sdRemark : '');
+            // Merge dirty remarks
+            Object.entries(sdFormDirtyRemarks).forEach(([code, text]) => {
+                if (text) existingRemarks[code] = text;
+                else delete existingRemarks[code]; // remove if empty
+            });
+            const serialized = serializeSdRemark(existingRemarks);
+            records.push({ hosp_name: hospName, sd_code: 'SD_remark', value: serialized });
+        }
+
+        if (records.length === 0) return;
+
+        const btn = document.getElementById('sdFormSaveBtn');
+        const btnText = document.getElementById('sdFormSaveBtnText');
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.innerText = 'กำลังบันทึก...';
+
+        try {
+            await new Promise((resolve, reject) => {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res && res.status === 'success') resolve(res);
+                        else reject(new Error(res ? res.message : 'Unknown error'));
+                    })
+                    .withFailureHandler(err => reject(new Error(err.message || err.toString())))
+                    .batchEditSdRecords(records);
+            });
+
+            // Update local model
+            records.forEach(r => {
+                if (r.sd_code === 'SD_remark') {
+                    if (MODEL.sdHospMeta[r.hosp_name]) MODEL.sdHospMeta[r.hosp_name].sdRemark = r.value;
+                } else {
+                    if (!MODEL.sdData[r.hosp_name]) MODEL.sdData[r.hosp_name] = {};
+                    MODEL.sdData[r.hosp_name][r.sd_code] = r.value;
+                }
+            });
+
+            sdFormDirtyChanges = {};
+            sdFormDirtyRemarks = {};
+            if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+            if (btn) btn.disabled = true;
+
+            renderSdForm(); // re-render to clear dirty styles
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ title: 'สำเร็จ!', text: `บันทึกแบบประเมิน Service Delivery เรียบร้อย`, icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
+            } else { alert('บันทึกสำเร็จ'); }
+
+        } catch (err) {
+            if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+            if (btn) btn.disabled = false;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ title: 'พบข้อผิดพลาด!', text: err.message, icon: 'error', confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
+            } else { alert('Error: ' + err.message); }
+        }
+    }
+
+    function clearSdFormFilters() {
+        $('#sdFormBranchFilter').val('').trigger('change.select2');
+        $('#sdFormProvFilter').val('').trigger('change.select2');
+        $('#sdFormHospFilter').val('').trigger('change.select2');
+        sdFormDirtyChanges = {};
+        sdFormDirtyRemarks = {};
+        const infoEl = document.getElementById('sdFormInfoCards');
+        const tableEl = document.getElementById('sdFormTableContainer');
+        const saveEl = document.getElementById('sdFormSaveBtnContainer');
+        const legendEl = document.getElementById('sdFormLegend');
+        if (infoEl) infoEl.classList.add('hidden');
+        if (tableEl) tableEl.classList.add('hidden');
+        if (saveEl) saveEl.classList.add('hidden');
+        if (legendEl) legendEl.classList.add('hidden');
+    }
+
     // --- Modal Logic for EQ ---
     function openAddEqModal() {
         document.getElementById('modalMode').value = 'add'; document.getElementById('modalRowIdx').value = ''; document.getElementById('modalAmt').value = 0; document.getElementById('modalPriority').value = ''; document.getElementById('modalProvPriority').value = ''; document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
@@ -1631,6 +2688,9 @@
         try {
             if (document.getElementById('headerVersion')) document.getElementById('headerVersion').innerText = String(VERSION);
             if (document.getElementById('templateVersionBadge')) document.getElementById('templateVersionBadge').innerText = String(VERSION);
+
+            initAllProvinceDropdowns(); // Populate standard province dropdowns
+
             showLoader("กำลังโหลดข้อมูล... v." + VERSION);
             await loadData({ force: false });
             MODEL = buildModelOnce();
