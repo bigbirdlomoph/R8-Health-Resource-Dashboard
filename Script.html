@@ -93,6 +93,11 @@
     const charts = {};
     let lastTableMode = null;
 
+    // ========== Auth System ==========
+    let IS_LOGGED_IN = false;
+    let USER_IDENTITY = null; // { email, firstName, lastName, position, hospital, phoneNo, role }
+    let pendingSubmitCallback = null;
+
     function formatMoney(n) { return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function cleanNum(v) { if (!v || v === "-") return 0; return parseFloat(String(v).replace(/,/g, '')) || 0; }
     function getValClass(v) { return cleanNum(v) === 0 ? 'zero-value' : ''; }
@@ -111,6 +116,434 @@
     }
     function showLoader(msg) { $("#loader").show(); $("#loader p").text(msg || ("กำลังโหลดข้อมูล... v." + VERSION)); }
     function hideLoader() { $("#loader").fadeOut(); }
+
+    // ========================================
+    // AUTH: Login / Activate / Identity Confirm
+    // ========================================
+
+    async function doLogin() {
+        showLoader("กำลังตรวจสอบสิทธิ์...");
+        try {
+            const result = await new Promise((resolve, reject) => {
+                google.script.run
+                    .withSuccessHandler(resolve)
+                    .withFailureHandler(err => reject(new Error(err.message || err.toString())))
+                    .checkLogin();
+            });
+
+            hideLoader();
+
+            if (result.status === 'ok') {
+                USER_IDENTITY = result.identity;
+                IS_LOGGED_IN = true;
+                activateProtectedFeatures();
+                updateSidebarUserInfo();
+                toast("เข้าสู่ระบบสำเร็จ: " + result.identity.firstName + " " + result.identity.lastName);
+            } else if (result.status === 'denied') {
+                Swal.fire({
+                    icon: 'warning', title: 'ไม่มีสิทธิ์เข้าใช้งาน',
+                    html: '<div class="text-left text-sm">' +
+                        '<p class="mb-2">อีเมล <strong>' + (result.email || '') + '</strong> ยังไม่ได้รับสิทธิ์ในระบบ</p>' +
+                        '<p class="mb-3">กรุณาติดต่อ Admin พร้อมแจ้งข้อมูล:</p>' +
+                        '<ul class="list-disc ml-5 space-y-1 text-slate-600"><li>ชื่อ-นามสกุล</li><li>ตำแหน่ง</li><li>สังกัด รพ.</li><li>เบอร์โทรติดต่อ</li></ul></div>',
+                    confirmButtonText: 'ตกลง', confirmButtonColor: '#059669'
+                });
+            } else if (result.status === 'suspended') {
+                Swal.fire({
+                    icon: 'error', title: 'บัญชีถูกระงับสิทธิ์',
+                    text: 'อีเมล ' + (result.email || '') + ' ถูกระงับสิทธิ์การใช้งาน กรุณาติดต่อ Admin',
+                    confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626'
+                });
+            } else if (result.status === 'no_session') {
+                Swal.fire({ icon: 'info', title: 'กรุณา Login Google ก่อน', confirmButtonText: 'ตกลง' });
+            }
+        } catch (e) {
+            hideLoader();
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: e.message, confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
+        }
+    }
+
+    function activateProtectedFeatures() {
+        try {
+            // ปุ่มเพิ่มครุภัณฑ์
+            const addEqBtn = document.getElementById('addEqBtn');
+            if (addEqBtn) {
+                addEqBtn.disabled = false;
+                addEqBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                addEqBtn.classList.add('hover:bg-moph-secondary');
+                addEqBtn.title = 'เพิ่มรายการครุภัณฑ์ใหม่';
+                addEqBtn.innerHTML = '<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>เพิ่ม';
+            }
+
+            // เมนู แบบประเมิน SD — ใช้ innerHTML แทน textNode manipulation เพื่อกัน DOM error
+            const sdFormBtn = document.getElementById('tabSdFormBtn');
+            if (sdFormBtn) {
+                sdFormBtn.disabled = false;
+                sdFormBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                sdFormBtn.classList.add('hover:bg-white/10', 'hover:text-white');
+                sdFormBtn.onclick = function () { switchTab('sd_form'); };
+                sdFormBtn.title = '';
+                sdFormBtn.innerHTML = '<div class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors"></div>' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-300 opacity-80 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' +
+                    ' 📝 แบบประเมิน SD';
+            }
+
+            // เมนู Admin (เฉพาะ ADMIN)
+            if (USER_IDENTITY && USER_IDENTITY.role === 'ADMIN') {
+                const adminMenu = document.getElementById('adminMenuSection');
+                if (adminMenu) adminMenu.classList.remove('hidden');
+            }
+
+            // re-render EQ table เฉพาะเมื่อ tab EQ แสดงอยู่
+            const eqEl = document.getElementById('eqContent');
+            if (eqEl && !eqEl.classList.contains('hidden') && MODEL && MODEL.eqData) {
+                renderEqTable();
+            }
+        } catch (e) {
+            console.warn('activateProtectedFeatures error:', e);
+        }
+    }
+
+    function updateSidebarUserInfo() {
+        const loginEl = document.getElementById('sidebarLogin');
+        const infoEl = document.getElementById('sidebarUserInfo');
+        if (!USER_IDENTITY) return;
+        if (loginEl) loginEl.classList.add('hidden');
+        if (infoEl) infoEl.classList.remove('hidden');
+
+        const avatarEl = document.getElementById('sidebarAvatar');
+        if (avatarEl) avatarEl.textContent = (USER_IDENTITY.firstName || '').charAt(0) + (USER_IDENTITY.lastName || '').charAt(0);
+
+        const nameEl = document.getElementById('sidebarUserName');
+        if (nameEl) nameEl.textContent = USER_IDENTITY.firstName + ' ' + USER_IDENTITY.lastName;
+
+        const hospEl = document.getElementById('sidebarUserHosp');
+        if (hospEl) hospEl.textContent = USER_IDENTITY.hospital || '-';
+
+        const badgeEl = document.getElementById('sidebarRoleBadge');
+        if (badgeEl) {
+            badgeEl.textContent = USER_IDENTITY.role;
+            if (USER_IDENTITY.role === 'ADMIN') {
+                badgeEl.className = 'px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30';
+            }
+        }
+    }
+
+    function onAddEqClick() {
+        if (!IS_LOGGED_IN) { Swal.fire({ icon: 'info', title: 'กรุณาเข้าสู่ระบบก่อน', text: 'กดปุ่ม "เข้าสู่ระบบ" ที่แถบด้านซ้าย', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669' }); return; }
+        openAddEqModal();
+    }
+
+    function onSdFormMenuClick() {
+        if (!IS_LOGGED_IN) { Swal.fire({ icon: 'info', title: 'กรุณาเข้าสู่ระบบก่อน', text: 'กดปุ่ม "เข้าสู่ระบบ" ที่แถบด้านซ้าย', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669' }); return; }
+        switchTab('sd_form');
+    }
+
+    // ========================================
+    // Identity Confirm Modal
+    // ========================================
+
+    function showIdentityConfirm(onConfirmCallback) {
+        pendingSubmitCallback = onConfirmCallback;
+
+        // Pre-fill จาก USER_IDENTITY
+        if (USER_IDENTITY) {
+            document.getElementById('idcFirstName').value = USER_IDENTITY.firstName || '';
+            document.getElementById('idcLastName').value = USER_IDENTITY.lastName || '';
+            document.getElementById('idcPosition').value = USER_IDENTITY.position || '';
+            document.getElementById('idcPhoneNo').value = USER_IDENTITY.phoneNo || '';
+
+            // Populate hospital dropdown
+            const hospSelect = document.getElementById('idcHospital');
+            hospSelect.innerHTML = '<option value="">เลือกโรงพยาบาล...</option>';
+            if (MODEL && MODEL.allHospList) {
+                MODEL.allHospList.forEach(h => {
+                    const opt = document.createElement('option');
+                    opt.value = h.text; opt.textContent = h.text;
+                    if (USER_IDENTITY.hospital && h.text.includes(USER_IDENTITY.hospital)) opt.selected = true;
+                    hospSelect.appendChild(opt);
+                });
+            }
+            // ถ้าไม่เจอใน list ให้เพิ่ม option เฉพาะ
+            if (USER_IDENTITY.hospital && !hospSelect.value) {
+                const opt = document.createElement('option');
+                opt.value = USER_IDENTITY.hospital; opt.textContent = USER_IDENTITY.hospital; opt.selected = true;
+                hospSelect.appendChild(opt);
+            }
+        }
+
+        const m = document.getElementById('identityConfirmModal');
+        const b = document.getElementById('identityConfirmModalBody');
+        m.classList.remove('hidden'); setTimeout(() => { m.classList.remove('opacity-0'); b.classList.remove('scale-95'); b.classList.add('scale-100'); }, 10);
+    }
+
+    function closeIdentityConfirmModal() {
+        const m = document.getElementById('identityConfirmModal');
+        const b = document.getElementById('identityConfirmModalBody');
+        m.classList.add('opacity-0'); b.classList.remove('scale-100'); b.classList.add('scale-95');
+        setTimeout(() => m.classList.add('hidden'), 300);
+        pendingSubmitCallback = null;
+    }
+
+    async function confirmIdentityAndSubmit() {
+        const firstName = (document.getElementById('idcFirstName').value || '').trim();
+        const lastName = (document.getElementById('idcLastName').value || '').trim();
+        const position = (document.getElementById('idcPosition').value || '').trim();
+        const hospital = (document.getElementById('idcHospital').value || '').trim();
+        const phoneNo = (document.getElementById('idcPhoneNo').value || '').trim();
+
+        if (!firstName || !lastName) { Swal.fire({ icon: 'warning', title: 'กรุณากรอกชื่อ-นามสกุล', confirmButtonText: 'ตกลง' }); return; }
+        if (!hospital) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกสังกัดโรงพยาบาล', confirmButtonText: 'ตกลง' }); return; }
+
+        const identity = { firstName, lastName, position, hospital, phoneNo };
+
+        // อัพเดท USER_IDENTITY ในหน่วยความจำ
+        if (USER_IDENTITY) {
+            USER_IDENTITY.firstName = firstName;
+            USER_IDENTITY.lastName = lastName;
+            USER_IDENTITY.position = position;
+            USER_IDENTITY.hospital = hospital;
+            USER_IDENTITY.phoneNo = phoneNo;
+            updateSidebarUserInfo();
+        }
+
+        // ⚠️ เก็บ callback ก่อนปิด modal (เพราะ closeModal จะ clear pendingSubmitCallback)
+        const cb = pendingSubmitCallback;
+        closeIdentityConfirmModal();
+
+        // เรียก callback
+        if (cb) {
+            await cb(identity);
+        }
+    }
+
+    function doLogout() {
+        IS_LOGGED_IN = false;
+        USER_IDENTITY = null;
+
+        // คืนสถานะ sidebar
+        const loginEl = document.getElementById('sidebarLogin');
+        const infoEl = document.getElementById('sidebarUserInfo');
+        if (loginEl) loginEl.classList.remove('hidden');
+        if (infoEl) infoEl.classList.add('hidden');
+
+        // ซ่อนเมนู admin
+        const adminMenu = document.getElementById('adminMenuSection');
+        if (adminMenu) adminMenu.classList.add('hidden');
+
+        // ล็อคปุ่มเพิ่มครุภัณฑ์
+        const addEqBtn = document.getElementById('addEqBtn');
+        if (addEqBtn) {
+            addEqBtn.disabled = true;
+            addEqBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            addEqBtn.classList.remove('hover:bg-moph-secondary');
+            addEqBtn.innerHTML = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>เพิ่ม';
+            addEqBtn.title = 'กรุณาเข้าสู่ระบบก่อนเพิ่มครุภัณฑ์';
+        }
+
+        // ล็อคเมนู แบบประเมิน SD
+        const sdFormBtn = document.getElementById('tabSdFormBtn');
+        if (sdFormBtn) {
+            sdFormBtn.disabled = true;
+            sdFormBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            sdFormBtn.classList.remove('hover:bg-white/10', 'hover:text-white');
+            sdFormBtn.onclick = function () { onSdFormMenuClick(); };
+        }
+
+        // ถ้าอยู่หน้า admin หรือ sd_form → กลับหน้า main
+        switchTab('main');
+
+        // Re-render EQ table เพื่อซ่อนปุ่ม edit
+        if (MODEL && MODEL.eqData) renderEqTable();
+
+        toast("ออกจากระบบเรียบร้อย");
+    }
+
+    // ========================================
+    // ADMIN: จัดการผู้ใช้
+    // ========================================
+
+    async function renderAdminPage() {
+        if (!IS_LOGGED_IN || !USER_IDENTITY || USER_IDENTITY.role !== 'ADMIN') return;
+
+        try {
+            const result = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(new Error(err.message || err.toString()))).getUserList();
+            });
+
+            if (result.status !== 'success') { toast('ไม่สามารถโหลดข้อมูลผู้ใช้ได้'); return; }
+
+            const users = result.users || [];
+            const active = users.filter(u => u.status === 'active').length;
+            const suspended = users.filter(u => u.status !== 'active').length;
+
+            document.getElementById('adminTotalUsers').textContent = users.length;
+            document.getElementById('adminActiveUsers').textContent = active;
+            document.getElementById('adminSuspendedUsers').textContent = suspended;
+
+            let html = '';
+            users.forEach((u, i) => {
+                const isActive = u.status === 'active';
+                const statusBadge = isActive
+                    ? '<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Active</span>'
+                    : '<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-600 border border-red-200">Suspended</span>';
+                const roleBadge = u.role === 'ADMIN'
+                    ? '<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200">ADMIN</span>'
+                    : '<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">USER</span>';
+                const toggleIcon = isActive ? '⛔' : '🔄';
+                const toggleTitle = isActive ? 'ระงับสิทธิ์' : 'เปิดสิทธิ์กลับ';
+                const encodedUser = encodeURIComponent(JSON.stringify(u));
+
+                html += '<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">' +
+                    '<td class="p-3 text-slate-500 text-center">' + (i + 1) + '</td>' +
+                    '<td class="p-3 font-bold text-slate-800">' + escapeHtml(u.firstName + ' ' + u.lastName) + '</td>' +
+                    '<td class="p-3 text-slate-600 text-sm">' + escapeHtml(u.position) + '</td>' +
+                    '<td class="p-3 text-slate-600 text-sm">' + escapeHtml(u.hospital) + '</td>' +
+                    '<td class="p-3 text-slate-500 text-sm">' + escapeHtml(u.email) + '</td>' +
+                    '<td class="p-3 text-center text-slate-500 text-sm">' + escapeHtml(u.phoneNo) + '</td>' +
+                    '<td class="p-3 text-center">' + roleBadge + '</td>' +
+                    '<td class="p-3 text-center">' + statusBadge + '</td>' +
+                    '<td class="p-3 text-center"><div class="flex gap-1 justify-center">' +
+                    '<button onclick="openAdminEditUserModal(\'' + encodedUser + '\')" class="p-1.5 bg-slate-50 hover:bg-amber-50 text-slate-400 hover:text-amber-500 rounded-lg border border-slate-200 hover:border-amber-200 transition-colors" title="แก้ไข">✏️</button>' +
+                    '<button onclick="toggleUserStatusAction(\'' + escapeHtml(u.email) + '\')" class="p-1.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg border border-slate-200 hover:border-red-200 transition-colors" title="' + toggleTitle + '">' + toggleIcon + '</button>' +
+                    '</div></td></tr>';
+            });
+
+            document.getElementById('adminUserTbody').innerHTML = html;
+
+        } catch (e) {
+            toast('โหลดข้อมูลผู้ใช้ไม่สำเร็จ: ' + e.message);
+        }
+    }
+
+    function openAdminAddUserModal() {
+        document.getElementById('adminUserMode').value = 'add';
+        document.getElementById('adminUserModalTitle').textContent = 'เพิ่มผู้ใช้ใหม่';
+        document.getElementById('adminUserSubmitText').textContent = 'เพิ่มผู้ใช้';
+        document.getElementById('adminUserEmail').value = '';
+        document.getElementById('adminUserEmail').readOnly = false;
+        document.getElementById('adminUserFirstName').value = '';
+        document.getElementById('adminUserLastName').value = '';
+        document.getElementById('adminUserPosition').value = '';
+        document.getElementById('adminUserPhoneNo').value = '';
+        document.getElementById('adminUserRole').value = 'USER';
+
+        // Populate hospital dropdown
+        const hospSelect = document.getElementById('adminUserHospital');
+        hospSelect.innerHTML = '<option value="">เลือกโรงพยาบาล...</option>';
+        if (MODEL && MODEL.allHospList) {
+            MODEL.allHospList.forEach(h => { const opt = document.createElement('option'); opt.value = h.text; opt.textContent = h.text; hospSelect.appendChild(opt); });
+        }
+
+        const m = document.getElementById('adminAddUserModal');
+        const b = document.getElementById('adminAddUserModalBody');
+        m.classList.remove('hidden'); setTimeout(() => { m.classList.remove('opacity-0'); b.classList.remove('scale-95'); b.classList.add('scale-100'); }, 10);
+    }
+
+    function openAdminEditUserModal(encodedUser) {
+        try {
+            const u = JSON.parse(decodeURIComponent(encodedUser));
+            document.getElementById('adminUserMode').value = 'edit';
+            document.getElementById('adminUserModalTitle').textContent = 'แก้ไขข้อมูลผู้ใช้';
+            document.getElementById('adminUserSubmitText').textContent = 'บันทึกการแก้ไข';
+            document.getElementById('adminUserEmail').value = u.email;
+            document.getElementById('adminUserEmail').readOnly = true;
+            document.getElementById('adminUserFirstName').value = u.firstName;
+            document.getElementById('adminUserLastName').value = u.lastName;
+            document.getElementById('adminUserPosition').value = u.position;
+            document.getElementById('adminUserPhoneNo').value = u.phoneNo;
+            document.getElementById('adminUserRole').value = u.role || 'USER';
+
+            const hospSelect = document.getElementById('adminUserHospital');
+            hospSelect.innerHTML = '<option value="">เลือกโรงพยาบาล...</option>';
+            if (MODEL && MODEL.allHospList) {
+                MODEL.allHospList.forEach(h => {
+                    const opt = document.createElement('option'); opt.value = h.text; opt.textContent = h.text;
+                    if (u.hospital && h.text.includes(u.hospital)) opt.selected = true;
+                    hospSelect.appendChild(opt);
+                });
+            }
+            if (u.hospital && !hospSelect.value) {
+                const opt = document.createElement('option'); opt.value = u.hospital; opt.textContent = u.hospital; opt.selected = true;
+                hospSelect.appendChild(opt);
+            }
+
+            const m = document.getElementById('adminAddUserModal');
+            const b = document.getElementById('adminAddUserModalBody');
+            m.classList.remove('hidden'); setTimeout(() => { m.classList.remove('opacity-0'); b.classList.remove('scale-95'); b.classList.add('scale-100'); }, 10);
+        } catch (e) { alert('ไม่สามารถโหลดข้อมูลผู้ใช้ได้'); }
+    }
+
+    function closeAdminUserModal() {
+        const m = document.getElementById('adminAddUserModal');
+        const b = document.getElementById('adminAddUserModalBody');
+        m.classList.add('opacity-0'); b.classList.remove('scale-100'); b.classList.add('scale-95');
+        setTimeout(() => m.classList.add('hidden'), 300);
+    }
+
+    async function submitAdminUser() {
+        const mode = document.getElementById('adminUserMode').value;
+        const email = (document.getElementById('adminUserEmail').value || '').trim();
+        const firstName = (document.getElementById('adminUserFirstName').value || '').trim();
+        const lastName = (document.getElementById('adminUserLastName').value || '').trim();
+        const position = (document.getElementById('adminUserPosition').value || '').trim();
+        const hospital = (document.getElementById('adminUserHospital').value || '').trim();
+        const phoneNo = (document.getElementById('adminUserPhoneNo').value || '').trim();
+        const role = document.getElementById('adminUserRole').value;
+
+        if (!email || !firstName || !lastName || !hospital) {
+            Swal.fire({ icon: 'warning', title: 'กรุณากรอกข้อมูลให้ครบ', text: 'ต้องระบุ Email, ชื่อ, นามสกุล, และสังกัด รพ.', confirmButtonText: 'ตกลง' }); return;
+        }
+
+        const btn = document.getElementById('adminUserSubmitBtn');
+        if (btn) btn.disabled = true;
+
+        try {
+            const userData = { email, firstName, lastName, position, hospital, phoneNo, role };
+            const serverFn = (mode === 'edit') ? 'editUser' : 'addUser';
+
+            const result = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(new Error(err.message || err.toString())))[serverFn](userData);
+            });
+
+            if (result.status === 'success') {
+                closeAdminUserModal();
+                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: mode === 'edit' ? 'แก้ไขข้อมูลผู้ใช้เรียบร้อย' : 'เพิ่มผู้ใช้ใหม่เรียบร้อย', confirmButtonColor: '#059669', timer: 2500 });
+                renderAdminPage();
+            } else {
+                Swal.fire({ icon: 'error', title: 'ไม่สำเร็จ', text: result.message || 'เกิดข้อผิดพลาด', confirmButtonColor: '#DC2626' });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: e.message, confirmButtonColor: '#DC2626' });
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function toggleUserStatusAction(email) {
+        const confirm = await Swal.fire({
+            icon: 'question', title: 'ยืนยันเปลี่ยนสถานะ?',
+            text: 'ต้องการเปลี่ยนสถานะของ ' + email + ' หรือไม่?',
+            showCancelButton: true, confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#DC2626'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const result = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(new Error(err.message || err.toString()))).toggleUserStatus(email);
+            });
+
+            if (result.status === 'success') {
+                toast('เปลี่ยนสถานะเป็น ' + result.newStatus + ' สำเร็จ');
+                renderAdminPage();
+            } else {
+                Swal.fire({ icon: 'error', title: 'ไม่สำเร็จ', text: result.message });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: e.message });
+        }
+    }
 
     function setLastUpdated(meta) {
         const last = meta && meta.lastUpdated ? new Date(meta.lastUpdated) : new Date();
@@ -700,6 +1133,13 @@
         setBtnState(sdListBtn, tabId === 'sd_list');
         setBtnState(sdFormBtn, tabId === 'sd_form');
 
+        const adminBtn = document.getElementById('tabAdminBtn');
+        setBtnState(adminBtn, tabId === 'admin');
+
+        // ซ่อน admin content ทุกครั้ง (ยกเว้น tab admin จะเปิดเอง)
+        const adminContentEl = document.getElementById('adminContent');
+        if (adminContentEl && tabId !== 'admin') { adminContentEl.classList.add('hidden'); adminContentEl.style.opacity = '0'; }
+
         if (tabId.startsWith('sd_')) {
             const sdSub = document.getElementById('sdSubmenu');
             const sdChev = document.getElementById('sdChevron');
@@ -746,7 +1186,8 @@
             if (sdList2) { sdList2.classList.add('hidden'); sdList2.style.opacity = '0'; }
             if (sdForm2) { sdForm2.classList.add('hidden'); sdForm2.style.opacity = '0'; }
 
-            if (document.getElementById('spBranchFilter') && document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); renderEqTable(); }
+            if (document.getElementById('spBranchFilter') && document.getElementById('spBranchFilter').options.length <= 1 && MODEL) { populateEqDropdown(); }
+            if (MODEL && MODEL.eqData) { try { renderEqTable(); } catch(e){} }
             $('#spBranchFilter, #eqYearFilter, #eqProvFilter').off('change.app select2:select.app').on('change.app select2:select.app', function () { setTimeout(renderEqTable, 0); });
 
         } else if (tabId === 'gis') {
@@ -940,6 +1381,21 @@
             $('#sdFormHospFilter').off('change.app').on('change.app', function () { renderSdForm(); });
 
             if (MODEL) { initSdFormDropdowns(); }
+        } else if (tabId === 'admin') {
+            if (pageTitle) pageTitle.innerText = "จัดการผู้ใช้งาน";
+            if (pageSubtitle) pageSubtitle.innerText = "เพิ่ม / แก้ไข / ระงับสิทธิ์ผู้ใช้ในระบบ (สำหรับ Admin)";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            const allSectionsAdmin = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent,
+                document.getElementById('sdDashContent'), document.getElementById('sdHeartContent'),
+                document.getElementById('sdListContent'), document.getElementById('sdFormContent')];
+            allSectionsAdmin.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+            const adminEl = document.getElementById('adminContent');
+            if (adminEl) { adminEl.classList.remove('hidden'); setTimeout(() => adminEl.style.opacity = '1', 50); }
+
+            if (IS_LOGGED_IN && USER_IDENTITY && USER_IDENTITY.role === 'ADMIN') {
+                renderAdminPage();
+            }
         }
 
         if (window.innerWidth < 1024) {
@@ -1067,6 +1523,10 @@
 
             const editData = encodeURIComponent(JSON.stringify(r));
 
+            const editCell = IS_LOGGED_IN
+                ? '<td class="text-center"><button onclick="openEditEqModal(\'' + editData + '\')" class="p-1.5 bg-slate-50 hover:bg-amber-50 text-slate-400 hover:text-amber-500 rounded-lg transition-colors border border-slate-200 hover:border-amber-200 shadow-sm group relative"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button></td>'
+                : '';
+
             html += `<tr>
                 <td class="text-center text-slate-600">${r.year}</td>
                 <td class="text-center text-slate-600"><span class="px-2 py-1 bg-slate-100 rounded-lg text-[11px] font-medium border border-slate-200">${r.sp}</span></td>
@@ -1076,11 +1536,7 @@
                 <td class="text-right text-slate-700">${r.price > 0 ? r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
                 <td class="text-center font-bold text-slate-700">${r.qty}</td>
                 <td class="text-right font-bold text-moph-700">${itemAmt > 0 ? itemAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
-                <td class="text-center">
-                    <button onclick="openEditEqModal('${editData}')" class="p-1.5 bg-slate-50 hover:bg-amber-50 text-slate-400 hover:text-amber-500 rounded-lg transition-colors border border-slate-200 hover:border-amber-200 shadow-sm group relative">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                </td>
+                ${editCell}
             </tr>`;
         });
 
@@ -2503,72 +2959,60 @@
         if (!hospName) return;
 
         const records = [];
-
-        // SD value changes
         Object.entries(sdFormDirtyChanges).forEach(([key, value]) => {
             const [hName, sdCode] = key.split('|');
             records.push({ hosp_name: hName, sd_code: sdCode, value: value });
         });
-
-        // Remark changes — merge with existing remarks
         if (Object.keys(sdFormDirtyRemarks).length > 0) {
             const meta = MODEL.sdHospMeta[hospName];
             const existingRemarks = parseSdRemark(meta ? meta.sdRemark : '');
-            // Merge dirty remarks
             Object.entries(sdFormDirtyRemarks).forEach(([code, text]) => {
                 if (text) existingRemarks[code] = text;
-                else delete existingRemarks[code]; // remove if empty
+                else delete existingRemarks[code];
             });
             const serialized = serializeSdRemark(existingRemarks);
             records.push({ hosp_name: hospName, sd_code: 'SD_remark', value: serialized });
         }
-
         if (records.length === 0) return;
 
-        const btn = document.getElementById('sdFormSaveBtn');
-        const btnText = document.getElementById('sdFormSaveBtnText');
-        if (btn) btn.disabled = true;
-        if (btnText) btnText.innerText = 'กำลังบันทึก...';
-
-        try {
-            await new Promise((resolve, reject) => {
-                google.script.run
-                    .withSuccessHandler(res => {
-                        if (res && res.status === 'success') resolve(res);
-                        else reject(new Error(res ? res.message : 'Unknown error'));
-                    })
-                    .withFailureHandler(err => reject(new Error(err.message || err.toString())))
-                    .batchEditSdRecords(records);
-            });
-
-            // Update local model
-            records.forEach(r => {
-                if (r.sd_code === 'SD_remark') {
-                    if (MODEL.sdHospMeta[r.hosp_name]) MODEL.sdHospMeta[r.hosp_name].sdRemark = r.value;
-                } else {
-                    if (!MODEL.sdData[r.hosp_name]) MODEL.sdData[r.hosp_name] = {};
-                    MODEL.sdData[r.hosp_name][r.sd_code] = r.value;
-                }
-            });
-
-            sdFormDirtyChanges = {};
-            sdFormDirtyRemarks = {};
-            if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+        // เปิด Identity Confirm Modal แทนบันทึกตรง
+        showIdentityConfirm(async (identity) => {
+            const btn = document.getElementById('sdFormSaveBtn');
+            const btnText = document.getElementById('sdFormSaveBtnText');
             if (btn) btn.disabled = true;
+            if (btnText) btnText.innerText = 'กำลังบันทึก...';
 
-            renderSdForm(); // re-render to clear dirty styles
+            try {
+                await new Promise((resolve, reject) => {
+                    google.script.run
+                        .withSuccessHandler(res => {
+                            if (res && res.status === 'success') resolve(res);
+                            else reject(new Error(res ? res.message : 'Unknown error'));
+                        })
+                        .withFailureHandler(err => reject(new Error(err.message || err.toString())))
+                        .batchEditSdRecords(records, identity);
+                });
 
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ title: 'สำเร็จ!', text: `บันทึกแบบประเมิน Service Delivery เรียบร้อย`, icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
-            } else { alert('บันทึกสำเร็จ'); }
-
-        } catch (err) {
-            if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
-            if (btn) btn.disabled = false;
-            if (typeof Swal !== 'undefined') {
+                records.forEach(r => {
+                    if (r.sd_code === 'SD_remark') {
+                        if (MODEL.sdHospMeta[r.hosp_name]) MODEL.sdHospMeta[r.hosp_name].sdRemark = r.value;
+                    } else {
+                        if (!MODEL.sdData[r.hosp_name]) MODEL.sdData[r.hosp_name] = {};
+                        MODEL.sdData[r.hosp_name][r.sd_code] = r.value;
+                    }
+                });
+                sdFormDirtyChanges = {};
+                sdFormDirtyRemarks = {};
+                if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+                if (btn) btn.disabled = true;
+                renderSdForm();
+                Swal.fire({ title: 'สำเร็จ!', text: 'บันทึกแบบประเมิน Service Delivery เรียบร้อย', icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
+            } catch (err) {
+                if (btnText) btnText.innerText = 'บันทึกแบบประเมิน';
+                if (btn) btn.disabled = false;
                 Swal.fire({ title: 'พบข้อผิดพลาด!', text: err.message, icon: 'error', confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
-            } else { alert('Error: ' + err.message); }
-        }
+            }
+        });
     }
 
     function clearSdFormFilters() {
@@ -2588,21 +3032,76 @@
     }
 
     // --- Modal Logic for EQ ---
+    function populateEqModalDropdowns() {
+        if (!MODEL) return;
+
+        // 5.1 จังหวัด จาก hospital sheet เรียงตามลำดับ R8_PROVINCES
+        const provSelect = $('#modalProv');
+        provSelect.empty().append('<option value="">เลือกจังหวัด...</option>');
+        R8_PROVINCES.forEach(p => provSelect.append(new Option(p, p)));
+
+        // 5.3 สาขา SP จาก m_sp Col A
+        const spSelect = $('#modalSp');
+        spSelect.empty().append('<option value="">เลือกสาขา SP...</option>');
+        const spList = MODEL.mspListSource || MODEL.spList || [];
+        spList.forEach(sp => spSelect.append(new Option(sp, sp)));
+
+        // 5.4 ชื่อรายการ จาก m_eq_moph Col E
+        const itemSelect = $('#modalItem');
+        itemSelect.empty().append('<option value="">ค้นหาหรือเลือกชื่อรายการ...</option>');
+        (MODEL.meqmophList || []).forEach(item => {
+            const opt = new Option(item.name, item.name, false, false);
+            $(opt).attr('data-price', item.price || 0);
+            $(opt).attr('data-code', item.code || '');
+            itemSelect.append(opt);
+        });
+
+        // Init Select2
+        $('#modalProv, #modalHosp, #modalSp, #modalItem, #modalFund').select2({
+            dropdownParent: $('#addEqModal'),
+            minimumResultsForSearch: 5,
+            width: '100%'
+        });
+    }
+
     function openAddEqModal() {
-        document.getElementById('modalMode').value = 'add'; document.getElementById('modalRowIdx').value = ''; document.getElementById('modalAmt').value = 0; document.getElementById('modalPriority').value = ''; document.getElementById('modalProvPriority').value = ''; document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
-        $('#modalProv').val('').trigger('change.select2'); updateModalHospDropdown();
+        document.getElementById('modalMode').value = 'add';
+        document.getElementById('modalRowIdx').value = '';
+        document.getElementById('modalAmt').value = 0;
+        document.getElementById('modalPrice').value = '';
+        document.getElementById('modalQty').value = 1;
+        document.getElementById('modalPriority').value = '';
+        document.getElementById('modalProvPriority').value = '';
+        document.getElementById('modalYear').value = '';
+        document.getElementById('addEqModalTitle').innerText = 'เพิ่มรายการครุภัณฑ์ใหม่';
+        populateEqModalDropdowns();
+        $('#modalProv').val('').trigger('change.select2');
+        $('#modalFund').val('').trigger('change.select2');
+        updateModalHospDropdown();
         const m = document.getElementById('addEqModal'); m.classList.remove('hidden'); setTimeout(() => m.classList.remove('opacity-0'), 10);
         const b = document.getElementById('addEqModalBody'); b.classList.remove('scale-95'); b.classList.add('scale-100');
     }
     function openEditEqModal(encodedData) {
         try {
             const data = JSON.parse(decodeURIComponent(encodedData));
-            document.getElementById('modalMode').value = 'edit'; document.getElementById('modalRowIdx').value = data.rowIdx; document.getElementById('addEqModalTitle').innerText = 'แก้ไขรายการครุภัณฑ์ (แถวที่ ' + data.rowIdx + ')';
-            $('#modalProv').val(data.prov).trigger('change.select2'); updateModalHospDropdown(data.hosp);
-            $('#modalYear').val(data.year).trigger('change.select2'); document.getElementById('modalFund').value = data.fundSrc || ''; $('#modalSp').val(data.sp).trigger('change.select2');
-            var itemExists = false; $('#modalItem option').each(function () { if (this.value === data.item) itemExists = true; });
-            if (itemExists) { $('#modalItem').val(data.item).trigger('change.select2'); } else { var newOption = new Option(data.item, data.item, true, true); if (data.itemCode) { $(newOption).attr('data-code', data.itemCode); } $('#modalItem').append(newOption).trigger('change.select2'); }
-            document.getElementById('modalPrice').value = data.price || 0; document.getElementById('modalQty').value = data.qty || 1; document.getElementById('modalAmt').value = data.amt || 0; document.getElementById('modalPriority').value = data.priority || ''; document.getElementById('modalProvPriority').value = data.provPriority || '';
+            document.getElementById('modalMode').value = 'edit';
+            document.getElementById('modalRowIdx').value = data.rowIdx;
+            document.getElementById('addEqModalTitle').innerText = 'แก้ไขรายการครุภัณฑ์ (แถวที่ ' + data.rowIdx + ')';
+            populateEqModalDropdowns();
+            $('#modalProv').val(data.prov).trigger('change.select2');
+            updateModalHospDropdown(data.hosp);
+            document.getElementById('modalYear').value = data.year || '';
+            $('#modalFund').val(data.fundSrc || '').trigger('change.select2');
+            $('#modalSp').val(data.sp).trigger('change.select2');
+            var itemExists = false;
+            $('#modalItem option').each(function () { if (this.value === data.item) itemExists = true; });
+            if (itemExists) { $('#modalItem').val(data.item).trigger('change.select2'); }
+            else { var newOption = new Option(data.item, data.item, true, true); if (data.itemCode) { $(newOption).attr('data-code', data.itemCode); } $('#modalItem').append(newOption).trigger('change.select2'); }
+            document.getElementById('modalPrice').value = data.price || 0;
+            document.getElementById('modalQty').value = data.qty || 1;
+            document.getElementById('modalAmt').value = data.amt || 0;
+            document.getElementById('modalPriority').value = data.priority || '';
+            document.getElementById('modalProvPriority').value = data.provPriority || '';
             const m = document.getElementById('addEqModal'); m.classList.remove('hidden'); setTimeout(() => m.classList.remove('opacity-0'), 10);
             const b = document.getElementById('addEqModalBody'); b.classList.remove('scale-95'); b.classList.add('scale-100');
         } catch (e) { alert("ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้"); }
@@ -2611,19 +3110,25 @@
         const m = document.getElementById('addEqModal'); const b = document.getElementById('addEqModalBody');
         m.classList.add('opacity-0'); b.classList.remove('scale-100'); b.classList.add('scale-95');
         setTimeout(() => m.classList.add('hidden'), 300); document.getElementById('addEqForm').reset();
-        $('#modalYear, #modalProv, #modalHosp, #modalSp, #modalItem').val('').trigger('change.select2');
+        try { $('#modalProv, #modalHosp, #modalSp, #modalItem, #modalFund').val('').trigger('change.select2'); } catch(e){}
     }
     function updateModalHospDropdown(selectedHosp = '') {
         const prov = document.getElementById('modalProv').value;
         const hospSelect = $('#modalHosp');
         hospSelect.empty().append('<option value="">เลือกหน่วยบริการ...</option>');
-        let hospList = MODEL.allHospList || [];
-        if (prov) hospList = hospList.filter(h => h.val === prov);
-        hospList.forEach(h => {
-            const opt = new Option(h.text, h.text, false, false);
-            if (selectedHosp && h.text.includes(selectedHosp)) { opt.selected = true; }
-            hospSelect.append(opt);
-        });
+        // 5.2 แสดงชื่อโรงพยาบาลจาก hospByProv ตามจังหวัดที่เลือก
+        if (prov && MODEL && MODEL.hospByProv && MODEL.hospByProv[prov]) {
+            MODEL.hospByProv[prov].forEach(h => {
+                const opt = new Option(h.name, h.name, false, false);
+                if (selectedHosp && h.name.includes(selectedHosp)) opt.selected = true;
+                hospSelect.append(opt);
+            });
+        } else if (!prov && MODEL && MODEL.allHospList) {
+            MODEL.allHospList.forEach(h => {
+                const opt = new Option(h.text, h.text, false, false);
+                hospSelect.append(opt);
+            });
+        }
         hospSelect.trigger('change.select2');
     }
     function autoFillPrice() {
@@ -2637,26 +3142,28 @@
     }
     async function submitAddEqMode(e) {
         e.preventDefault(); const btn = document.getElementById('submitEqBtn'); const ogText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> บันทึก...`;
         const mode = document.getElementById('modalMode').value; const rowIdx = document.getElementById('modalRowIdx').value;
         let record;
         try {
             const itemSelect = document.getElementById('modalItem'); const sIndex = itemSelect.selectedIndex; const selectedOption = sIndex >= 0 ? itemSelect.options[sIndex] : null; const itemCode = selectedOption ? ($(selectedOption).attr('data-code') || $(selectedOption).data('code') || '') : '';
             record = { rowIdx: rowIdx, year: document.getElementById('modalYear').value, fundSrc: document.getElementById('modalFund').value, prov: document.getElementById('modalProv').value, sp: document.getElementById('modalSp').value, hosp: document.getElementById('modalHosp').value, item: document.getElementById('modalItem').value, price: parseFloat(document.getElementById('modalPrice').value) || 0, qty: parseInt(document.getElementById('modalQty').value, 10) || 0, amt: parseFloat(document.getElementById('modalAmt').value) || 0, itemCode: itemCode, priority: document.getElementById('modalPriority').value, provPriority: document.getElementById('modalProvPriority').value };
-        } catch (err) { alert('ข้อผิดพลาด: ' + err.message); btn.innerHTML = ogText; btn.disabled = false; return; }
-        try {
-            await new Promise((resolve, reject) => {
-                if (mode === 'edit') { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).editEquipmentRecord(record); }
-                else { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response from server')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).addEquipmentRecord(record); }
-            });
-            btn.innerHTML = ogText; btn.disabled = false; closeAddEqModal(); refreshNow();
-            if (typeof Swal !== 'undefined') Swal.fire({ title: 'สำเร็จ!', text: mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว', icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
-            else alert(mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว');
-        } catch (err) {
-            btn.innerHTML = ogText; btn.disabled = false;
-            if (typeof Swal !== 'undefined') Swal.fire({ title: 'พบข้อผิดพลาด!', text: err.message || 'ไม่สามารถบันทึกข้อมูลได้', icon: 'error', confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
-            else alert('พบข้อผิดพลาด: ' + (err.message || 'ไม่สามารถบันทึกข้อมูลได้'));
-        }
+        } catch (err) { alert('ข้อผิดพลาด: ' + err.message); return; }
+
+        // เปิด Identity Confirm Modal แทนบันทึกตรง
+        showIdentityConfirm(async (identity) => {
+            btn.disabled = true; btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> บันทึก...';
+            try {
+                await new Promise((resolve, reject) => {
+                    if (mode === 'edit') { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).editEquipmentRecord(record, identity); }
+                    else { google.script.run.withSuccessHandler(res => { if (res && res.status === 'success') resolve(); else reject(new Error(res ? res.message : 'Unknown response')); }).withFailureHandler(err => reject(new Error(err.message || err.toString()))).addEquipmentRecord(record, identity); }
+                });
+                btn.innerHTML = ogText; btn.disabled = false; closeAddEqModal(); refreshNow();
+                Swal.fire({ title: 'สำเร็จ!', text: mode === 'edit' ? 'บันทึกการแก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'เพิ่มข้อมูลครุภัณฑ์ใหม่เรียบร้อยแล้ว', icon: 'success', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669', timer: 3000 });
+            } catch (err) {
+                btn.innerHTML = ogText; btn.disabled = false;
+                Swal.fire({ title: 'พบข้อผิดพลาด!', text: err.message || 'ไม่สามารถบันทึกข้อมูลได้', icon: 'error', confirmButtonText: 'ตกลง', confirmButtonColor: '#DC2626' });
+            }
+        });
     }
 
     // ฟังก์ชันสั่งสตาร์ทระบบ (ที่เคยหล่นหายไป)
