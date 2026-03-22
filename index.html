@@ -158,18 +158,18 @@
                         </svg>
                         ผลการประเมิน SD
                     </button>
-                    <button id="tabSdFormBtn" onclick="switchTab('sd_form')"
-                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 hover:bg-white/10 hover:text-white rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group">
+                    <button id="tabSdFormBtn" onclick="onSdFormMenuClick()" disabled
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-moph-50 rounded-lg text-sm font-normal transition-colors text-left inactive-menu relative overflow-hidden group opacity-40 cursor-not-allowed"
+                        title="กรุณาเข้าสู่ระบบก่อนใช้งานแบบประเมิน">
                         <div
                             class="absolute -left-3 top-1/2 w-3 border-t border-white/20 group-hover:border-white/50 transition-colors">
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4 text-emerald-300 opacity-80 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            class="h-4 w-4 text-amber-300 opacity-80 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                        📝 แบบประเมิน SD
+                        🔒 แบบประเมิน SD
                     </button>
                 </div>
             </div>
@@ -219,19 +219,61 @@
                     </button>
                 </div>
             </div>
+            <!-- Admin Menu (hidden จนกว่า login + ADMIN) -->
+            <div id="adminMenuSection" class="hidden pt-4 mt-2 border-t border-white/10">
+                <div class="font-heading text-[10px] font-medium text-amber-300/70 uppercase tracking-widest mb-2 px-3">ผู้ดูแลระบบ</div>
+                <button id="tabAdminBtn" onclick="switchTab('admin')"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-amber-200 hover:bg-amber-400/10 hover:text-amber-100 rounded-xl font-medium transition-colors border border-amber-400/20 text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    👥 จัดการผู้ใช้
+                </button>
+            </div>
         </nav>
 
-        <div class="px-6 py-6 border-t border-white/10 bg-black/10">
-            <div class="flex items-center gap-4">
-                <div
-                    class="h-10 w-10 min-w-[40px] rounded-full bg-white/20 border border-white/30 flex items-center justify-center font-heading font-medium text-white shadow-inner">
-                    R8</div>
-                <div class="overflow-hidden">
-                    <h3 class="text-sm font-medium text-white m-0 truncate leading-tight">เขตสุขภาพที่ 8</h3>
-                    <p class="text-[12px] text-moph-200 opacity-90 tracking-wide font-normal truncate mt-0.5">เวอร์ชัน
-                        <span id="serverVersion">...</span>
-                    </p>
+        <!-- Sidebar Footer: Login / User Info -->
+        <div class="px-4 py-4 border-t border-white/10 bg-black/10 space-y-3">
+            <!-- ก่อน Login -->
+            <div id="sidebarLogin">
+                <button onclick="doLogin()"
+                    class="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all border border-white/20 hover:border-white/40 group">
+                    <div class="h-9 w-9 min-w-[36px] rounded-full bg-amber-400/20 border border-amber-300/40 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <div class="text-left overflow-hidden">
+                        <div class="text-sm font-bold leading-tight truncate">เข้าสู่ระบบ</div>
+                        <div class="text-[11px] text-white/60 truncate">Sign in with Google</div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- หลัง Login -->
+            <div id="sidebarUserInfo" class="hidden">
+                <div class="flex items-center gap-3 px-3 py-2 bg-white/10 rounded-xl border border-white/20">
+                    <div id="sidebarAvatar"
+                        class="h-9 w-9 min-w-[36px] rounded-full bg-emerald-400/30 border border-emerald-300/50 flex items-center justify-center font-heading font-bold text-white text-sm shadow-inner">
+                        --</div>
+                    <div class="overflow-hidden flex-1">
+                        <div id="sidebarUserName" class="text-sm font-bold text-white truncate leading-tight">-</div>
+                        <div id="sidebarUserHosp" class="text-[11px] text-moph-200 truncate mt-0.5">-</div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <span id="sidebarRoleBadge" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">USER</span>
+                    </div>
                 </div>
+                <button onclick="doLogout()"
+                    class="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-300 rounded-xl text-sm font-medium transition-all border border-red-400/20 hover:border-red-400/40">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    ออกจากระบบ
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 px-1">
+                <div class="h-5 w-5 min-w-[20px] rounded bg-white/10 flex items-center justify-center text-[9px] font-bold text-white/50">R8</div>
+                <p class="text-[11px] text-moph-200/70 truncate">v.<span id="serverVersion">...</span></p>
             </div>
         </div>
     </aside>
@@ -486,13 +528,12 @@
                             <div class="lg:col-span-2 flex gap-2">
                                 <button onclick="clearEqFilters()"
                                     class="w-1/2 py-[11px] px-4 bg-white border border-red-200 text-red-500 rounded-xl text-sm font-bold hover:bg-red-50 hover:border-red-300 shadow-sm whitespace-nowrap transition-colors">ล้างค่า</button>
-                                <!-- <button onclick="openAddEqModal()"
-                                    class="w-1/2 py-[11px] px-4 bg-moph-primary hover:bg-moph-secondary text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-1 transition-colors"><svg
-                                        class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd"
-                                            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                                            clip-rule="evenodd" />
-                                    </svg>เพิ่ม</button> -->
+                                <button id="addEqBtn" onclick="onAddEqClick()" disabled
+                                    class="w-1/2 py-[11px] px-4 bg-moph-primary text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-1 transition-colors opacity-40 cursor-not-allowed"
+                                    title="กรุณาเข้าสู่ระบบก่อนเพิ่มครุภัณฑ์"><svg
+                                        class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>เพิ่ม</button>
                             </div>
                         </div>
                     </div>
@@ -1203,6 +1244,66 @@
                 </div>
             </div>
 
+            <!-- ==================== ADMIN: จัดการผู้ใช้ (เฉพาะ ADMIN) ==================== -->
+            <div id="adminContent" class="hidden space-y-6 opacity-0 transition-opacity duration-300">
+                <div class="flex items-center gap-4 mb-2">
+                    <div class="p-3 bg-amber-100 rounded-2xl text-amber-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">จัดการผู้ใช้งาน</h3>
+                        <p class="text-sm text-slate-500">เพิ่ม / แก้ไข / ระงับสิทธิ์ผู้ใช้ในระบบ</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-slate-500 mb-2">ผู้ใช้ทั้งหมด</div>
+                        <div class="text-4xl font-black text-moph-700" id="adminTotalUsers">0</div>
+                    </div>
+                    <div class="bg-white border border-emerald-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-emerald-600 mb-2">Active</div>
+                        <div class="text-4xl font-black text-emerald-600" id="adminActiveUsers">0</div>
+                    </div>
+                    <div class="bg-white border border-red-200 rounded-2xl p-6 text-center shadow-sm">
+                        <div class="text-sm font-bold text-red-500 mb-2">Suspended</div>
+                        <div class="text-4xl font-black text-red-500" id="adminSuspendedUsers">0</div>
+                    </div>
+                </div>
+
+                <div class="card bg-white p-6 shadow-sm border border-slate-200 rounded-3xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold text-slate-700">รายชื่อผู้ใช้</h4>
+                        <button onclick="openAdminAddUserModal()"
+                            class="py-2.5 px-5 bg-moph-primary hover:bg-moph-secondary text-white rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>เพิ่มผู้ใช้ใหม่
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="adminUserTable" class="w-full text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100">
+                                    <th class="p-3 text-left font-bold text-slate-600 border-b border-slate-200">#</th>
+                                    <th class="p-3 text-left font-bold text-slate-600 border-b border-slate-200">ชื่อ-นามสกุล</th>
+                                    <th class="p-3 text-left font-bold text-slate-600 border-b border-slate-200">ตำแหน่ง</th>
+                                    <th class="p-3 text-left font-bold text-slate-600 border-b border-slate-200">สังกัด รพ.</th>
+                                    <th class="p-3 text-left font-bold text-slate-600 border-b border-slate-200">Email</th>
+                                    <th class="p-3 text-center font-bold text-slate-600 border-b border-slate-200">เบอร์โทรติดต่อ</th>
+                                    <th class="p-3 text-center font-bold text-slate-600 border-b border-slate-200">Role</th>
+                                    <th class="p-3 text-center font-bold text-slate-600 border-b border-slate-200">สถานะ</th>
+                                    <th class="p-3 text-center font-bold text-slate-600 border-b border-slate-200">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUserTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="3">
@@ -1273,15 +1374,18 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <div><label class="block text-base font-bold text-slate-700 mb-3">แหล่งงบประมาณ <span
-                                        class="text-red-500">*</span></label><input type="text" id="modalFund" required
-                                    placeholder="เช่น งบค่าเสื่อม..."
-                                    class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none">
+                                        class="text-red-500">*</span></label>
+                                <select id="modalFund" required class="w-full modal-select2">
+                                    <option value="">เลือกแหล่งงบ...</option>
+                                    <option value="งบลงทุน">งบลงทุน</option>
+                                    <option value="งบค่าเสื่อม">งบค่าเสื่อม</option>
+                                </select>
                             </div>
                             <div><label class="block text-base font-bold text-slate-700 mb-3">ปีงบประมาณ <span
-                                        class="text-red-500">*</span></label><select id="modalYear" required
-                                    class="w-full modal-select2">
-                                    <option value="">เลือกปีงบประมาณ...</option>
-                                </select></div>
+                                        class="text-red-500">*</span></label><input type="number" id="modalYear" required
+                                    min="2500" max="2600" step="1" placeholder="เช่น 2568"
+                                    class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-[12px] px-4 rounded-xl text-base focus:ring-2 focus:ring-green-500 outline-none text-center font-mono font-bold">
+                            </div>
                             <div><label
                                     class="block text-base font-bold text-slate-700 mb-3">ลำดับความสำคัญ</label><input
                                     type="number" id="modalPriority" placeholder="ระบุตัวเลข..."
@@ -1306,6 +1410,97 @@
                                 </svg>บันทึกข้อมูล</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- ==================== MODAL: ยืนยันผู้ให้ข้อมูล ==================== -->
+            <div id="identityConfirmModal"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-3xl shadow-2xl w-11/12 max-w-[600px] max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300"
+                    id="identityConfirmModalBody">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-3xl shadow-sm">
+                        <h2 class="text-lg font-bold flex items-center gap-3 text-slate-800">
+                            <div class="p-2 bg-amber-100 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></div>
+                            ยืนยันผู้ให้ข้อมูล
+                        </h2>
+                        <button onclick="closeIdentityConfirmModal()" class="text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors p-2 rounded-full">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <p class="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">ข้อมูลดึงจากระบบอัตโนมัติ — แก้ไขได้หากมีการเปลี่ยนแปลง</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">ชื่อ <span class="text-red-500">*</span></label>
+                                <input type="text" id="idcFirstName" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none font-bold"></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">นามสกุล <span class="text-red-500">*</span></label>
+                                <input type="text" id="idcLastName" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none font-bold"></div>
+                        </div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-2">ตำแหน่ง <span class="text-red-500">*</span></label>
+                            <input type="text" id="idcPosition" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">สังกัดโรงพยาบาล <span class="text-red-500">*</span></label>
+                                <select id="idcHospital" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                                    <option value="">เลือกโรงพยาบาล...</option>
+                                </select></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">เบอร์โทรติดต่อ <span class="text-red-500">*</span></label>
+                                <input type="text" id="idcPhoneNo" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"></div>
+                        </div>
+                        <div class="pt-4 flex gap-3 justify-end border-t border-slate-100">
+                            <button type="button" onclick="closeIdentityConfirmModal()" class="py-2.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">ยกเลิก</button>
+                            <button type="button" onclick="confirmIdentityAndSubmit()" class="py-2.5 px-6 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                ยืนยันและบันทึก</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== MODAL: Admin เพิ่มผู้ใช้ใหม่ ==================== -->
+            <div id="adminAddUserModal"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-3xl shadow-2xl w-11/12 max-w-[640px] max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300"
+                    id="adminAddUserModalBody">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-3xl shadow-sm">
+                        <h2 class="text-lg font-bold flex items-center gap-3 text-slate-800">
+                            <div class="p-2 bg-green-100 rounded-xl"><svg class="h-5 w-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg></div>
+                            <span id="adminUserModalTitle">เพิ่มผู้ใช้ใหม่</span>
+                        </h2>
+                        <button onclick="closeAdminUserModal()" class="text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors p-2 rounded-full">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <input type="hidden" id="adminUserMode" value="add">
+                        <div><label class="block text-sm font-bold text-slate-600 mb-2">Email (Google Account) <span class="text-red-500">*</span></label>
+                            <input type="email" id="adminUserEmail" required placeholder="example@gmail.com" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">ชื่อ <span class="text-red-500">*</span></label>
+                                <input type="text" id="adminUserFirstName" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none font-bold"></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">นามสกุล <span class="text-red-500">*</span></label>
+                                <input type="text" id="adminUserLastName" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none font-bold"></div>
+                        </div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-2">ตำแหน่ง</label>
+                            <input type="text" id="adminUserPosition" placeholder="เช่น นักวิชาการสาธารณสุขชำนาญการ" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">สังกัดโรงพยาบาล <span class="text-red-500">*</span></label>
+                                <select id="adminUserHospital" required class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                                    <option value="">เลือกโรงพยาบาล...</option>
+                                </select></div>
+                            <div><label class="block text-sm font-bold text-slate-600 mb-2">เบอร์โทรติดต่อ</label>
+                                <input type="text" id="adminUserPhoneNo" placeholder="เบอร์โทรติดต่อ สำหรับติดต่อ" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none"></div>
+                        </div>
+                        <div><label class="block text-sm font-bold text-slate-600 mb-2">สิทธิ์การใช้งาน</label>
+                            <select id="adminUserRole" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 px-4 rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                                <option value="USER">USER — ใช้งานปกติ</option>
+                                <option value="ADMIN">ADMIN — จัดการผู้ใช้ได้</option>
+                            </select></div>
+                        <div class="pt-4 flex gap-3 justify-end border-t border-slate-100">
+                            <button type="button" onclick="closeAdminUserModal()" class="py-2.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">ยกเลิก</button>
+                            <button type="button" id="adminUserSubmitBtn" onclick="submitAdminUser()" class="py-2.5 px-6 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                <span id="adminUserSubmitText">เพิ่มผู้ใช้</span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
