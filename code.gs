@@ -6,7 +6,7 @@
  */
 
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
-const VERSION = '690313-auth'; // v4 Auth System
+const VERSION = '690402'; // v4 Auth System
 const CACHE_TTL_SEC = 180;
 
 // ========================================
@@ -20,7 +20,7 @@ const T_ADMIN_SHEET = 't_admin';
 const AUTH_CACHE_SEC = 300; // cache user role 5 นาที
 
 // ⚠️ เปลี่ยนเป็น Gmail จริงของ Admin ก่อน deploy
-const FALLBACK_ADMIN_EMAIL = 'mybigbird1983@gmail.com';
+const FALLBACK_ADMIN_EMAIL = 'adminbird@gmail.com';
 
 // ========================================
 // Web App Entry Point
@@ -805,4 +805,82 @@ function _syncIdentityIfChanged(user, identity) {
             updateUserIdentity(identity);
         }
     } catch (e) { }
+}
+
+// ========================================
+// SAP EVALUATION: ประเมินระดับ SAP (S, S+, A, P ฯลฯ)
+// ========================================
+
+/**
+ * รับข้อมูลจากหน้าเว็บและบันทึกลง Sheet: t_sap_level
+ * @param {object} payload - ข้อมูลการประเมิน { target_level, eval_year, scores: {s1, s2, s3, s4, total}, result, status, raw_data }
+ * @param {object} identity - { firstName, lastName, position, hospital, province, phoneNo }
+ */
+function submitSapEvaluation(payload, identity) {
+    const user = _requireAuth(); // เช็คสิทธิ์ (ต้อง Login)
+    _validateIdentity(identity); // เช็คว่ากรอกชื่อ รพ. หรือยัง
+
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000); // ป้องกันคนกดส่งพร้อมกัน
+        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+        
+        // ค้นหา Sheet t_sap_level ถ้าไม่มีให้สร้างใหม่พร้อม Header
+        let sheet = ss.getSheetByName('t_sap_level');
+        if (!sheet) {
+            sheet = ss.insertSheet('t_sap_level');
+            sheet.appendRow([
+                'timestamp', 'email', 'evaluator_name', 'hospital_name', 'province',
+                'eval_year', 'target_level', 'score_s1', 'score_s2', 'score_s3',
+                'score_s4', 'total_score', 'eval_result', 'status', 'eval_data_json'
+            ]);
+            // ล็อกแถวแรกที่เป็น Header
+            sheet.setFrozenRows(1);
+        }
+
+        const fullName = identity.firstName + ' ' + identity.lastName;
+        const province = identity.province || 'ไม่ระบุ'; // ระบบเดิมอาจจะไม่มี province ให้รับมาเพิ่มเติม
+
+        // แปลงข้อมูลดิบจากฟอร์ม (raw_data) ให้เป็น JSON String
+        const evalDataJson = JSON.stringify(payload.raw_data || {});
+
+        // เตรียมข้อมูล 1 แถวเพื่อบันทึกลงชีตตามโครงสร้างที่ตกลงกันไว้
+        const rowData = [
+            new Date(),                     // A: timestamp
+            user.email,                     // B: email
+            fullName,                       // C: evaluator_name
+            identity.hospital,              // D: hospital_name
+            province,                       // E: province
+            payload.eval_year || '',        // F: eval_year (เช่น 2568)
+            payload.target_level || 'S',    // G: target_level
+            payload.scores.s1 || 0,         // H: score_s1
+            payload.scores.s2 || 0,         // I: score_s2
+            payload.scores.s3 || 0,         // J: score_s3
+            payload.scores.s4 || 0,         // K: score_s4
+            payload.scores.total || 0,      // L: total_score
+            payload.result || 'ยังไม่ผ่าน',   // M: eval_result
+            payload.status || 'Submitted',  // N: status
+            evalDataJson                    // O: eval_data_json
+        ];
+
+        // บันทึกลง Sheet
+        sheet.appendRow(rowData);
+
+        // บันทึกประวัติการกระทำลงใน Log (เพื่อให้ Admin ตรวจสอบได้)
+        _logTransaction(T_ADMIN_SHEET, [
+            new Date(), user.email, fullName,
+            'SUBMIT_SAP_EVAL', payload.target_level, identity.hospital,
+            'ประเมินระดับ ' + payload.target_level + ' ได้คะแนน: ' + payload.scores.total
+        ]);
+
+        // อัพเดทข้อมูลผู้ใช้เบื้องหลัง (ถ้าผู้ใช้มีการเปลี่ยนชื่อหรือเบอร์โทรในฟอร์ม)
+        _syncIdentityIfChanged(user, identity);
+
+        return { status: 'success', message: 'บันทึกข้อมูลสำเร็จ' };
+
+    } catch (e) {
+        return { status: 'error', message: e.toString() };
+    } finally {
+        lock.releaseLock();
+    }
 }
