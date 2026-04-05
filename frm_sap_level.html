@@ -1,0 +1,1072 @@
+<style>
+    .sap-checkbox-input { width: 1.25rem; height: 1.25rem; color: #0ea5e9; border-radius: 0.25rem; cursor: pointer; flex-shrink: 0; margin-top: 0.15rem; }
+    .sap-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; outline: none; transition: 0.2s; font-size: 0.875rem;}
+    .sap-input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); }
+    .section-header { padding: 0.75rem 1.25rem; border-bottom: 1px solid; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+    
+    /* บังคับให้กล่องคำถามด้านในเป็นสีขาว เพื่อให้อ่านง่าย ตัดกับสีพื้นหลังของแต่ละด้าน */
+    .question-block { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; background: #ffffff; margin-bottom: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .question-title { font-size: 0.9rem; font-weight: bold; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;}
+    .sub-text { font-size: 0.75rem; color: #64748b; font-weight: normal; }
+
+    /* Theme สีสำหรับ 4 ด้าน (อิงสีพาสเทลให้ดูสะอาดตา) */
+    .theme-s1 { background-color: #f0f9ff; border-color: #bae6fd; } /* ฟ้า */
+    .theme-s1 .section-header { background-color: #e0f2fe; border-bottom-color: #bae6fd; }
+    
+    .theme-s2 { background-color: #f0fdf4; border-color: #bbf7d0; } /* เขียว */
+    .theme-s2 .section-header { background-color: #dcfce7; border-bottom-color: #bbf7d0; }
+    
+    .theme-s3 { background-color: #faf5ff; border-color: #e9d5ff; } /* ม่วง */
+    .theme-s3 .section-header { background-color: #f3e8ff; border-bottom-color: #e9d5ff; }
+    
+    .theme-s4 { background-color: #fff7ed; border-color: #fed7aa; } /* ส้ม */
+    .theme-s4 .section-header { background-color: #ffedd5; border-bottom-color: #fed7aa; }
+</style>
+
+<div id="sapLevelSelector" class="space-y-6 animate-fade-in">
+    <div class="text-center mb-8">
+        <h3 class="text-2xl font-bold text-moph-primary mb-2">เลือกระดับที่ต้องการขอรับการประเมิน</h3>
+        <p class="text-gray-500">กรุณาเลือกระดับ SAP ที่สอดคล้องกับศักยภาพของหน่วยบริการ</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <button onclick="selectSapLevel('S')" class="bg-white hover:bg-sky-50 border-2 border-sky-100 hover:border-sky-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-sky-600 mb-2">ระดับ S</div><p class="text-sm text-gray-500">โรงพยาบาลชุมชนขนาดใหญ่ / ทั่วไป</p>
+        </button>
+        <button onclick="selectSapLevel('S+')" class="bg-white hover:bg-blue-50 border-2 border-blue-100 hover:border-blue-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-blue-600 mb-2">ระดับ S+</div><p class="text-sm text-gray-500">โรงพยาบาลทั่วไป (Standard Plus)</p>
+        </button>
+        <button onclick="selectSapLevel('A')" class="bg-white hover:bg-emerald-50 border-2 border-emerald-100 hover:border-emerald-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-emerald-600 mb-2">ระดับ A</div><p class="text-sm text-gray-500">โรงพยาบาลทั่วไปขนาดใหญ่ (Advance)</p>
+        </button>
+        <button onclick="selectSapLevel('A+')" class="bg-white hover:bg-teal-50 border-2 border-teal-100 hover:border-teal-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-teal-600 mb-2">ระดับ A+</div><p class="text-sm text-gray-500">โรงพยาบาลทั่วไปขนาดใหญ่ (Advance Plus)</p>
+        </button>
+        <button onclick="selectSapLevel('P')" class="bg-white hover:bg-fuchsia-50 border-2 border-fuchsia-100 hover:border-fuchsia-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-fuchsia-600 mb-2">ระดับ P</div><p class="text-sm text-gray-500">โรงพยาบาลศูนย์ (Premium)</p>
+        </button>
+        <button onclick="selectSapLevel('P+')" class="bg-white hover:bg-purple-50 border-2 border-purple-100 hover:border-purple-300 p-6 rounded-2xl text-left transition-all shadow-sm">
+            <div class="text-3xl font-bold text-purple-600 mb-2">ระดับ P+</div><p class="text-sm text-gray-500">โรงพยาบาลศูนย์ (Premium Plus)</p>
+        </button>
+    </div>
+</div>
+
+<div id="sapFormContainer" class="hidden space-y-6 animate-fade-in relative pb-10">
+    <button onclick="backToSelector()" class="text-gray-500 font-medium mb-4 hover:text-sky-600 transition-colors">
+        <i class="bi bi-arrow-left"></i> กลับไปหน้าเลือกระดับ
+    </button>
+    
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-moph-primary pl-3">
+            แบบประเมินการปรับระดับโรงพยาบาล ระดับ <span id="targetLevelDisplayText" class="text-moph-primary"></span>
+        </h2>
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                <input type="text" id="hospNameDisplay" class="sap-input bg-slate-50 text-slate-500 font-semibold cursor-not-allowed" readonly>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">ปีงบประมาณที่ประเมิน</label>
+                <select id="evalYear" class="sap-input bg-white font-medium text-slate-700 border-slate-300">
+                    <option value="2569">2569</option>
+                    <option value="2570">2570</option>
+                    <option value="2571">2571</option>
+                    <option value="2572">2572</option>
+                    <option value="2573">2573</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">รอบการประเมิน</label>
+                <select id="evalRound" class="sap-input bg-white font-medium text-slate-700 border-slate-300">
+                    <option value="1">รอบที่ 1</option>
+                    <option value="2">รอบที่ 2</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection_S" class="level-form-section hidden space-y-6">
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s1">
+            <div class="section-header"><h3 class="font-bold text-slate-800">1. ด้านโครงสร้างพื้นฐาน <span class="text-sm text-gray-500">(เต็ม 10 | ผ่าน 80% = 8)</span></h3><span id="badge_s1" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-start gap-3 question-block"><input type="checkbox" id="s_1_1" class="sap-checkbox-input calc-s"><div class="font-bold text-sm">1.1 จุดบริการผู้ป่วยนอกและอุบัติเหตุ <span class="sub-text block">มีจุดบริการผู้ป่วยนอกและอุบัติเหตุ (2 คะแนน)</span></div></label>
+                <div class="question-block flex flex-col gap-2"><label class="flex items-start gap-3"><input type="checkbox" id="s_1_2" class="sap-checkbox-input calc-s"><div class="font-bold text-sm">1.2 หอผู้ป่วยใน <span class="sub-text block">มีหอผู้ป่วยใน (2 คะแนน)</span></div></label><input type="text" id="s_1_2r" class="sap-input text-xs" placeholder="กรณีมีภารกิจพิเศษ (ระบุ)"></div>
+                <label class="flex items-start gap-3 question-block"><input type="checkbox" id="s_1_3" class="sap-checkbox-input calc-s"><div class="font-bold text-sm">1.3 ที่พักบุคลากร <span class="sub-text block">มีที่พักบุคลากร (2 คะแนน)</span></div></label>
+                <div class="question-block"><div class="font-bold text-sm mb-2">1.4 รถพยาบาล <span class="sub-text">(2 คัน ขึ้นไป = 2 คะแนน)</span></div><div class="flex gap-2"><input type="number" id="s_1_4a" class="sap-input w-24 calc-s" placeholder="ALS"><input type="number" id="s_1_4b" class="sap-input w-24 calc-s" placeholder="BLS"></div></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.5 IPD มีห้อง Negative Pressure Room <span class="sub-text block">1 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="s_1_5" class="sap-input w-20 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.6 จำนวนห้อง X-ray <span class="sub-text block">1 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="s_1_6" class="sap-input w-20 calc-s"></div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s2">
+            <div class="section-header"><h3 class="font-bold text-slate-800">2. ด้านบริการ <span class="text-sm text-gray-500">(เต็ม 40 | ผ่าน 80% = 32)</span></h3><span id="badge_s2" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><div class="question-title">สาขาแพทย์บริการหลัก (first line) โดยแพทย์เวชปฏิบัติทั่วไป</div>
+                    <label class="flex items-start gap-2 text-sm mb-1"><input type="checkbox" id="s_2_gp1" class="sap-checkbox-input calc-s"> การอ่านฟิล์ม X-ray (1 คะแนน)</label>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_gp2" class="sap-checkbox-input calc-s"> การส่งเสริมป้องกัน (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">มีบริการสาขาหลัก (first line) ด้านสูตินรีเวชกรรม <span>(3 ข้อ=1, 4 ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ob"> การทำคลอดปกติ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ob"> คลินิกส่งเสริมการมีบุตร</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ob"> การฝังยาคุมกำเนิด</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ob"> การตรวจคัดกรองหามะเร็งปากมดลูก</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">บริการสาขาหลัก (first line) ด้านศัลยกรรมทั่วไป</div>
+                    <label class="flex items-start gap-2 text-sm mb-1"><input type="checkbox" id="s_2_su1" class="sap-checkbox-input calc-s"> การเย็บและตกแต่งแผล (1 คะแนน)</label>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_su2" class="sap-checkbox-input calc-s"> การผ่าตัดเล็ก (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">บริการสาขาหลัก (first line) ด้านเวชศาสตร์ครอบครัว</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_fam" class="sap-checkbox-input calc-s"> คลินิกหมอครอบครัว (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">มีการให้บริการผู้ป่วยฉุกเฉินและอุบัติเหตุ ER ตลอด 24 ชั่วโมง</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_er" class="sap-checkbox-input calc-s"> การให้บริการการแพทย์ฉุกเฉิน (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านอายุรกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_med" class="sap-checkbox-input calc-s"> การตรวจวินิจฉัย และรักษาโรคที่ไม่ซับซ้อน (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านกุมารเวชกรรม</div>
+                    <label class="flex items-start gap-2 text-sm mb-1"><input type="checkbox" id="s_2_pe1" class="sap-checkbox-input calc-s"> การตรวจวินิจฉัย และรักษาโรคทางกุมารเวชที่ไม่ซับซ้อน (1 คะแนน)</label>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_pe2" class="sap-checkbox-input calc-s"> มีคลินิกสุขภาพเด็กดี และการกระตุ้นพัฒนาการ (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านออร์โธปิดิกส์ <span>(1 ข้อ=1, 3 ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ort"> การตรวจวินิจฉัย และรักษาโรคทางออร์โธปิดิกส์ที่ไม่ซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ort"> การทำหัตถการอย่างง่าย เช่น การใส่เฝือก การใส่เครื่องช่วยผยุง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-ort"> มีโปรแกรมการติดตามฟื้นฟูสมรรถภาพที่บ้าน และชุมชน</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านจิตเวช</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_psy" class="sap-checkbox-input calc-s"> มีบริการผู้ป่วยนอกจิตเวชทั่วไป และยาเสพติด (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการด้านทันตกรรม <span>(1 ข้อ=1, 2 ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-den"> บริการทันตกรรมปฐมภูมิ ประกอบด้วยการส่งเสริมป้องกันทันตกรรมพื้นฐาน ทันตกรรมฉุกเฉิน ในกลุ่มผู้ป่วยทั่วไปและผู้ที่มีความต้องการพิเศษ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-s s-den"> บริการทันตกรรมเฉพาะทางที่ไม่ยุ่งยากซับซ้อน เช่น ฟันคุด แต่งกระดูก ฟันเทียมถอดได้ ครอบฟัน เกรารากฟัน รักษาคลองรากฟันที่ไม่ซับซ้อน</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขารอง (Second Line)</div>
+                    <label class="text-sm font-bold mb-1 block">มินิธัญญารักษ์ (ตามความมอบหมายของสำนักงานสาธารณสุขจังหวัด) จังหวัดละ 1 แห่ง</label>
+                    <input type="text" id="s_2_mini" class="sap-input text-sm" placeholder="ระบุ (ถ้ามี) ประกอบการพิจารณา">
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการนิติเวช</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="s_2_for" class="sap-checkbox-input calc-s"> บริการนิติเวช ชันสูตรศพ โดยทีมแพทย์และพยาบาลห้องอุบัติเหตุฉุกเฉิน (1 คะแนน)</label>
+                </div>
+                <div class="question-block md:col-span-2"><div class="question-title">การดูแลระยะเปลี่ยนผ่านและบริการเฉพาะด้าน</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" id="s_2_imc" class="sap-checkbox-input calc-s"> <div><span class="font-bold">การดูแลระยะเปลี่ยนผ่านผู้ป่วยกึ่งเฉียบพลัน (Intermediate Care)</span> <br>มีบริการ Intermediate Care (5 คะแนน)</div></label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="s_2_er24" class="sap-checkbox-input calc-s"> <div><span class="font-bold">มีบริการผู้ป่วยฉุกเฉินและอุบัติเหตุ (ER)</span> <br>มีบริการผู้ป่วยฉุกเฉินและอุบัติเหตุ (ER) ตลอด 24 ชั่วโมง (5 คะแนน)</div></label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="s_2_aca" class="sap-checkbox-input calc-s"> <div><span class="font-bold">สถาบันฝึกอบรม (Academic)</span> <br>มีหลักสูตรร่วมฝึกอบรมกับสถาบันอื่นๆ ของรัฐ หรือมีการประชุมวิชาการภายใน (5 คะแนน)</div></label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="s_2_res" class="sap-checkbox-input calc-s"> <div><span class="font-bold">งานวิจัย (Research)</span> <br>มีการเผยแพร่หรือนำเสนอในระดับจังหวัดขึ้นไป (5 คะแนน)</div></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s3">
+            <div class="section-header"><h3 class="font-bold text-slate-800">3. ด้านบุคลากรที่สอดรับกับบริการ <span class="text-sm text-gray-500">(เต็ม 20 | ผ่าน 80% = 16)</span></h3><span id="badge_s3" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์ทั้งหมด<span class="sub-text block">3 - 4 คน ขึ้นไป (4) | 5 คน ขึ้นไป (5)</span></div><input type="number" id="s_3_1" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex items-start gap-2">
+                    <input type="checkbox" id="s_3_2" class="sap-checkbox-input calc-s">
+                    <div class="font-bold text-sm">สาขาแพทย์บริการหลัก (first line)<br><span class="sub-text font-normal text-gray-600">(สูตินรีเวชกรรม ศัลยกรรมทั่วไป อายุรกรรม กุมารเวชกรรม ออร์โธปิดิกส์ จิตเวช วิสัญญีวิทยา แพทย์เวชศาสตร์ฉุกเฉิน และแพทย์เวชศาสตร์ครอบครัว)</span><span class="sub-text block mt-1">แพทย์ Part time (ประจำอย่างน้อย 1วัน/สัปดาห์) 1 สาขาขึ้นไป (1 คะแนน)</span></div>
+                </div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์เวชศาสตร์ครอบครัว<span class="sub-text block">1 คน ขึ้นไป (5 คะแนน)</span></div><input type="number" id="s_3_3" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">ทันตแพทย์<span class="sub-text block">2 คน ขึ้นไป (2 คะแนน)</span></div><input type="number" id="s_3_4" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">เภสัชกร<span class="sub-text block">2 คน ขึ้นไป (2 คะแนน)</span></div><input type="number" id="s_3_5" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">พยาบาล<span class="sub-text block">15 - 23 คนขึ้นไป (2) | 24 คน ขึ้นไป (3)</span></div><input type="number" id="s_3_6" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการพัสดุ<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="s_3_7" class="sap-input w-24 calc-s"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการการเงินและบัญชี<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="s_3_8" class="sap-input w-24 calc-s"></div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s4">
+            <div class="section-header"><h3 class="font-bold text-slate-800">4. ด้านประสิทธิภาพการบริการ <span class="text-sm text-gray-500">(เต็ม 30 | ผ่าน 80% = 24)</span></h3><span id="badge_s4" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><label class="font-bold text-sm">CMI <span class="sub-text block">0.4 - 0.49 (6) | 0.5 - 0.59 (7) | 0.6 ขึ้นไป (8)</span></label><input type="number" id="s_4_1" class="sap-input mt-2 calc-s" step="0.01"></div>
+                <div class="question-block"><label class="font-bold text-sm">SumAdJ RW <span class="sub-text block">1,000 - 1,299 RW/ปี (6) | 1,300 - 1,499 RW/ปี (7) | 1,500 RW/ปี ขึ้นไป (8)</span></label><input type="number" id="s_4_2" class="sap-input mt-2 calc-s"></div>
+                <div class="question-block"><label class="font-bold text-sm">Active bed <span class="sub-text block">10 - 15 เตียง (6) | 16 - 19 เตียง (7) | 20 เตียงขึ้นไป (8)</span></label><input type="number" id="s_4_3" class="sap-input mt-2 calc-s"></div>
+                <div class="question-block"><label class="font-bold text-sm">OP visit <span class="sub-text block">30,000 - 59,999 visit/ปี (4) | 60,000 - 99,999 visit/ปี (5) | 100,000 ขึ้นไป visit/ปี (6)</span></label><input type="number" id="s_4_4" class="sap-input mt-2 calc-s"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection_S+" class="level-form-section hidden space-y-6">
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s1">
+            <div class="section-header"><h3 class="font-bold text-slate-800">1. ด้านโครงสร้างพื้นฐาน <span class="text-sm text-gray-500">(เต็ม 10 | ผ่าน 80% = 8)</span></h3><span id="badge_sp1" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จุดบริการผู้ป่วยนอกและอุบัติเหตุ <span class="sub-text block">ห้องตรวจผู้ป่วยนอก 6 ห้อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="sp_1_1" class="sap-input w-24 py-1 calc-sp"></div>
+                <div class="question-block flex flex-col gap-2"><div class="font-bold text-sm">1.2 หอผู้ป่วยใน <span class="sub-text block">60 เตียง ขึ้นไป (และหรือมีภารกิจพิเศษที่ได้รับมอบหมายสามารถให้คะแนนได้) (2 คะแนน)</span></div><input type="number" id="sp_1_2" class="sap-input w-24 py-1 calc-sp" placeholder="จำนวนเตียง"></div>
+                <label class="flex items-start gap-3 question-block"><input type="checkbox" id="sp_1_3" class="sap-checkbox-input calc-sp"><div class="font-bold text-sm">1.3 ที่พักบุคลากร <span class="sub-text block">มีที่พักบุคลากร (2 คะแนน)</span></div></label>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.4 รถพยาบาล <span class="sub-text block">3 คัน ขึ้นไป (1 คะแนน)</span></div><input type="number" id="sp_1_4" class="sap-input w-24 py-1 calc-sp"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.5 IPD มีห้อง Negative Pressure Room <span class="sub-text block">1 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="sp_1_5" class="sap-input w-24 py-1 calc-sp"></div>
+                <div class="question-block md:col-span-2"><div class="font-bold text-sm mb-2">1.6 โครงสร้างเพิ่มเติม</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="sp_1_6a" class="sap-checkbox-input calc-sp"> มีบริการ CT Scan (2 คะแนน)</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="sp_1_6b" class="sap-checkbox-input calc-sp"> มีบริการเครื่องไตเทียม 4 เครื่องขึ้นไป</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="sp_1_6c" class="sap-checkbox-input calc-sp"> มีบริการห้องผ่าตัด 1 ห้องขึ้นไป</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s2">
+            <div class="section-header"><h3 class="font-bold text-slate-800">2. ด้านบริการ <span class="text-sm text-gray-500">(เต็ม 40 | ผ่าน 80% = 32)</span></h3><span id="badge_sp2" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block md:col-span-2"><div class="question-title">สาขา Plus</div>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <label class="flex items-center gap-2 text-sm font-bold text-blue-700">
+                            <input type="checkbox" id="sp_2_plus" class="sap-checkbox-input calc-sp" onchange="document.getElementById('sp_2_plus_name').classList.toggle('hidden', !this.checked)"> 
+                            สาขา Plus (5 คะแนน)
+                        </label>
+                        <input type="text" id="sp_2_plus_name" class="sap-input py-1 text-sm hidden sm:w-1/2 border-blue-300 bg-blue-50" placeholder="ระบุชื่อสาขา Plus ที่เปิดให้บริการ">
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">มีบริการสาขาหลัก (first line) ด้านสูตินรีเวชกรรม</div>
+                    <div class="sub-text mb-2">การใช้หัตถการช่วยคลอด เช่น เครื่องดูดสูญญากาศ คีมช่วยคลอด การทำหมันเปียก การตรวจ mobile colposcope บริการผ่าตัด Caesarean Section</div>
+                    <select id="sp_2_ob" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">บริการสาขาหลัก (first line) ด้านศัลยกรรมทั่วไป</div>
+                    <div class="sub-text mb-2">มีหัตถการทางศัลยกรรม เช่น การผ่าตัดใส้ติ่งอักเสบ colonoscope การผ่าตัดไส้เลือน การบริการ One day Sergery : (ODS & MIS)</div>
+                    <select id="sp_2_su" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">บริการสาขาหลัก (first line) ด้านเวชศาสตร์ครอบครัว</div>
+                    <div class="sub-text mb-2">คลินิกหมอครอบครัวและคลินิกโรคไม่ติดต่อเรื้อรัง</div>
+                    <select id="sp_2_fa" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านเวชศาสตร์ฉุกเฉิน</div>
+                    <div class="sub-text mb-2">มีการให้บริการผู้ป่วยฉุกเฉินและอุบัติเหตุ ER ตลอด 24 ชั่วโมง</div>
+                    <select id="sp_2_er" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านอายุรกรรม</div>
+                    <div class="sub-text mb-2">การดูแลผู้ป่วยที่มีภาวะติดเชื้อในกระแสเลือดแบบรุนแรง การดูแลผู้ป่วยใส่ท่อช่วยหายใจได้</div>
+                    <select id="sp_2_me" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านกุมารเวชกรรม</div>
+                    <div class="sub-text mb-2">การบริการโดยกุมารแพทย์ เช่น การดูแลผู้ป่วยกุมารเวชกรรมทั่วไป</div>
+                    <select id="sp_2_pe" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านออร์โธปิดิกส์</div>
+                    <div class="sub-text mb-2">การดูแลผู้ป่วยกระดูกหักและข้อที่ไม่ซับซ้อน</div>
+                    <select id="sp_2_or" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการสาขาหลัก (first line) ด้านจิตเวช</div>
+                    <div class="sub-text mb-2">การดูและผู้ป่วยจิตเวชระดับกลาง และผู้ป่วยยาเสพติด จัดบริการมินิธัญญารักษ์</div>
+                    <select id="sp_2_ps" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title text-sky-700">การจัดบริการด้านทันตกรรม</div>
+                    <div class="sub-text mb-2">อุดฟันที่ยาก รักษารากฟันซ้ำแบบง่าย/ฟันหลายคลองราก ผ่าตัดปริทันต์อย่างง่าย เฝือกสบฟันแบบแข็ง รักษาโพรงประสาทฟันน้ำนม ครอบฟันน้ำนม จัดฟันเชิงป้องกัน/แก้ไข</div>
+                    <select id="sp_2_de" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="1">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Part time (1)</option><option value="2">มีบริการตรวจรักษาโดยแพทย์เฉพาะทาง แบบ Full time (2)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการนิติเวช</div>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="sp_2_for" class="sap-checkbox-input calc-sp"> บริการนิติเวช ชันสูตรศพ โดยทีมแพทย์และพยาบาลห้องอุบัติเหตุฉุกเฉิน (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการ ICU</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="sp_2_icu" class="sap-checkbox-input calc-sp"> <div>การดูแลผู้ป่วยกึ่งวิกฤต (Semi ICU) หรือหออภิบาลผู้ป่วยโรคหลอดเลือดสมอง (Stroke Unit) 4 เตียงขึ้นไป (4 คะแนน)</div></label>
+                </div>
+                <div class="question-block"><div class="question-title">มีบริการผู้ป่วยฉุกเฉินและอุบัติเหตุ (ER)</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="sp_2_er24" class="sap-checkbox-input calc-sp"> <div>มีบริการผู้ป่วยฉุกเฉินและอุบัติเหตุ (ER) ตลอด 24 ชั่วโมง (3 คะแนน)</div></label>
+                </div>
+                <div class="question-block"><div class="question-title">สถาบันฝึกอบรม (Academic) : ร่วมฝึกหลักสูตร Undergrad ร่วมฝึกหลักสูตรแพทย์เวชศาสตร์ครอบครัว</div>
+                    <select id="sp_2_aca" class="sap-input calc-sp"><option value="0">ไม่มีบริการ</option><option value="3">1 หลักสูตร (3 คะแนน)</option><option value="4">2 หลักสูตร ขึ้นไป (4 คะแนน)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title">งานวิจัย (Research)</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="sp_2_res" class="sap-checkbox-input calc-sp"> <div>มีการเผยแพร่หรือนำเสนอในระดับจังหวัดขึ้นไป (5 คะแนน)</div></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s3">
+            <div class="section-header"><h3 class="font-bold text-slate-800">3. ด้านบุคลากรที่สอดรับกับบริการ <span class="text-sm text-gray-500">(เต็ม 20 | ผ่าน 80% = 16)</span></h3><span id="badge_sp3" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์ทั้งหมด<span class="sub-text block">6 - 10 คน ขึ้นไป (2) | 11 คน ขึ้นไป (3)</span></div><input type="number" id="sp_3_1" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex items-start gap-2">
+                    <input type="checkbox" id="sp_3_2" class="sap-checkbox-input calc-sp">
+                    <div class="font-bold text-sm">สาขาแพทย์บริการหลัก (first line)<br><span class="sub-text font-normal text-gray-600">(สูตินรีเวชกรรม ศัลยกรรมทั่วไป อายุรกรรม กุมารเวชกรรม ออร์โธปิดิกส์ จิตเวช วิสัญญีวิทยา แพทย์เวชศาสตร์ฉุกเฉิน และแพทย์เวชศาสตร์ครอบครัว)</span><span class="sub-text block mt-1">แพทย์ Part time (ประจำอย่างน้อย 1วัน/สัปดาห์) หรือ Full time 1 สาขาขึ้นไป (3 คะแนน)</span></div>
+                </div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์เวชศาสตร์ครอบครัว<span class="sub-text block">2 คน ขึ้นไป (5 คะแนน)</span></div><input type="number" id="sp_3_3" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">ทันตแพทย์เฉพาะทาง<span class="sub-text block">2 คน ขึ้นไป (2 คะแนน)</span></div><input type="number" id="sp_3_4" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">เภสัชกร<span class="sub-text block">2 คน ขึ้นไป (2 คะแนน)</span></div><input type="number" id="sp_3_5" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">พยาบาล<span class="sub-text block">15 - 23 คนขึ้นไป (2) | 24 คน ขึ้นไป (3)</span></div><input type="number" id="sp_3_6" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการพัสดุ<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="sp_3_7" class="sap-input w-24 calc-sp" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการการเงินและบัญชี<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="sp_3_8" class="sap-input w-24 calc-sp" min="0"></div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s4">
+            <div class="section-header"><h3 class="font-bold text-slate-800">4. ด้านประสิทธิภาพการบริการ <span class="text-sm text-gray-500">(เต็ม 30 | ผ่าน 80% = 24)</span></h3><span id="badge_sp4" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><label class="font-bold text-sm">CMI <span class="sub-text block">0.6 - 0.69 (6) | 0.7 - 0.79 (7) | 0.8 ขึ้นไป (8)</span></label><input type="number" id="sp_4_1" class="sap-input mt-2 calc-sp" step="0.01"></div>
+                <div class="question-block"><label class="font-bold text-sm">SumAdJ RW <span class="sub-text block">3,000 - 3,499 RW/ปี (6) | 3,500 - 3,999 RW/ปี (7) | 4,000 RW/ปี ขึ้นไป (8)</span></label><input type="number" id="sp_4_2" class="sap-input mt-2 calc-sp"></div>
+                <div class="question-block"><label class="font-bold text-sm">Active bed <span class="sub-text block">40 - 44 เตียง (6) | 45 - 49 เตียง (7) | 50 เตียงขึ้นไป (8)</span></label><input type="number" id="sp_4_3" class="sap-input mt-2 calc-sp"></div>
+                <div class="question-block"><label class="font-bold text-sm">OP visit <span class="sub-text block">100,000 - 139,999 visit/ปี (4) | 140,000 - 179,999 visit/ปี (5) | 180,000 ขึ้นไป visit/ปี (6)</span></label><input type="number" id="sp_4_4" class="sap-input mt-2 calc-sp"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection_A" class="level-form-section hidden space-y-6">
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s1">
+            <div class="section-header"><h3 class="font-bold text-slate-800">1. ด้านโครงสร้างพื้นฐาน <span class="text-sm text-gray-500">(เต็ม 10 | ผ่าน 80% = 8)</span></h3><span id="badge_a1" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จุดบริการผู้ป่วยนอกและอุบัติเหตุ <span class="sub-text block">ห้องตรวจผู้ป่วยนอก 20 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_1_1a" class="sap-input w-20 py-1 calc-a"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จำนวนเตียงห้องอุบัติเหตุและฉุกเฉิน <span class="sub-text block">10 เตียง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_1_1b" class="sap-input w-20 py-1 calc-a"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.2 หอผู้ป่วยใน <span class="sub-text block">120 เตียง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_1_2" class="sap-input w-20 py-1 calc-a"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.3 จำนวนเครื่องไตเทียม <span class="sub-text block">8 เครื่อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_1_3" class="sap-input w-20 py-1 calc-a"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.4 จำนวนห้องผ่าตัด <span class="sub-text block">4 ห้อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_1_4" class="sap-input w-20 py-1 calc-a"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.5 IPD มีห้อง Negative Pressure Room <span class="sub-text block">ที่ได้มาตรฐาน 2 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_1_5" class="sap-input w-20 py-1 calc-a"></div>
+                <label class="question-block flex items-center gap-3 md:col-span-2"><input type="checkbox" id="a_1_6" class="sap-checkbox-input calc-a"><div class="font-bold text-sm">1.6 จำนวนห้อง X-ray <span class="sub-text block">2 ห้องขึ้นไป และมี CT Scan 1 ห้อง (1 คะแนน)</span></div></label>
+            </div>
+        </div>
+        
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s2">
+            <div class="section-header"><h3 class="font-bold text-slate-800">2. ด้านบริการ <span class="text-sm text-gray-500">(เต็ม 40 | ผ่าน 80% = 32)</span></h3><span id="badge_a2" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><div class="question-title">มีบริการสาขาหลัก (first line) ด้านสูตินรีเวชกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_ob" class="sap-checkbox-input calc-a"> บริการทางสูติกรรม (ผ่าตัดทางนรีเวช การบริการผ่าตัด Caesarean Section) (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">บริการสาขาหลัก (first line) ด้านศัลยกรรมทั่วไป</div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" id="a_2_su1" class="sap-checkbox-input calc-a"> การผ่าตัดใส้ติ่งอักเสบ / ผ่าตัดที่ไม่ซ้ำซ้อน (2 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="a_2_su2" class="sap-checkbox-input calc-a"> บริการ One day Sergery : ODS (2 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="a_2_su3" class="sap-checkbox-input calc-a"> บริการ Minimally Invasive Sergery : MIS (2 คะแนน)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">บริการสาขาหลัก (first line) ด้านเวชศาสตร์ครอบครัว <span class="text-sky-600">(1 ข้อ=1, 2 ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-fam"> คลินิกหมอครอบครัว และคลินิกโรคไม่ติดต่อเรื้อรัง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-fam"> บริการเตียง Palliative care สำหรับผู้ป่วยใน (Palliative care bed)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านเวชศาสตร์ฉุกเฉิน <span class="text-sky-600">(1-2 ข้อ=1, 3 ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-er"> ระบบ Tele-ER</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-er"> ระบบการให้บริการ ER 24 ชั่วโมง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-er"> เครือข่ายระบบส่งต่อ</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านอายุรกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_med" class="sap-checkbox-input calc-a"> การตรวจวินิจฉัยโรคทางอายุรกรรมที่ซับซ้อน และการดูแลผู้ป่วยระยะวิกฤตใน ICU (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านกุมารเวชกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_ped" class="sap-checkbox-input calc-a"> การดูแลเด็กอายุต่ำกว่า 5 ปี ที่ใช้เครื่องช่วยหายใจ (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านออร์โธปิดิกส์</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_ort" class="sap-checkbox-input calc-a"> การตรวจวินิจฉัยและรักษาโรคทางออร์โธปิดิกส์ (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านจิตเวช</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_psy" class="sap-checkbox-input calc-a"> มีบริการผู้ป่วยจิตเวชทั่วไปและยาเสพติดทางไกล (Tela Mental Health) (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการด้านทันตกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_den" class="sap-checkbox-input calc-a"> บริการทันตกรรมเฉพาะทาง เช่น ฟันเทียม รักษารากฟัน ศัลยปริทันต์ จัดฟันเชิงแก้ไข ทันตกรรมสำหรับเด็ก รากฟันเทียม (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขารอง (second line)</div>
+                    <label class="flex items-start gap-2 text-sm mb-1"><input type="checkbox" id="a_2_sec1" class="sap-checkbox-input calc-a"> หน่วยจักษุวิทยา หรือหน่วยโสต สอ นาสิก (1 คะแนน)</label>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_sec2" class="sap-checkbox-input calc-a"> รังสีวินิจฉัย อัลตราซาวด์ (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาต่อยอด (third line) <span class="text-sky-600">(1ข้อ=1, 2-3ข้อ=2, 4ข้อ=3)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-thi"> บริการดูแลรักษาผู้ป่วยโรคหัวใจล้มเหลว</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-thi"> บริการเคมีบำบัดในผู้ป่วยโรคมะเร็ง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-thi"> จัดเก็บดวงตาในผู้ป่วยที่เสียชีวิต</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-a a-thi"> หออภิบาลผู้ป่วยโรคหลอดเลือกสมอง (Stroke Unit)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการนิติเวช</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_for" class="sap-checkbox-input calc-a"> บริการนิติเวช ชันสูตรศพ โดยทีมแพทย์และพยาบาลห้องอุบัติเหตุฉุกเฉิน (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการ ICU</div>
+                    <select id="a_2_icu" class="sap-input calc-a"><option value="0">ไม่มีบริการ</option><option value="1">4 - 5 เตียง (1 คะแนน)</option><option value="2">6 - 8 เตียง (2 คะแนน)</option><option value="3">9 เตียง ขึ้นไป (3 คะแนน)</option></select>
+                </div>
+                <div class="question-block"><div class="question-title">สถาบันฝึกอบรม (Academic) : หลักสูตร Undergrad ทุกสาขาวิชาชีพ ยกเว้น Extern</div>
+                    <select id="a_2_aca" class="sap-input calc-a"><option value="0">ไม่มี</option><option value="3">2 หลักสูตร (3 คะแนน)</option><option value="4">3 หลักสูตร ขึ้นไป (4 คะแนน)</option></select>
+                </div>
+                <div class="question-block md:col-span-2"><div class="question-title">งานวิจัย (Research)</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="a_2_res" class="sap-checkbox-input calc-a"> มีการเผยแพร่ในระดับเขต (5 คะแนน)</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s3">
+            <div class="section-header"><h3 class="font-bold text-slate-800">3. ด้านบุคลากรที่สอดรับกับบริการ <span class="text-sm text-gray-500">(เต็ม 20 | ผ่าน 80% = 16)</span></h3><span id="badge_a3" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block md:col-span-2">
+                    <div class="question-title">สาขาแพทย์บริการหลัก (first line) <span class="text-sky-600">(ผ่านเกณฑ์สาขาละ 1 คะแนน / รวมสูงสุด 9 คะแนน)</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">สูตินรีเวชกรรม<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1a" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ศัลยกรรมทั่วไป<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1b" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">อายุรกรรม<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1c" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">กุมารเวชกรรม<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1d" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ออร์โธปิดิกส์<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1e" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">จิตเวช<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1f" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">วิสัญญีวิทยา<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1g" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ฉุกเฉิน<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1h" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ครอบครัว<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="a_3_1i" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                    </div>
+                </div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์รังสีวินิจฉัย<span class="sub-text block">2 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_3_2" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์สาขารอง (second line)<span class="sub-text block">1 สาขาขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_3_3" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">ทันตแพทย์เฉพาะทาง<span class="sub-text block">4 สาขาขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_3_4" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">เภสัชกร<span class="sub-text block">10 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_3_5" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">พยาบาล<span class="sub-text block">100 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="a_3_6" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการพัสดุ<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_3_7" class="sap-input w-20 py-1 calc-a" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการการเงินและบัญชี<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="a_3_8" class="sap-input w-20 py-1 calc-a" min="0"></div>
+            </div>
+        </div>
+
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s4">
+            <div class="section-header"><h3 class="font-bold text-slate-800">4. ด้านประสิทธิภาพการบริการ <span class="text-sm text-gray-500">(เต็ม 30 | ผ่าน 80% = 24)</span></h3><span id="badge_a4" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><label class="font-bold text-sm">CMI <span class="sub-text block">0.8 - 0.89 (6) | 0.9 - 0.99 (7) | 1 ขึ้นไป (8)</span></label><input type="number" id="a_4_1" class="sap-input mt-2 calc-a" step="0.01"></div>
+                <div class="question-block"><label class="font-bold text-sm">SumAdJ RW <span class="sub-text block">8,000 - 8,999 RW/ปี (6) | 9,000 - 9,999 RW/ปี (7) | 10,000 RW/ปี ขึ้นไป (8)</span></label><input type="number" id="a_4_2" class="sap-input mt-2 calc-a"></div>
+                <div class="question-block"><label class="font-bold text-sm">Active bed <span class="sub-text block">80 - 99 เตียง (6) | 100 - 119 เตียง (7) | 120 เตียงขึ้นไป (8)</span></label><input type="number" id="a_4_3" class="sap-input mt-2 calc-a"></div>
+                <div class="question-block"><label class="font-bold text-sm">OP visit <span class="sub-text block">120,000 - 199,999 visit/ปี (4) | 200,000 - 279,999 visit/ปี (5) | 280,000 ขึ้นไป visit/ปี (6)</span></label><input type="number" id="a_4_4" class="sap-input mt-2 calc-a"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection_A+" class="level-form-section hidden space-y-6">
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s1">
+            <div class="section-header"><h3 class="font-bold text-slate-800">1. ด้านโครงสร้างพื้นฐาน <span class="text-sm text-gray-500">(เต็ม 10 | ผ่าน 80% = 8)</span></h3><span id="badge_ap1" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จุดบริการผู้ป่วยนอกและอุบัติเหตุ<span class="sub-text block">ห้องตรวจผู้ป่วยนอก 24 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_1_1a" class="sap-input w-20 py-1 calc-ap"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จำนวนเตียงห้องอุบัติเหตุและฉุกเฉิน<span class="sub-text block">12 เตียง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_1_1b" class="sap-input w-20 py-1 calc-ap"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.2 หอผู้ป่วยใน<span class="sub-text block">200 เตียง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_1_2" class="sap-input w-20 py-1 calc-ap"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.3 จำนวนเครื่องไตเทียม<span class="sub-text block">8 เครื่อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_1_3" class="sap-input w-20 py-1 calc-ap"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.4 จำนวนห้องผ่าตัด<span class="sub-text block">6 ห้อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_1_4" class="sap-input w-20 py-1 calc-ap"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.5 IPD มีห้อง Negative Pressure Room<span class="sub-text block">ที่ได้มาตรฐาน 4 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_1_5" class="sap-input w-20 py-1 calc-ap"></div>
+                <label class="question-block flex items-center gap-3 md:col-span-2"><input type="checkbox" id="ap_1_6" class="sap-checkbox-input calc-ap"><div class="font-bold text-sm">1.6 จำนวนห้อง X-ray<span class="sub-text block">2 ห้องขึ้นไป และมี CT Scan 1 ห้อง (1 คะแนน)</span></div></label>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s2">
+            <div class="section-header"><h3 class="font-bold text-slate-800">2. ด้านบริการ <span class="text-sm text-gray-500">(เต็ม 40 | ผ่าน 80% = 32)</span></h3><span id="badge_ap2" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><div class="question-title">มีบริการสาขาหลัก (first line) ด้านสูตินรีเวชกรรม <span class="text-sky-600">(1-4ข้อ=1, 5ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ob"> บริการทางสูติกรรม</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ob"> คลินิกผู้มีบุตรยาก</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ob"> ผ่าตัดทางนรีเวช</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ob"> การบริการผ่าตัด Caesarean Section</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ob"> colposcope</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">บริการสาขาหลัก (first line) ด้านศัลยกรรมทั่วไป</div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" id="ap_2_su1" class="sap-checkbox-input calc-ap"> ผ่าตัดที่ไม่ซ้ำซ้อน / ผ่าตัดใส้ติ่งอักเสบ / ผ่าตัดไส้เลื่อน / ผ่าตัดช่องท้อง / ผ่าตัด trauma emergency (2 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="ap_2_su2" class="sap-checkbox-input calc-ap"> บริการ One day Sergery : ODS (2 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="ap_2_su3" class="sap-checkbox-input calc-ap"> บริการ Minimally Invasive Sergery : MIS (2 คะแนน)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">บริการสาขาหลัก (first line) ด้านเวชศาสตร์ครอบครัว <span class="text-sky-600">(1-2ข้อ=1, 3ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-fam"> คลินิกหมอครอบครัว และ NCD</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-fam"> บริการอาชีวเวชกรรม</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-fam"> Intermediate care / Palliative care / Home ward</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านเวชศาสตร์ฉุกเฉิน <span class="text-sky-600">(1-3ข้อ=1, 4ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-er"> ระบบการให้บริการ ER 24 ชั่วโมง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-er"> ระบบ AOC</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-er"> ระบบ Tele-ER</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-er"> ระบบส่งต่อระดับเครือข่าย</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านอายุรกรรม <span class="text-sky-600">(1-4ข้อ=1, 5ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-med"> รักษาโรคอายุรกรรม</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-med"> บริการโรคหัวใจ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-med"> บริการโรคไต</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-med"> หน่วยโรคทางเดินอาหาร</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-med"> หน่วยโรคหลอดเลือดสมอง</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านกุมารเวชกรรม <span class="text-sky-600">(1ข้อ=1, 2ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ped"> รักษาโรคกุมารเวชกรรม</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ped"> ศูนย์พัฒนาการเด็ก</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านออร์โธปิดิกส์ <span class="text-sky-600">(1-2ข้อ=1, 3ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ort"> รักษาโรคทางออร์โธปิดิกส์</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ort"> บริการเปลี่ยนข้อ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-ort"> บริการ First track fracture around the hip สามารถผ่าตัดภายใน 72 ชั่วโมง</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านจิตเวช <span class="text-sky-600">(1ข้อ=1, 2ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-psy"> รักษาผู้ป่วยจิตเวช</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-psy"> เปิดหอผู้ป่วยในจิตเวช</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการด้านทันตกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="ap_2_den" class="sap-checkbox-input calc-ap"> บริการทันตกรรมเฉพาะทาง เช่น ฟันเทียม รักษารากฟัน ศัลยปริทันต์ จัดฟันเชิงแก้ไข ทันตกรรมสำหรับเด็ก รากฟันเทียม (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขารอง (second line)</div>
+                    <label class="flex items-start gap-2 text-sm mb-1"><input type="checkbox" id="ap_2_sec1" class="sap-checkbox-input calc-ap"> หน่วยจักษุวิทยา หรือ ศูนย์ทางโรคโสต สอ นาสิก (1 คะแนน)</label>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="ap_2_sec2" class="sap-checkbox-input calc-ap"> รังสีวินิจฉัย อัลตราซาวด์ การตรวจวินิจฉัยทางรังสีพิเศษ (1 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาต่อยอด (third line) <span class="text-sky-600">(1ข้อ=1, 2ข้อ=2, 3ข้อ=3)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-thi"> บริการ Onco Sergery (MIS/ODS)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-thi"> บริการ ICU ศัลยกรรม 6 เตียง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-ap ap-thi"> บริการ ICU ศัลยอายุรกรรม 8 เตียง</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการนิติเวช</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="ap_2_for" class="sap-checkbox-input calc-ap"> บริการนิติเวช ชันสูตรศพ โดยทีมแพทย์และพยาบาลห้องอุบัติเหตุฉุกเฉิน (1 คะแนน)</label>
+                </div>
+                <div class="question-block md:col-span-2"><div class="question-title">บริการเฉพาะด้านและวิชาการ</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div><div class="text-sm font-bold">การจัดบริการ special ICU</div><select id="ap_2_icu" class="sap-input calc-ap mt-1"><option value="0">ไม่มีบริการ</option><option value="2">1 สาขา (2 คะแนน)</option><option value="3">2 สาขา ขึ้นไป (3 คะแนน)</option></select></div>
+                        <div><div class="text-sm font-bold">สถาบันฝึกอบรม (Academic) : หลักสูตร Undergrad เพิ่ม Extern</div><select id="ap_2_aca" class="sap-input calc-ap mt-1"><option value="0">ไม่มี</option><option value="3">2 หลักสูตร (3 คะแนน)</option><option value="4">3 หลักสูตร ขึ้นไป และเพิ่ม Extern (4 คะแนน)</option></select></div>
+                        <div class="flex flex-col justify-end"><label class="flex items-start gap-2 text-sm"><input type="checkbox" id="ap_2_res" class="sap-checkbox-input calc-ap"> <div><span class="font-bold">งานวิจัย (Research)</span><br>มีการเผยแพร่ในระดับเขตและประเทศ (5 คะแนน)</div></label></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s3">
+            <div class="section-header"><h3 class="font-bold text-slate-800">3. ด้านบุคลากรที่สอดรับกับบริการ <span class="text-sm text-gray-500">(เต็ม 20 | ผ่าน 80% = 16)</span></h3><span id="badge_ap3" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block md:col-span-2">
+                    <div class="question-title">สาขาแพทย์บริการหลัก (first line) <span class="text-sky-600">(ผ่านเกณฑ์สาขาละ 1 คะแนน / รวมสูงสุด 9 คะแนน)</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">สูตินรีเวชกรรม<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1a" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ศัลยกรรมทั่วไป<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1b" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">อายุรกรรม<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1c" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">กุมารเวชกรรม<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1d" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ออร์โธปิดิกส์<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1e" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">จิตเวช<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1f" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">วิสัญญีวิทยา<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1g" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ฉุกเฉิน<div class="question-desc">1 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1h" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ครอบครัว<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="ap_3_1i" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                    </div>
+                </div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์รังสีวินิจฉัย<span class="sub-text block">2 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_3_2" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์สาขารอง (second line)<span class="sub-text block">2 สาขาขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_3_3" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">ทันตแพทย์เฉพาะทาง<span class="sub-text block">6 สาขาขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_3_4" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">เภสัชกร<span class="sub-text block">10 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_3_5" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">พยาบาล<span class="sub-text block">120 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="ap_3_6" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการพัสดุ<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_3_7" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการการเงินและบัญชี<span class="sub-text block">1 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="ap_3_8" class="sap-input w-20 py-1 calc-ap" min="0"></div>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s4">
+            <div class="section-header"><h3 class="font-bold text-slate-800">4. ด้านประสิทธิภาพการบริการ <span class="text-sm text-gray-500">(เต็ม 30 | ผ่าน 80% = 24)</span></h3><span id="badge_ap4" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><label class="font-bold text-sm">CMI <span class="sub-text block">1.0 - 1.09 (6) | 1.1 - 1.19 (7) | 1.2 ขึ้นไป (8)</span></label><input type="number" id="ap_4_1" class="sap-input mt-2 calc-ap" step="0.01"></div>
+                <div class="question-block"><label class="font-bold text-sm">SumAdJ RW <span class="sub-text block">19,000 - 21,999 RW/ปี (6) | 22,000 - 24,999 RW/ปี (7) | 25,000 RW/ปี ขึ้นไป (8)</span></label><input type="number" id="ap_4_2" class="sap-input mt-2 calc-ap"></div>
+                <div class="question-block"><label class="font-bold text-sm">Active bed <span class="sub-text block">150 - 199 เตียง (6) | 200 - 249 เตียง (7) | 250 เตียงขึ้นไป (8)</span></label><input type="number" id="ap_4_3" class="sap-input mt-2 calc-ap"></div>
+                <div class="question-block"><label class="font-bold text-sm">OP visit <span class="sub-text block">240,000 - 319,999 visit/ปี (4) | 320,000 - 399,999 visit/ปี (5) | 400,000 ขึ้นไป visit/ปี (6)</span></label><input type="number" id="ap_4_4" class="sap-input mt-2 calc-ap"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection_P" class="level-form-section hidden space-y-6">
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s1">
+            <div class="section-header"><h3 class="font-bold text-slate-800">1. ด้านโครงสร้างพื้นฐาน <span class="text-sm text-gray-500">(เต็ม 10 | ผ่าน 80% = 8)</span></h3><span id="badge_p1" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จุดบริการผู้ป่วยนอกและอุบัติเหตุ<span class="sub-text block">ห้องตรวจผู้ป่วยนอก 30 ห้อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_1_1a" class="sap-input w-20 py-1 calc-p"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.1 จำนวนเตียงห้องอุบัติเหตุและฉุกเฉิน<span class="sub-text block">15 เตียง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_1_1b" class="sap-input w-20 py-1 calc-p"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.2 หอผู้ป่วยใน<span class="sub-text block">400 เตียง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_1_2" class="sap-input w-20 py-1 calc-p"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.3 จำนวนเครื่องไตเทียม<span class="sub-text block">12 เครื่อง ขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_1_3" class="sap-input w-20 py-1 calc-p"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.4 จำนวนห้องผ่าตัด<span class="sub-text block">8 ห้อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_1_4" class="sap-input w-20 py-1 calc-p"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">1.5 IPD มีห้อง Negative Pressure Room<span class="sub-text block">ที่ได้มาตรฐาน 6 ห้อง ขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_1_5" class="sap-input w-20 py-1 calc-p"></div>
+                <label class="question-block flex items-center gap-3 md:col-span-2"><input type="checkbox" id="p_1_6" class="sap-checkbox-input calc-p"><div class="font-bold text-sm">1.6 จำนวนห้อง X-ray<span class="sub-text block">4 ห้องขึ้นไป มี CT Scan 1 ห้อง และ MRI 1 ห้อง (1 คะแนน)</span></div></label>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s2">
+            <div class="section-header"><h3 class="font-bold text-slate-800">2. ด้านบริการ <span class="text-sm text-gray-500">(เต็ม 40 | ผ่าน 80% = 32)</span></h3><span id="badge_p2" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block md:col-span-2"><div class="question-title">มีการรักษาโรคที่ยุ่งยากซับซ้อนระดับศูนย์ความเชี่ยวชาญ รวมถึงใช้เทคโนโลยีขั้นสูงและมีราคาแพง (Advance & Sophisticate Technology)</div></div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านสูตินรีเวชกรรม <span class="text-sky-600">(1-2ข้อ=1, 3ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ob"> บริการสูติกรรม/นรีเวชกรรมซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ob"> บริการรักษามะเร็งนรีเวช</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ob"> บริการผู้มีบุตรยาก</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านศัลยกรรมทั่วไป</div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_su1" class="sap-checkbox-input calc-p"> บริการผ่าตัดศัลยกรรมซับซ้อน/โรคตับ/ทางเดินน้ำดี/โรคลำไส้ใหญ่ (2 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_su2" class="sap-checkbox-input calc-p"> บริการ One Day Surgery : ODS (1 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_su3" class="sap-checkbox-input calc-p"> บริการ Minimally Invasive Surgery : MIS (1 คะแนน)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านเวชศาสตร์ครอบครัว <span class="text-sky-600">(1-2ข้อ=0, 3ข้อ=1)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-fam"> บริการผู้ป่วยโรคไม่ติดต่อเรื้อรัง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-fam"> Intermediate care/Palliative care/Home ward</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-fam"> หน่วยอาชีวเวชกรรม</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านเวชศาสตร์ฉุกเฉิน <span class="text-sky-600">(1-3ข้อ=1, 4ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-er"> ระบบ Virtual ER โดยแพทย์เวชศาสตร์ฉุกเฉิน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-er"> ระบบ Tele-ER</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-er"> ระบบ AOC</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-er"> เครือข่ายระบบส่งต่อระดับจังหวัด/ระดับเขต</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านอายุรกรรม <span class="text-sky-600">(1-6ข้อ=1, 7ข้อ=2)</span></div>
+                    <div class="grid grid-cols-2 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> รักษาโรคอายุรกรรมซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยโรคหัวใจ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยมะเร็ง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยโรคหลอดเลือดสมอง</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยโรคทางเดินอาหาร</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยโรคไต</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-med"> หน่วยโรคผิวหนัง</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านกุมารเวชกรรม <span class="text-sky-600">(1-2ข้อ=1, 3ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ped"> รักษาโรคกุมารเวชกรรมซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ped"> โรค New born</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ped"> ศูนย์พัฒนาการเด็ก</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านออร์โธปิดิกส์ <span class="text-sky-600">(1ข้อ=1, 2ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ort"> รักษาโรคทางออร์โธปิดิกส์ซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-ort"> การผ่าตัดผ่านกล้องข้อเข่า/กระดูกสันหลัง</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาหลัก (first line) ด้านจิตเวช <span class="text-sky-600">(1-2ข้อ=1, 3ข้อ=2)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-psy"> รักษาผู้ป่วยจิตเวชซับซ้อน</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-psy"> เปิดหอผู้ป่วยในจิตเวช</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-psy"> โครงการราชทัณฑ์ปันสุข</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการด้านทันตกรรม</div>
+                    <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="p_2_den" class="sap-checkbox-input calc-p"> บริการทันตกรรมเฉพาะทางที่ยุ่งยากซับซ้อนมาก เช่น ผ่าตัดใหญ่ที่ซับซ้อน ฟื้นฟูสภาพการบดเคี้ยวทั้งปาก (2 คะแนน)</label>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขารอง (second line)</div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <div class="font-bold text-sky-700 mb-1 mt-1">ศูนย์เฉพาะทาง <span class="text-xs text-gray-500 font-normal">(1 ข้อ = 0 คะแนน, 2 ข้อ = 1 คะแนน)</span></div>
+                        <label class="flex items-start gap-2 ml-4"><input type="checkbox" class="sap-checkbox-input calc-p p-sec-center"> ศูนย์จักษุวิทยา</label>
+                        <label class="flex items-start gap-2 ml-4"><input type="checkbox" class="sap-checkbox-input calc-p p-sec-center"> ศูนย์ทางโรคโสต ศอ นาสิก</label>
+                        <div class="border-t border-gray-200 my-2"></div>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_sec2" class="sap-checkbox-input calc-p"> โรคทางจักษุซับซ้อน (1 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_sec3" class="sap-checkbox-input calc-p"> โรคจอประสาทตาและกระจกตา (1 คะแนน)</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_sec4" class="sap-checkbox-input calc-p"> รังสีวินิจฉัยซับซ้อน (1 คะแนน)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">การจัดบริการสาขาต่อยอด (third line) <span class="text-sky-600">(1 ข้อ = 2 คะแนน, 2 ข้อ = 3 คะแนน)</span></div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-thi"> บริการผ่าตัดหัวใจ</label>
+                        <label class="flex items-start gap-2"><input type="checkbox" class="sap-checkbox-input calc-p p-thi"> บริการ Interventional Neuroradiology (รังสีร่วมรักษาระบบประสาท)</label>
+                    </div>
+                </div>
+                <div class="question-block"><div class="question-title">นิติเวช / พยาธิวิทยา</div>
+                    <div class="grid grid-cols-1 gap-1 text-sm">
+                        <label class="flex items-start gap-2"><input type="checkbox" id="p_2_for" class="sap-checkbox-input calc-p"> การจัดบริการนิติเวช : บริการนิติเวชทั่วไป (1 คะแนน)</label>
+                        <label class="flex items-start gap-2 mt-2"><input type="checkbox" id="p_2_pat" class="sap-checkbox-input calc-p"> การจัดบริการพยาธิวิทยา : บริการตรวจชิ้นเนื้อ (1 คะแนน)</label>
+                    </div>
+                </div>
+                <div class="question-block md:col-span-2"><div class="question-title">บริการเฉพาะด้านและวิชาการ</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><div class="text-sm font-bold">การจัดบริการ special ICU</div><select id="p_2_icu" class="sap-input calc-p mt-1"><option value="0">ไม่มีบริการ</option><option value="1">2 สาขา (1 คะแนน)</option><option value="2">3 สาขา ขึ้นไป (2 คะแนน)</option></select></div>
+                        <label class="flex items-center gap-2 text-sm font-bold mt-4"><input type="checkbox" id="p_2_cpe" class="sap-checkbox-input calc-p"> ศูนย์แพทย์ศาสตร์ศึกษา : ศูนย์แพทยศาสตร์ ชั้นคลินิก ระดับ S ขึ้นไป (4 คะแนน)</label>
+                        <div><div class="text-sm font-bold">สถาบันฝึกอบรม (Academic) : การฝึกอบรมแพทย์/พยาบาลเฉพาะทาง</div><select id="p_2_aca" class="sap-input calc-p mt-1"><option value="0">ไม่มี</option><option value="3">หลักสูตรโครงการร่วม Major Board training หรือ Common specialist nurse อย่างน้อย 1 สาขา (3 คะแนน)</option></select></div>
+                        <label class="flex items-center gap-2 text-sm font-bold mt-4"><input type="checkbox" id="p_2_res" class="sap-checkbox-input calc-p"> งานวิจัย (Research) : มีวารสารวิจัยของโรงพยาบาลที่มีดัชนีอ้างอิงวารสารไทย (TCI) ระดับ 2 (3 คะแนน)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s3">
+            <div class="section-header"><h3 class="font-bold text-slate-800">3. ด้านบุคลากรที่สอดรับกับบริการ <span class="text-sm text-gray-500">(เต็ม 20 | ผ่าน 80% = 16)</span></h3><span id="badge_p3" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block md:col-span-2">
+                    <div class="question-title">สาขาแพทย์บริการหลัก (first line) <span class="text-sky-600">(ผ่านเกณฑ์สาขาละ 1 คะแนน / รวมสูงสุด 9 คะแนน)</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">สูตินรีเวชกรรม<div class="question-desc">4 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1a" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ศัลยกรรมทั่วไป<div class="question-desc">5 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1b" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">อายุรกรรม<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1c" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">กุมารเวชกรรม<div class="question-desc">4 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1d" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">ออร์โธปิดิกส์<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1e" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">จิตเวช<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1f" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">วิสัญญีวิทยา<div class="question-desc">3 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1g" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ฉุกเฉิน<div class="question-desc">2 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1h" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                        <div class="flex justify-between items-center border p-2 rounded bg-white"><div class="text-sm font-bold">เวชศาสตร์ครอบครัว<div class="question-desc">4 คนขึ้นไป (1 คะแนน)</div></div><input type="number" id="p_3_1i" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                    </div>
+                </div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์รังสีวินิจฉัย<span class="sub-text block">3 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_3_2" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์สาขารอง (second line)<span class="sub-text block">4 สาขาขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_3_3" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">แพทย์สาขาต่อยอด (third line)<span class="sub-text block">2 สาขาขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_3_x" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">ทันตแพทย์เฉพาะทาง<span class="sub-text block">8 สาขาขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_3_4" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">เภสัชกร<span class="sub-text block">10 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_3_5" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">พยาบาล<span class="sub-text block">120 คนขึ้นไป (2 คะแนน)</span></div><input type="number" id="p_3_6" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการพัสดุ<span class="sub-text block">2 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_3_7" class="sap-input w-20 py-1 calc-p" min="0"></div>
+                <div class="question-block flex justify-between items-center"><div class="font-bold text-sm">นักวิชาการการเงินและบัญชี<span class="sub-text block">2 คนขึ้นไป (1 คะแนน)</span></div><input type="number" id="p_3_8" class="sap-input w-20 py-1 calc-p" min="0"></div>
+            </div>
+        </div>
+        <div class="border rounded-xl overflow-hidden shadow-sm theme-s4">
+            <div class="section-header"><h3 class="font-bold text-slate-800">4. ด้านประสิทธิภาพการบริการ <span class="text-sm text-gray-500">(เต็ม 30 | ผ่าน 80% = 24)</span></h3><span id="badge_p4" class="px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm">รอประเมิน</span></div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="question-block"><label class="font-bold text-sm">CMI <span class="sub-text block">1.2 - 1.39 (6) | 1.4 - 1.59 (7) | 1.6 ขึ้นไป (8)</span></label><input type="number" id="p_4_1" class="sap-input mt-2 calc-p" step="0.01"></div>
+                <div class="question-block"><label class="font-bold text-sm">SumAdJ RW <span class="sub-text block">35,000 - 39,999 RW/ปี (6) | 40,000 - 44,999 RW/ปี (7) | 45,000 RW/ปี ขึ้นไป (8)</span></label><input type="number" id="p_4_2" class="sap-input mt-2 calc-p"></div>
+                <div class="question-block"><label class="font-bold text-sm">Active bed <span class="sub-text block">200 - 299 เตียง (6) | 300 - 399 เตียง (7) | 400 เตียงขึ้นไป (8)</span></label><input type="number" id="p_4_3" class="sap-input mt-2 calc-p"></div>
+                <div class="question-block"><label class="font-bold text-sm">OP visit <span class="sub-text block">400,000 - 489,999 visit/ปี (4) | 490,000 - 569,999 visit/ปี (5) | 570,000 ขึ้นไป visit/ปี (6)</span></label><input type="number" id="p_4_4" class="sap-input mt-2 calc-p"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="bg-slate-800 text-white rounded-xl p-6 text-center shadow-lg relative overflow-hidden mt-6">
+        <h2 class="text-2xl font-bold mb-2 font-heading">คะแนนประเมินรวม: <span id="total_score_display" class="text-4xl text-amber-400">0</span> / 100</h2>
+        <div id="eval_result_badge" class="inline-block px-4 py-1 rounded-full bg-slate-600 text-slate-300 font-bold mb-4">สถานะ: รอการประเมิน (ต้องผ่าน 80% ทุกด้าน)</div>
+        <p id="eval_detail_text" class="text-sm text-gray-400 mb-6"></p>
+        
+        <button type="button" onclick="submitSapForm()" class="w-full md:w-auto px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md transition-colors text-lg">
+            💾 บันทึกข้อมูลการประเมิน
+        </button>
+    </div>
+
+</div>
+
+<script>
+    let currentTargetLevel = '';
+
+    setTimeout(() => {
+        if(typeof USER_IDENTITY !== 'undefined' && USER_IDENTITY) {
+            document.getElementById('hospNameDisplay').value = USER_IDENTITY.hospital || 'ไม่ทราบสังกัด';
+        }
+    }, 1000);
+
+    function selectSapLevel(level) {
+        currentTargetLevel = level;
+        // แก้ไขบัคตรงนี้: ลบบรรทัดที่ทำให้เกิด Error ออกไปแล้ว ใช้แค่ Text
+        const titleText = document.getElementById('targetLevelDisplayText');
+        if(titleText) titleText.innerText = level;
+        
+        document.getElementById('sapLevelSelector').classList.add('hidden');
+        document.getElementById('sapFormContainer').classList.remove('hidden');
+
+        document.querySelectorAll('.level-form-section').forEach(el => el.classList.add('hidden'));
+        
+        let targetId = level === 'P+' ? 'formSection_P' : 'formSection_' + level;
+        const targetForm = document.getElementById(targetId);
+        if(targetForm) targetForm.classList.remove('hidden');
+
+        calculateCurrentLevel();
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // เพิ่มลูกเล่นเลื่อนหน้าขึ้นบนสุด
+    }
+
+    function backToSelector() {
+        document.getElementById('sapFormContainer').classList.add('hidden');
+        document.getElementById('sapLevelSelector').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function isChecked(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+    function getNum(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; }
+    function countChecked(className) { return document.querySelectorAll('.' + className + ':checked').length; }
+
+    document.querySelectorAll('.calc-s, .calc-sp, .calc-a, .calc-ap, .calc-p').forEach(el => {
+        el.addEventListener('input', calculateCurrentLevel);
+        el.addEventListener('change', calculateCurrentLevel);
+    });
+
+    function updateBadge(id, score, maxScore) {
+        const el = document.getElementById(id);
+        if(!el) return false;
+        const pct = (score / maxScore) * 100;
+        if(score === 0) {
+            el.className = "px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 shadow-sm";
+            el.innerText = `คะแนน: ${score}/${maxScore} (รอประเมิน)`;
+            return false;
+        } else if(pct >= 80) {
+            el.className = "px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700 shadow-sm";
+            el.innerText = `คะแนน: ${score}/${maxScore} (ผ่าน ${pct.toFixed(0)}%)`;
+            return true;
+        } else {
+            el.className = "px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700 shadow-sm";
+            el.innerText = `คะแนน: ${score}/${maxScore} (ไม่ผ่าน ${pct.toFixed(0)}%)`;
+            return false;
+        }
+    }
+
+    function calculateCurrentLevel() {
+        if(currentTargetLevel === 'S') return calcLevelS();
+        if(currentTargetLevel === 'S+') return calcLevelSP();
+        if(currentTargetLevel === 'A') return calcLevelA();
+        if(currentTargetLevel === 'A+') return calcLevelAP();
+        if(currentTargetLevel === 'P' || currentTargetLevel === 'P+') return calcLevelP();
+        return null;
+    }
+
+    function renderSummary(sc1, sc2, sc3, sc4, passFlags) {
+        let total = sc1 + sc2 + sc3 + sc4;
+        document.getElementById('total_score_display').innerText = total;
+
+        let badge = document.getElementById('eval_result_badge');
+        let detail = document.getElementById('eval_detail_text');
+        
+        if(total === 0) {
+            badge.className = "inline-block px-4 py-1 rounded-full bg-slate-600 text-slate-300 font-bold mb-4";
+            badge.innerText = "สถานะ: รอการประเมิน";
+            detail.innerText = "";
+        } else if(passFlags.every(x => x)) {
+            badge.className = "inline-block px-4 py-1 rounded-full bg-emerald-500 text-white font-bold mb-4 shadow-[0_0_15px_rgba(16,185,129,0.5)]";
+            badge.innerText = `🎉 ผ่านเกณฑ์ระดับ ${currentTargetLevel}`;
+            detail.innerText = "ยอดเยี่ยม! ได้ 80% ครบทุกด้าน";
+        } else {
+            badge.className = "inline-block px-4 py-1 rounded-full bg-amber-500 text-white font-bold mb-4";
+            badge.innerText = `⚠️ ไม่ผ่านเกณฑ์ระดับ ${currentTargetLevel}`;
+            let fails = [];
+            if(!passFlags[0]) fails.push("ด้านที่ 1"); if(!passFlags[1]) fails.push("ด้านที่ 2");
+            if(!passFlags[2]) fails.push("ด้านที่ 3"); if(!passFlags[3]) fails.push("ด้านที่ 4");
+            detail.innerText = `ตกเกณฑ์: ${fails.join(', ')} (ต้องได้ 80% ทุกด้าน)`;
+        }
+        return { scores: {s1: sc1, s2: sc2, s3: sc3, s4: sc4, total: total}, isPass: passFlags.every(x => x) };
+    }
+
+    // ==== Logic ระดับ S ====
+    function calcLevelS() {
+        let sc1=0, sc2=0, sc3=0, sc4=0;
+        if(isChecked('s_1_1')) sc1+=2; if(isChecked('s_1_2')) sc1+=2; if(isChecked('s_1_3')) sc1+=2;
+        if((getNum('s_1_4a') + getNum('s_1_4b')) >= 2) sc1+=2;
+        if(getNum('s_1_5') >= 1) sc1+=1; if(getNum('s_1_6') >= 1) sc1+=1;
+
+        if(isChecked('s_2_gp1')) sc2+=1; if(isChecked('s_2_gp2')) sc2+=1;
+        let ob = countChecked('s-ob'); if(ob>=4) sc2+=2; else if(ob>=3) sc2+=1;
+        if(isChecked('s_2_su1')) sc2+=1; if(isChecked('s_2_su2')) sc2+=1;
+        if(isChecked('s_2_fam')) sc2+=2; if(isChecked('s_2_er')) sc2+=1;
+        if(isChecked('s_2_med')) sc2+=2;
+        if(isChecked('s_2_pe1')) sc2+=1; if(isChecked('s_2_pe2')) sc2+=1;
+        let ort = countChecked('s-ort'); if(ort>=3) sc2+=2; else if(ort>=1) sc2+=1;
+        if(isChecked('s_2_psy')) sc2+=2;
+        let den = countChecked('s-den'); if(den>=2) sc2+=2; else if(den>=1) sc2+=1;
+        if(isChecked('s_2_for')) sc2+=1;
+        if(isChecked('s_2_imc')) sc2+=5; if(isChecked('s_2_er24')) sc2+=5;
+        if(isChecked('s_2_aca')) sc2+=5; if(isChecked('s_2_res')) sc2+=5;
+
+        let doc = getNum('s_3_1'); if(doc>=5) sc3+=5; else if(doc>=3) sc3+=4;
+        if(isChecked('s_3_2')) sc3+=1;
+        if(getNum('s_3_3') >= 1) sc3+=5;
+        if(getNum('s_3_4') >= 2) sc3+=2; if(getNum('s_3_5') >= 2) sc3+=2;
+        let nur = getNum('s_3_6'); if(nur>=24) sc3+=3; else if(nur>=15) sc3+=2;
+        if(getNum('s_3_7') >= 1) sc3+=1; if(getNum('s_3_8') >= 1) sc3+=1;
+        if(sc3>20) sc3=20;
+
+        let cmi = getNum('s_4_1'); if(cmi>=0.6) sc4+=8; else if(cmi>=0.5) sc4+=7; else if(cmi>=0.4) sc4+=6;
+        let rw = getNum('s_4_2'); if(rw>=1500) sc4+=8; else if(rw>=1300) sc4+=7; else if(rw>=1000) sc4+=6;
+        let bed = getNum('s_4_3'); if(bed>=20) sc4+=8; else if(bed>=16) sc4+=7; else if(bed>=10) sc4+=6;
+        let op = getNum('s_4_4'); if(op>=100000) sc4+=6; else if(op>=60000) sc4+=5; else if(op>=30000) sc4+=4;
+        if(sc4>30) sc4=30;
+
+        return renderSummary(sc1, sc2, sc3, sc4, [
+            updateBadge('badge_s1', sc1, 10), updateBadge('badge_s2', sc2, 40),
+            updateBadge('badge_s3', sc3, 20), updateBadge('badge_s4', sc4, 30)
+        ]);
+    }
+
+    // ==== Logic ระดับ S+ ====
+    function calcLevelSP() {
+        let sc1=0, sc2=0, sc3=0, sc4=0;
+        if(getNum('sp_1_1') >= 6) sc1+=2; if(getNum('sp_1_2') >= 60) sc1+=2;
+        if(isChecked('sp_1_3')) sc1+=2;
+        if(getNum('sp_1_4') >= 3) sc1+=1; if(getNum('sp_1_5') >= 1) sc1+=1;
+        if(isChecked('sp_1_6a')) sc1+=2; 
+        if(sc1>10) sc1=10;
+
+        if(isChecked('sp_2_plus')) sc2+=5;
+        sc2 += getNum('sp_2_ob'); sc2 += getNum('sp_2_su'); sc2 += getNum('sp_2_fa');
+        sc2 += getNum('sp_2_er'); sc2 += getNum('sp_2_me'); sc2 += getNum('sp_2_pe');
+        sc2 += getNum('sp_2_or'); sc2 += getNum('sp_2_ps'); sc2 += getNum('sp_2_de');
+        if(isChecked('sp_2_for')) sc2+=1; if(isChecked('sp_2_icu')) sc2+=4;
+        if(isChecked('sp_2_er24')) sc2+=3; sc2 += getNum('sp_2_aca');
+        if(isChecked('sp_2_res')) sc2+=5;
+        if(sc2>40) sc2=40;
+
+        let doc = getNum('sp_3_1'); if(doc>=11) sc3+=3; else if(doc>=6) sc3+=2;
+        if(isChecked('sp_3_2')) sc3+=3;
+        if(getNum('sp_3_3') >= 2) sc3+=5;
+        if(getNum('sp_3_4') >= 2) sc3+=2; if(getNum('sp_3_5') >= 2) sc3+=2;
+        let nur = getNum('sp_3_6'); if(nur>=24) sc3+=3; else if(nur>=15) sc3+=2;
+        if(getNum('sp_3_7') >= 1) sc3+=1; if(getNum('sp_3_8') >= 1) sc3+=1;
+        if(sc3>20) sc3=20;
+
+        let cmi = getNum('sp_4_1'); if(cmi>=0.8) sc4+=8; else if(cmi>=0.7) sc4+=7; else if(cmi>=0.6) sc4+=6;
+        let rw = getNum('sp_4_2'); if(rw>=4000) sc4+=8; else if(rw>=3500) sc4+=7; else if(rw>=3000) sc4+=6;
+        let bed = getNum('sp_4_3'); if(bed>=50) sc4+=8; else if(bed>=45) sc4+=7; else if(bed>=40) sc4+=6;
+        let op = getNum('sp_4_4'); if(op>=180000) sc4+=6; else if(op>=140000) sc4+=5; else if(op>=100000) sc4+=4;
+        if(sc4>30) sc4=30;
+
+        return renderSummary(sc1, sc2, sc3, sc4, [
+            updateBadge('badge_sp1', sc1, 10), updateBadge('badge_sp2', sc2, 40),
+            updateBadge('badge_sp3', sc3, 20), updateBadge('badge_sp4', sc4, 30)
+        ]);
+    }
+
+    // ==== Logic ระดับ A ====
+    function calcLevelA() {
+        let sc1=0, sc2=0, sc3=0, sc4=0;
+        if(getNum('a_1_1a') >= 20) sc1+=1; if(getNum('a_1_1b') >= 10) sc1+=1;
+        if(getNum('a_1_2') >= 120) sc1+=2; if(getNum('a_1_3') >= 8) sc1+=2;
+        if(getNum('a_1_4') >= 4) sc1+=2; if(getNum('a_1_5') >= 2) sc1+=1;
+        if(isChecked('a_1_6')) sc1+=1;
+
+        if(isChecked('a_2_ob')) sc2+=2;
+        if(isChecked('a_2_su1')) sc2+=2; if(isChecked('a_2_su2')) sc2+=2; if(isChecked('a_2_su3')) sc2+=2;
+        let fam = countChecked('a-fam'); if(fam>=2) sc2+=2; else if(fam>=1) sc2+=1;
+        let er = countChecked('a-er'); if(er>=3) sc2+=2; else if(er>=1) sc2+=1;
+        if(isChecked('a_2_med')) sc2+=2; if(isChecked('a_2_ped')) sc2+=2;
+        if(isChecked('a_2_ort')) sc2+=2; if(isChecked('a_2_psy')) sc2+=2;
+        if(isChecked('a_2_den')) sc2+=2;
+        if(isChecked('a_2_sec1')) sc2+=1; if(isChecked('a_2_sec2')) sc2+=1;
+        let thi = countChecked('a-thi'); if(thi>=4) sc2+=3; else if(thi>=2) sc2+=2; else if(thi>=1) sc2+=1;
+        if(isChecked('a_2_for')) sc2+=1;
+        sc2 += getNum('a_2_icu'); sc2 += getNum('a_2_aca');
+        if(isChecked('a_2_res')) sc2+=5;
+        if(sc2>40) sc2=40;
+
+        if(getNum('a_3_1a') >= 2) sc3 += 1; // สูติ
+        if(getNum('a_3_1b') >= 2) sc3 += 1; // ศัลยกรรม
+        if(getNum('a_3_1c') >= 1) sc3 += 1; // อายุรกรรม
+        if(getNum('a_3_1d') >= 1) sc3 += 1; // กุมารเวช
+        if(getNum('a_3_1e') >= 1) sc3 += 1; // ออร์โธ
+        if(getNum('a_3_1f') >= 1) sc3 += 1; // จิตเวช
+        if(getNum('a_3_1g') >= 1) sc3 += 1; // วิสัญญี
+        if(getNum('a_3_1h') >= 1) sc3 += 1; // เวชฉุกเฉิน
+        if(getNum('a_3_1i') >= 3) sc3 += 1; // เวชครอบครัว
+
+        if(getNum('a_3_2') >= 2) sc3+=1; if(getNum('a_3_3') >= 1) sc3+=2;
+        if(getNum('a_3_4') >= 4) sc3+=2; if(getNum('a_3_5') >= 10) sc3+=2;
+        if(getNum('a_3_6') >= 100) sc3+=2;
+        if(getNum('a_3_7') >= 1) sc3+=1; if(getNum('a_3_8') >= 1) sc3+=1;
+        if(sc3>20) sc3=20;
+
+        let cmi = getNum('a_4_1'); if(cmi>=1.0) sc4+=8; else if(cmi>=0.9) sc4+=7; else if(cmi>=0.8) sc4+=6;
+        let rw = getNum('a_4_2'); if(rw>=10000) sc4+=8; else if(rw>=9000) sc4+=7; else if(rw>=8000) sc4+=6;
+        let bed = getNum('a_4_3'); if(bed>=120) sc4+=8; else if(bed>=100) sc4+=7; else if(bed>=90) sc4+=6;
+        let op = getNum('a_4_4'); if(op>=280000) sc4+=6; else if(op>=200000) sc4+=5; else if(op>=120000) sc4+=4;
+        if(sc4>30) sc4=30;
+
+        return renderSummary(sc1, sc2, sc3, sc4, [
+            updateBadge('badge_a1', sc1, 10), updateBadge('badge_a2', sc2, 40),
+            updateBadge('badge_a3', sc3, 20), updateBadge('badge_a4', sc4, 30)
+        ]);
+    }
+
+    // ==== Logic ระดับ A+ ====
+    function calcLevelAP() {
+        let sc1=0, sc2=0, sc3=0, sc4=0;
+        if(getNum('ap_1_1a') >= 24) sc1+=1; if(getNum('ap_1_1b') >= 12) sc1+=1;
+        if(getNum('ap_1_2') >= 200) sc1+=2; if(getNum('ap_1_3') >= 8) sc1+=2;
+        if(getNum('ap_1_4') >= 6) sc1+=2; if(getNum('ap_1_5') >= 4) sc1+=1;
+        if(isChecked('ap_1_6')) sc1+=1;
+
+        let ob = countChecked('ap-ob'); if(ob>=5) sc2+=2; else if(ob>=1) sc2+=1;
+        if(isChecked('ap_2_su1')) sc2+=2; if(isChecked('ap_2_su2')) sc2+=2; if(isChecked('ap_2_su3')) sc2+=2;
+        let fam = countChecked('ap-fam'); if(fam>=3) sc2+=2; else if(fam>=1) sc2+=1;
+        let er = countChecked('ap-er'); if(er>=4) sc2+=2; else if(er>=1) sc2+=1;
+        let med = countChecked('ap-med'); if(med>=5) sc2+=2; else if(med>=1) sc2+=1;
+        let ped = countChecked('ap-ped'); if(ped>=2) sc2+=2; else if(ped>=1) sc2+=1;
+        let ort = countChecked('ap-ort'); if(ort>=3) sc2+=2; else if(ort>=1) sc2+=1;
+        let psy = countChecked('ap-psy'); if(psy>=2) sc2+=2; else if(psy>=1) sc2+=1;
+        if(isChecked('ap_2_den')) sc2+=2;
+        if(isChecked('ap_2_sec1')) sc2+=1; if(isChecked('ap_2_sec2')) sc2+=1;
+        let thi = countChecked('ap-thi'); if(thi>=3) sc2+=3; else if(thi>=2) sc2+=2; else if(thi>=1) sc2+=1;
+        if(isChecked('ap_2_for')) sc2+=1;
+        sc2 += getNum('ap_2_icu'); sc2 += getNum('ap_2_aca');
+        if(isChecked('ap_2_res')) sc2+=5;
+        if(sc2>40) sc2=40;
+
+        if(getNum('ap_3_1a') >= 3) sc3 += 1; // สูติ
+        if(getNum('ap_3_1b') >= 3) sc3 += 1; // ศัลยกรรม
+        if(getNum('ap_3_1c') >= 3) sc3 += 1; // อายุรกรรม
+        if(getNum('ap_3_1d') >= 3) sc3 += 1; // กุมารเวช
+        if(getNum('ap_3_1e') >= 2) sc3 += 1; // ออร์โธ
+        if(getNum('ap_3_1f') >= 1) sc3 += 1; // จิตเวช
+        if(getNum('ap_3_1g') >= 2) sc3 += 1; // วิสัญญี
+        if(getNum('ap_3_1h') >= 1) sc3 += 1; // เวชฉุกเฉิน
+        if(getNum('ap_3_1i') >= 3) sc3 += 1; // เวชครอบครัว
+
+        if(getNum('ap_3_2') >= 2) sc3+=1; if(getNum('ap_3_3') >= 2) sc3+=2;
+        if(getNum('ap_3_4') >= 6) sc3+=2; if(getNum('ap_3_5') >= 10) sc3+=2;
+        if(getNum('ap_3_6') >= 120) sc3+=2;
+        if(getNum('ap_3_7') >= 1) sc3+=1; if(getNum('ap_3_8') >= 1) sc3+=1;
+        if(sc3>20) sc3=20;
+
+        let cmi = getNum('ap_4_1'); if(cmi>=1.2) sc4+=8; else if(cmi>=1.1) sc4+=7; else if(cmi>=1.0) sc4+=6;
+        let rw = getNum('ap_4_2'); if(rw>=25000) sc4+=8; else if(rw>=22000) sc4+=7; else if(rw>=19000) sc4+=6;
+        let bed = getNum('ap_4_3'); if(bed>=250) sc4+=8; else if(bed>=200) sc4+=7; else if(bed>=150) sc4+=6;
+        let op = getNum('ap_4_4'); if(op>=400000) sc4+=6; else if(op>=320000) sc4+=5; else if(op>=240000) sc4+=4;
+        if(sc4>30) sc4=30;
+
+        return renderSummary(sc1, sc2, sc3, sc4, [
+            updateBadge('badge_ap1', sc1, 10), updateBadge('badge_ap2', sc2, 40),
+            updateBadge('badge_ap3', sc3, 20), updateBadge('badge_ap4', sc4, 30)
+        ]);
+    }
+
+    // ==== Logic ระดับ P / P+ ====
+    function calcLevelP() {
+        let sc1=0, sc2=0, sc3=0, sc4=0;
+        if(getNum('p_1_1a') >= 30) sc1+=1; if(getNum('p_1_1b') >= 15) sc1+=1;
+        if(getNum('p_1_2') >= 400) sc1+=2; if(getNum('p_1_3') >= 12) sc1+=1;
+        if(getNum('p_1_4') >= 8) sc1+=2; if(getNum('p_1_5') >= 6) sc1+=2;
+        if(isChecked('p_1_6')) sc1+=1;
+
+        let ob = countChecked('p-ob'); if(ob>=3) sc2+=2; else if(ob>=1) sc2+=1;
+        if(isChecked('p_2_su1')) sc2+=2; if(isChecked('p_2_su2')) sc2+=1; if(isChecked('p_2_su3')) sc2+=1;
+        let fam = countChecked('p-fam'); if(fam>=3) sc2+=1;
+        let er = countChecked('p-er'); if(er>=4) sc2+=2; else if(er>=1) sc2+=1;
+        let med = countChecked('p-med'); if(med>=7) sc2+=2; else if(med>=1) sc2+=1;
+        let ped = countChecked('p-ped'); if(ped>=3) sc2+=2; else if(ped>=1) sc2+=1;
+        let ort = countChecked('p-ort'); if(ort>=2) sc2+=2; else if(ort>=1) sc2+=1;
+        let psy = countChecked('p-psy'); if(psy>=3) sc2+=2; else if(psy>=1) sc2+=1;
+        if(isChecked('p_2_den')) sc2+=2;
+        
+        let p_sec_centers = countChecked('p-sec-center'); if(p_sec_centers >= 2) sc2 += 1;
+        if(isChecked('p_2_sec2')) sc2+=1; if(isChecked('p_2_sec3')) sc2+=1; if(isChecked('p_2_sec4')) sc2+=1;
+        
+        let p_thi_count = countChecked('p-thi'); if (p_thi_count === 2) { sc2 += 3; } else if (p_thi_count === 1) { sc2 += 2; }
+        
+        if(isChecked('p_2_for')) sc2+=1; if(isChecked('p_2_pat')) sc2+=1;
+        sc2 += getNum('p_2_icu');
+        if(isChecked('p_2_cpe')) sc2+=4;
+        sc2 += getNum('p_2_aca');
+        if(isChecked('p_2_res')) sc2+=3;
+        if(sc2>40) sc2=40;
+
+        if(getNum('p_3_1a') >= 4) sc3 += 1; // สูติ
+        if(getNum('p_3_1b') >= 5) sc3 += 1; // ศัลยกรรม
+        if(getNum('p_3_1c') >= 3) sc3 += 1; // อายุรกรรม
+        if(getNum('p_3_1d') >= 4) sc3 += 1; // กุมารเวช
+        if(getNum('p_3_1e') >= 2) sc3 += 1; // ออร์โธ
+        if(getNum('p_3_1f') >= 2) sc3 += 1; // จิตเวช
+        if(getNum('p_3_1g') >= 3) sc3 += 1; // วิสัญญี
+        if(getNum('p_3_1h') >= 2) sc3 += 1; // เวชฉุกเฉิน
+        if(getNum('p_3_1i') >= 4) sc3 += 1; // เวชครอบครัว
+
+        if(getNum('p_3_2') >= 3) sc3+=1; if(getNum('p_3_3') >= 4) sc3+=1;
+        if(getNum('p_3_x') >= 2) sc3+=1; if(getNum('p_3_4') >= 8) sc3+=2;
+        if(getNum('p_3_5') >= 10) sc3+=2; if(getNum('p_3_6') >= 120) sc3+=2;
+        if(getNum('p_3_7') >= 2) sc3+=1; if(getNum('p_3_8') >= 2) sc3+=1;
+        if(sc3>20) sc3=20;
+
+        let cmi = getNum('p_4_1'); if(cmi>=1.6) sc4+=8; else if(cmi>=1.4) sc4+=7; else if(cmi>=1.2) sc4+=6;
+        let rw = getNum('p_4_2'); if(rw>=45000) sc4+=8; else if(rw>=40000) sc4+=7; else if(rw>=35000) sc4+=6;
+        let bed = getNum('p_4_3'); if(bed>=400) sc4+=8; else if(bed>=300) sc4+=7; else if(bed>=250) sc4+=6;
+        let op = getNum('p_4_4'); if(op>=570000) sc4+=6; else if(op>=490000) sc4+=5; else if(op>=400000) sc4+=4;
+        if(sc4>30) sc4=30;
+
+        return renderSummary(sc1, sc2, sc3, sc4, [
+            updateBadge('badge_p1', sc1, 10), updateBadge('badge_p2', sc2, 40),
+            updateBadge('badge_p3', sc3, 20), updateBadge('badge_p4', sc4, 30)
+        ]);
+    }
+
+    function submitSapForm() {
+        const result = calculateCurrentLevel();
+        if(!result) return;
+        const year = document.getElementById('evalYear').value;
+        const round = document.getElementById('evalRound').value;
+        Swal.fire('ผ่านฉลุย!', `เตรียมพร้อมนำข้อมูลคะแนน ${result.scores.total} (สถานะ: ${result.isPass ? 'ผ่าน' : 'ไม่ผ่าน'}) ปี ${year} รอบ ${round} ส่งไปหลังบ้านในสเตปต่อไปครับ!`, 'success');
+    }
+</script>
