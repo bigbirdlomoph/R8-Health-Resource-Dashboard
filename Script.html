@@ -1128,10 +1128,13 @@
         const sdHeartBtn = document.getElementById('tabSdHeartBtn');
         const sdListBtn = document.getElementById('tabSdListBtn');
         const sdFormBtn = document.getElementById('tabSdFormBtn');
+        const sapLevelBtn = document.getElementById('tabSapLevelBtn'); // <-- เพิ่มอ้างอิงปุ่มใหม่
+        
         setBtnState(sdDashBtn, tabId === 'sd_dash');
         setBtnState(sdHeartBtn, tabId === 'sd_heart');
         setBtnState(sdListBtn, tabId === 'sd_list');
         setBtnState(sdFormBtn, tabId === 'sd_form');
+        setBtnState(sapLevelBtn, tabId === 'sap_level'); // <-- เซ็ตสถานะปุ่มใหม่
 
         const adminBtn = document.getElementById('tabAdminBtn');
         setBtnState(adminBtn, tabId === 'admin');
@@ -1140,7 +1143,12 @@
         const adminContentEl = document.getElementById('adminContent');
         if (adminContentEl && tabId !== 'admin') { adminContentEl.classList.add('hidden'); adminContentEl.style.opacity = '0'; }
 
-        if (tabId.startsWith('sd_')) {
+        // ซ่อนหน้า sap_level อัตโนมัติเมื่อคลิกแท็บอื่น (ป้องกันของเก่าบัค)
+        const sapLevelEl = document.getElementById('sap_level');
+        if (sapLevelEl && tabId !== 'sap_level') { sapLevelEl.classList.add('hidden'); sapLevelEl.style.opacity = '0'; }
+
+        // ปรับให้เมนู SD กางออกค้างไว้ ถ้าคลิกเมนูในกลุ่ม SD หรือ SAP
+        if (tabId.startsWith('sd_') || tabId === 'sap_level') {
             const sdSub = document.getElementById('sdSubmenu');
             const sdChev = document.getElementById('sdChevron');
             if (sdSub) sdSub.classList.remove('hidden');
@@ -1381,6 +1389,27 @@
             $('#sdFormHospFilter').off('change.app').on('change.app', function () { renderSdForm(); });
 
             if (MODEL) { initSdFormDropdowns(); }
+            
+        // ==========================================
+        // ชุดคำสั่งใหม่สำหรับหน้า แบบประเมิน SAP
+        // ==========================================
+        } else if (tabId === 'sap_level') {
+            if (pageTitle) pageTitle.innerText = "แบบประเมิน SAP Level";
+            if (pageSubtitle) pageSubtitle.innerText = "ประเมินการปรับระดับและจัดตั้งหน่วยบริการสุขภาพ";
+            if (headerFilters) headerFilters.classList.add('hidden');
+
+            // ซ่อนหน้าอื่นๆ ทั้งหมด
+            const allSectionsSap = [mainContent, eqContent, gisContent, gisBedContent, gisDoctorContent, gisNurseContent,
+                document.getElementById('sdDashContent'), document.getElementById('sdHeartContent'),
+                document.getElementById('sdListContent'), document.getElementById('sdFormContent')];
+            allSectionsSap.forEach(el => { if (el) { el.classList.add('hidden'); el.style.opacity = '0'; } });
+
+            // โชว์หน้า SAP Level
+            if (sapLevelEl) { 
+                sapLevelEl.classList.remove('hidden'); 
+                setTimeout(() => sapLevelEl.style.opacity = '1', 50); 
+            }
+
         } else if (tabId === 'admin') {
             if (pageTitle) pageTitle.innerText = "จัดการผู้ใช้งาน";
             if (pageSubtitle) pageSubtitle.innerText = "เพิ่ม / แก้ไข / ระงับสิทธิ์ผู้ใช้ในระบบ (สำหรับ Admin)";
@@ -3208,4 +3237,24 @@
             hideLoader();
         }
     };
+
+        function switchPage(pageId) {
+        // 1. ซ่อนทุกหน้าที่มีคลาส .page-content
+        const pages = document.querySelectorAll('.page-content');
+        pages.forEach(page => {
+            page.classList.add('d-none');
+        });
+
+        // 2. แสดงเฉพาะหน้าที่ถูกคลิก
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+            targetPage.classList.remove('d-none');
+        }
+
+        // (Option) อัพเดทแถบสี Active ของเมนูใน Sidebar
+        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active');
+        }
+    }
 </script>
