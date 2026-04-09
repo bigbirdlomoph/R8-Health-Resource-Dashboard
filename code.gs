@@ -6,7 +6,7 @@
  */
 
 const SPREADSHEET_ID = '1PMdzm4Not07JIqL9sf_pW_v87kKsKzLh5S7I_b4QdnE';
-const VERSION = '690402'; // v4 Auth System
+const VERSION = '690409'; // v4 Auth System
 const CACHE_TTL_SEC = 180;
 
 // ========================================
@@ -214,12 +214,13 @@ function _requireAdmin() {
  * บันทึก Log การเข้าใช้งาน (auth_user_log)
  */
 function logUserAction(email, fullName, action, detail) {
-    try {
-        const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-        const sheet = ss.getSheetByName(LOG_SHEET);
-        if (!sheet) return;
-        sheet.appendRow([new Date(), email, fullName, action, detail]);
-    } catch (e) { }
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('auth_user_log');
+    if (sheet) {
+      const timestamp = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
+      sheet.appendRow([timestamp, email, fullName, action, detail]);
+    }
+  } catch (e) { console.error("Log error: ", e); }
 }
 
 /**
@@ -883,4 +884,52 @@ function submitSapEvaluation(payload, identity) {
     } finally {
         lock.releaseLock();
     }
+}
+
+// ==========================================
+// 🟢 ระบบ Authentication & Security Log
+// ==========================================
+
+function logUserAction(email, fullName, action, detail) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('auth_user_log');
+    if (sheet) {
+      // คอลัมน์ A=timestamp, B=email, C=full_name, D=action, E=detail
+      const timestamp = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
+      sheet.appendRow([timestamp, email, fullName, action, detail]);
+    }
+  } catch (e) {
+    console.error("Log error: ", e);
+  }
+}
+
+function verifyUserLogin(email) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('auth_users');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i]; // A=0:email, B=1:fname, C=2:lname, D=3:pos, E=4:hosp, F=5:role, G=6:status
+      if (String(row[0]).trim().toLowerCase() === email.trim().toLowerCase()) {
+        if (String(row[6]).trim().toLowerCase() === 'active') {
+          const userObj = {
+            email: row[0],
+            full_name: row[1] + " " + row[2],
+            hospital: row[4],
+            role: String(row[5]).trim().toLowerCase()
+          };
+          logUserAction(userObj.email, userObj.full_name, 'LOGIN_SUCCESS', 'เข้าสู่ระบบ (Email Login)');
+          return { success: true, user: userObj };
+        }
+        return { success: false, message: 'บัญชีนี้ถูกระงับการใช้งาน' };
+      }
+    }
+    logUserAction(email, 'Unknown', 'LOGIN_FAILED', 'พยายามเข้าสู่ระบบด้วย Email ที่ไม่มีในระบบ');
+    return { success: false, message: 'ไม่พบ Email นี้ในระบบ' };
+  } catch (e) { return { success: false, message: 'Error: ' + e.toString() }; }
+}
+
+function handleUserLogout(email, fullName) {
+  logUserAction(email, fullName, 'LOGOUT', 'ออกจากระบบ');
+  return true;
 }
