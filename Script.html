@@ -558,19 +558,42 @@
         return idx;
     }
 
-    function buildModelOnce() {
-        if (!rawData || !rawData.hospital) return null;
+    // Start Function buildModelOnce
+      function buildModelOnce() {
+        if (!rawData || !rawData.hospital || rawData.hospital.length < 2) return null;
+
+        // 1. ค้นหาคอลัมน์จากชื่อหัวตารางแบบเป๊ะๆ (Exact Match)
+        const hHeaders = rawData.hospital[0].map(h => String(h || '').trim());
+        function getHospIdx(exactName, fallback) {
+            const i = hHeaders.findIndex(h => h === exactName);
+            return i > -1 ? i : fallback;
+        }
+
+        const hIdx = {
+            prov: getHospIdx('จังหวัด', 3),
+            code5: getHospIdx('รหัส 5 หลัก', 6),
+            name: getHospIdx('ชื่อโรงพยาบาล', 7),
+            type: getHospIdx('ประเภทหน่วยบริการสุขภาพ', 8),
+            oldLvl: getHospIdx('ระดับหน่วยบริการเดิม', 9),
+            sapLvl: getHospIdx('ระดับ SAP', 10),
+            agency: getHospIdx('สังกัด', 11),
+            node: getHospIdx('Node', 2),
+            subdistCode: getHospIdx('รหัสตำบล', -1),
+            subdistName: getHospIdx('ตำบล', -1)
+        };
 
         const provSet = new Set();
         const hospProvMap = {};
+        
         (rawData.hospital || []).slice(1).forEach(r => {
-            const p = normProv(r[3]);
+            const p = normProv(r[hIdx.prov]);
             if (p) {
                 provSet.add(p);
-                const hName = String(r[7] || '').trim();
+                const hName = String(r[hIdx.name] || '').trim();
                 if (hName) hospProvMap[hName] = p;
             }
         });
+        
         (rawData.population || []).slice(1).forEach(r => { const p = normProv(r[3]); if (p) provSet.add(p); });
 
         const idx = {
@@ -597,49 +620,32 @@
             const amtIdx = eqHeaders.findIndex(h => h && h.includes('วงเงินรวม'));
             const srcIdx = eqHeaders.findIndex(h => h && (h.includes('แหล่งงบประมาณ') || h.includes('แหล่งงบ')));
 
-            eqData = rawData.meqsp.slice(1).map((r, idx) => {
+            eqData = rawData.meqsp.slice(1).map((r, i) => {
                 const hName = String(r[hospIdx] || '').trim();
                 return {
-                    rowIdx: idx + 2,
-                    year: yearIdx > -1 ? String(r[yearIdx] || '').trim() : '',
-                    sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
-                    hosp: hName,
-                    prov: hospProvMap[hName] || '',
-                    item: itemIdx > -1 ? String(r[itemIdx] || '').trim() : '',
-                    fundSrc: srcIdx > -1 ? String(r[srcIdx] || '').trim() : '',
-                    price: priceIdx > -1 ? cleanNum(r[priceIdx]) : 0,
-                    qty: qtyIdx > -1 ? cleanNum(r[qtyIdx]) : 0,
-                    amt: amtIdx > -1 ? cleanNum(r[amtIdx]) : 0,
-                    itemCode: String(r[9] || '').trim(),
-                    priority: String(r[10] || '').trim(),
-                    provPriority: String(r[11] || '').trim()
+                    rowIdx: i + 2, year: yearIdx > -1 ? String(r[yearIdx] || '').trim() : '', sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
+                    hosp: hName, prov: hospProvMap[hName] || '', item: itemIdx > -1 ? String(r[itemIdx] || '').trim() : '',
+                    fundSrc: srcIdx > -1 ? String(r[srcIdx] || '').trim() : '', price: priceIdx > -1 ? cleanNum(r[priceIdx]) : 0,
+                    qty: qtyIdx > -1 ? cleanNum(r[qtyIdx]) : 0, amt: amtIdx > -1 ? cleanNum(r[amtIdx]) : 0,
+                    itemCode: String(r[9] || '').trim(), priority: String(r[10] || '').trim(), provPriority: String(r[11] || '').trim()
                 };
             });
         }
 
         const spSet = new Set();
         const yearSet = new Set();
-        eqData.forEach(item => {
-            if (item.sp) spSet.add(item.sp);
-            if (item.year) yearSet.add(item.year);
-        });
+        eqData.forEach(item => { if (item.sp) spSet.add(item.sp); if (item.year) yearSet.add(item.year); });
         const spList = Array.from(spSet).sort();
         const yearList = Array.from(yearSet).sort((a, b) => b.toString().localeCompare(a.toString()));
         const allHospList = Array.from(new Set(Object.keys(hospProvMap))).map(h => ({ val: h, text: `[${hospProvMap[h]}] ${h}` })).sort((a, b) => a.text.localeCompare(b.text, 'th'));
+        
         let mspListSource = [];
-        if (rawData.msp && rawData.msp.length > 1) {
-            mspListSource = Array.from(new Set(rawData.msp.slice(1).map(r => String(r[0] || '').trim()).filter(s => s !== ''))).sort();
-        }
+        if (rawData.msp && rawData.msp.length > 1) { mspListSource = Array.from(new Set(rawData.msp.slice(1).map(r => String(r[0] || '').trim()).filter(s => s !== ''))).sort(); }
 
         let meqmophList = [];
         if (rawData.meqmoph && rawData.meqmoph.length > 1) {
-            meqmophList = rawData.meqmoph.slice(1).map(r => ({
-                code: String(r[3] || '').trim(),
-                name: String(r[4] || '').trim(),
-                price: cleanNum(r[6])
-            })).filter(i => i.name !== '');
-            const mapUnique = new Map();
-            meqmophList.forEach(i => { if (!mapUnique.has(i.name)) mapUnique.set(i.name, i); });
+            meqmophList = rawData.meqmoph.slice(1).map(r => ({ code: String(r[3] || '').trim(), name: String(r[4] || '').trim(), price: cleanNum(r[6]) })).filter(i => i.name !== '');
+            const mapUnique = new Map(); meqmophList.forEach(i => { if (!mapUnique.has(i.name)) mapUnique.set(i.name, i); });
             meqmophList = Array.from(mapUnique.values()).sort((a, b) => a.name.localeCompare(b.name, 'th'));
         }
 
@@ -647,56 +653,86 @@
         const distPopByProv = {};
         (rawData.population || []).slice(1).forEach(r => {
             const p = normProv(r[3]); if (!p) return;
-            const pop = cleanNum(r[11]);
-            provPop[p] = (provPop[p] || 0) + pop;
-            const dN = DISTRICT_MAP[r[4]] || r[4];
-            distPopByProv[p] ||= {};
-            distPopByProv[p][dN] = (distPopByProv[p][dN] || 0) + pop;
+            const pop = cleanNum(r[11]); provPop[p] = (provPop[p] || 0) + pop;
+            const dN = DISTRICT_MAP[r[4]] || r[4]; distPopByProv[p] ||= {}; distPopByProv[p][dN] = (distPopByProv[p][dN] || 0) + pop;
         });
 
+        // เรียงรหัสจังหวัด 38-48
         const provList = Array.from(provSet);
-        const inOriginal = ORIGINAL_ORDER.filter(p => provSet.has(p));
-        const rest = provList.filter(p => !inOriginal.includes(p)).sort((a, b) => (provPop[b] || 0) - (provPop[a] || 0));
-        const sortedProvinces = [...inOriginal, ...rest];
+        const PROV_CODE = { 'บึงกาฬ': 38, 'หนองบัวลำภู': 39, 'อุดรธานี': 41, 'เลย': 42, 'หนองคาย': 43, 'สกลนคร': 47, 'นครพนม': 48 };
+        const sortedProvinces = provList.sort((a, b) => (PROV_CODE[a] || 99) - (PROV_CODE[b] || 99));
 
         const statsByProv = {};
         for (const p of sortedProvinces) {
             statsByProv[p] = {
-                count: 0,
-                pop: provPop[p] || 0,
-                sap: {},
-                types: { รพศ: 0, รพท: 0, รพช: 0 },
-                distPops: distPopByProv[p] || {},
-                docs: Object.fromEntries(KEYS.DOC.map(k => [k, 0])),
-                nurses: Object.fromEntries(KEYS.NURSE.map(k => [k, 0])),
-                beds: Object.fromEntries(KEYS.BED.map(k => [k, 0])),
-                structure: Object.fromEntries(KEYS.STRUCT.map(k => [k, 0]))
+                count: 0, pop: provPop[p] || 0, sap: {},
+                types: { รพศ: 0, รพท: 0, รพช: 0, hospCenter: 0, hospComm: 0, hospSubMoph: 0, hospSubPao: 0, hospOther: 0, hospPrivate: 0 },
+                distPops: distPopByProv[p] || {}, docs: Object.fromEntries(KEYS.DOC.map(k => [k, 0])), nurses: Object.fromEntries(KEYS.NURSE.map(k => [k, 0])),
+                beds: Object.fromEntries(KEYS.BED.map(k => [k, 0])), structure: Object.fromEntries(KEYS.STRUCT.map(k => [k, 0]))
             };
         }
 
         const hospByProv = {};
         for (const p of sortedProvinces) hospByProv[p] = [];
 
+        // 2. อ่านข้อมูล รพ. และคัดแยกด้วยเงื่อนไข STRICT CONDITIONS (100% Exact Match)
         (rawData.hospital || []).slice(1).forEach(r => {
-            const p = normProv(r[3]); if (!p || !statsByProv[p]) return;
-            const grade = String(r[10] ?? "").trim().toUpperCase();
+            const p = normProv(r[hIdx.prov]); 
+            if (!p || !statsByProv[p]) return;
+            
+            const code5 = String(hIdx.code5 > -1 ? r[hIdx.code5] : "").trim();
+            const hospName = String(hIdx.name > -1 ? r[hIdx.name] : "").trim();
+            
+            // อ่านค่าจากตารางมาตรงๆ ไม่ดัดแปลง (ตัดแค่ Space หัวท้ายกันเหนียว)
+            const hospType = String(hIdx.type > -1 ? r[hIdx.type] : "").trim();
+            const agency = String(hIdx.agency > -1 ? r[hIdx.agency] : "").trim();
+            
+            const grade = String(hIdx.sapLvl > -1 ? r[hIdx.sapLvl] : "").trim().toUpperCase();
+            const oldLvl = String(hIdx.oldLvl > -1 ? r[hIdx.oldLvl] : "").trim();
+            const node = String(hIdx.node > -1 ? r[hIdx.node] : "").trim();
+            const subdistCode = String(hIdx.subdistCode > -1 ? r[hIdx.subdistCode] : "").trim();
+            const subdistName = String(hIdx.subdistName > -1 ? r[hIdx.subdistName] : "").trim();
+
+            if (!hospType && !hospName) return; 
+
             statsByProv[p].count++;
-            if (grade === "P+") {
-                if (p === "อุดรธานี" || p === "สกลนคร") statsByProv[p].types.รพศ++; else
-                    statsByProv[p].types.รพท++;
+            
+            // การนับกราฟ SAP ตามระดับ 
+            if (grade === "P+") { if (p === "อุดรธานี" || p === "สกลนคร") statsByProv[p].types.รพศ++; else statsByProv[p].types.รพท++; }
+            else if (grade === "P") { if (p === "เลย" || p === "นครพนม" || p === "สกลนคร") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++; }
+            else if (grade === "A+") statsByProv[p].types.รพท++; else if (grade !== "") statsByProv[p].types.รพช++;
+            if (grade) statsByProv[p].sap[grade] = (statsByProv[p].sap[grade] || 0) + 1;
+
+            // ==============================================================
+            // 🟢 STRICT CONDITIONS (ตรงตามคำสั่งของคุณทุกประการ แบบ Exact Match)
+            // ==============================================================
+            
+            if (hospType === "โรงพยาบาลส่งเสริมสุขภาพตำบล" && agency === "สป.สธ.") {
+                statsByProv[p].types.hospSubMoph++;
+            } 
+            else if (hospType === "ศูนย์บริการสาธารณสุข อปท." && agency === "อปท.") {
+                statsByProv[p].types.hospSubPao++;
+            } 
+            else if ((hospType === "โรงพยาบาล นอก สธ." || hospType === "โรงพยาบาล นอก สป.สธ.") && (agency === "กระทรวงกลาโหม" || agency === "กรมสุขภาพจิต")) {
+                statsByProv[p].types.hospOther++;
+            } 
+            else if (hospType === "โรงพยาบาลเอกชน" && agency === "เอกชน") {
+                statsByProv[p].types.hospPrivate++;
             }
-            else if (grade === "P") {
-                if (p === "เลย" || p === "นครพนม" || p === "สกลนคร") statsByProv[p].types.รพท++; else
-                    statsByProv[p].types.รพช++;
+            else if (hospType === "โรงพยาบาลศูนย์" || hospType === "โรงพยาบาลทั่วไป") {
+                statsByProv[p].types.hospCenter++;
             }
-            else if (grade === "A+") statsByProv[p].types.รพท++; else statsByProv[p].types.รพช++;
-            statsByProv[p].sap[grade] = (statsByProv[p].sap[grade] || 0) + 1;
-            hospByProv[p].push({
-                name: r[7], code5: String(r[6]).trim(), type: String(r[8] ?? "").trim(), oldLvl: r[9], sapLvl: grade, node: String(r[1]
-                    ?? "").trim()
+            else if (hospType === "โรงพยาบาลชุมชน") {
+                statsByProv[p].types.hospComm++;
+            }
+
+            hospByProv[p].push({ 
+                name: hospName, code5: code5, type: hospType, oldLvl: oldLvl, sapLvl: grade, node: node,
+                subdistCode: subdistCode, subdistName: subdistName 
             });
         });
 
+        // ดึงข้อมูลเตียง
         if (rawData.bed && rawData.bed.length > 1) {
             const bedH = rawData.bed[0];
             const hospColBed = bedH.findIndex(h => String(h || '').includes('โรงพยาบาล') || String(h || '').includes('ชื่อ'));
@@ -733,7 +769,7 @@
             const sheet = rawData[sheetName];
             if (!sheet) return;
             sheet.slice(1).forEach(r => {
-                const p = normProv(r[3]);
+                const p = normProv(r[3]); 
                 if (!statsByProv[p]) return;
                 for (const k of keys) {
                     const i = idxMap[k];
@@ -746,89 +782,123 @@
         aggProv('bed', KEYS.BED, idx.bed, 'beds');
         aggProv('hospital_structure', KEYS.STRUCT, idx.structure, 'structure');
 
-        // ==========================================
-        // SERVICE DELIVERY MODEL
-        // ==========================================
         const sdMethodMap = {};
-        if (rawData.csdmethod && rawData.csdmethod.length > 1) {
-            rawData.csdmethod.slice(1).forEach(r => {
-                sdMethodMap[String(r[0]).trim()] = String(r[1] || '').trim();
-            });
-        }
+        if (rawData.csdmethod && rawData.csdmethod.length > 1) { rawData.csdmethod.slice(1).forEach(r => { sdMethodMap[String(r[0]).trim()] = String(r[1] || '').trim(); }); }
 
-        const sdItemsByBranch = {};
-        const sdAllBranches = [];
-        const sdCriteria = {};
-        const SAP_COLS = ['P+', 'P', 'A+', 'A', 'S+', 'S'];
+        const sdItemsByBranch = {}; const sdAllBranches = []; const sdCriteria = {}; const SAP_COLS = ['P+', 'P', 'A+', 'A', 'S+', 'S'];
         if (rawData.cspsd && rawData.cspsd.length > 1) {
             rawData.cspsd.slice(1).forEach(r => {
-                const sp = String(r[0] || '').trim();
-                const code = String(r[1] || '').trim();
-                const name = String(r[2] || '').trim();
+                const sp = String(r[0] || '').trim(); const code = String(r[1] || '').trim(); const name = String(r[2] || '').trim();
                 if (!sp || !code) return;
                 if (!sdItemsByBranch[sp]) { sdItemsByBranch[sp] = []; sdAllBranches.push(sp); }
                 sdItemsByBranch[sp].push({ code, name });
-                // SAP criteria from c_sp_sd columns D-I (r[3]-r[8])
                 sdCriteria[code] = {};
-                SAP_COLS.forEach((col, i) => {
-                    sdCriteria[code][col] = parseInt(r[i + 3], 10) || 0;
-                });
+                SAP_COLS.forEach((col, i) => { sdCriteria[code][col] = parseInt(r[i + 3], 10) || 0; });
             });
         }
 
-        // c_sd_criteria Col A: dropdown options for SD assessment
         const sdCriteriaOptions = [];
         if (rawData.csdcriteria && rawData.csdcriteria.length > 1) {
             rawData.csdcriteria.slice(1).forEach(r => {
-                const val = String(r[0] || '').trim();
-                const desc = String(r[1] || '').trim();
-                if (val && !sdCriteriaOptions.find(o => o.value === val)) {
-                    sdCriteriaOptions.push({ value: val, desc: desc });
-                }
+                const val = String(r[0] || '').trim(); const desc = String(r[1] || '').trim();
+                if (val && !sdCriteriaOptions.find(o => o.value === val)) { sdCriteriaOptions.push({ value: val, desc: desc }); }
             });
         }
 
-        // m_sd: Wide format — header: SP สาขา | จังหวัด | ชื่อโรงพยาบาล | ระดับ SAP | H1 | H2 | ... | หมายเหตุ | SD_remark
-        const sdData = {};       // { hospName: { H1: 'มี(1)', H2: '0', ... } }
-        const sdHospMeta = {};   // { hospName: { sp, prov, sap, remark, sdRemark } }
-        const sdColMap = {};     // { 'H1': colIndex, 'H2': colIndex, ... }
-        let sdRemarkIdx = -1;
-        let sdRemarkColIdx = -1; // SD_remark column (pipe-separated per-item remarks)
+        const sdData = {}; const sdHospMeta = {}; const sdColMap = {}; let sdRemarkIdx = -1; let sdRemarkColIdx = -1;
         if (rawData.msd && rawData.msd.length > 1) {
             const msdHeaders = rawData.msd[0].map(h => String(h || '').trim());
-            // Discover SD code columns dynamically (H1, H2, ... or any codes from c_sp_sd)
-            const allSdCodes = new Set();
-            Object.values(sdItemsByBranch).forEach(items => items.forEach(i => allSdCodes.add(i.code)));
-            msdHeaders.forEach((h, i) => {
-                if (allSdCodes.has(h)) sdColMap[h] = i;
-            });
-            // Find key columns by header name
+            const allSdCodes = new Set(); Object.values(sdItemsByBranch).forEach(items => items.forEach(i => allSdCodes.add(i.code)));
+            msdHeaders.forEach((h, i) => { if (allSdCodes.has(h)) sdColMap[h] = i; });
             const spIdx = msdHeaders.findIndex(h => h.includes('สาขา'));
             const provIdx = msdHeaders.findIndex(h => h.includes('จังหวัด'));
             const hospIdx = msdHeaders.findIndex(h => h.includes('โรงพยาบาล') || h.includes('ชื่อ'));
             const sapIdx = msdHeaders.findIndex(h => h.includes('SAP') || h.includes('ระดับ'));
-            sdRemarkIdx = msdHeaders.findIndex(h => h === 'หมายเหตุ');
-            sdRemarkColIdx = msdHeaders.findIndex(h => h === 'SD_remark');
+            sdRemarkIdx = msdHeaders.findIndex(h => h === 'หมายเหตุ'); sdRemarkColIdx = msdHeaders.findIndex(h => h === 'SD_remark');
 
             rawData.msd.slice(1).forEach(r => {
-                const hospName = hospIdx > -1 ? String(r[hospIdx] || '').trim() : '';
-                if (!hospName) return;
+                const hospName = hospIdx > -1 ? String(r[hospIdx] || '').trim() : ''; if (!hospName) return;
                 sdData[hospName] = {};
-                for (const [code, ci] of Object.entries(sdColMap)) {
-                    sdData[hospName][code] = String(r[ci] ?? '0').trim();
-                }
-                sdHospMeta[hospName] = {
-                    sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '',
-                    prov: provIdx > -1 ? String(r[provIdx] || '').trim() : '',
-                    sap: sapIdx > -1 ? String(r[sapIdx] || '').trim() : '',
-                    remark: sdRemarkIdx > -1 ? String(r[sdRemarkIdx] || '').trim() : '',
-                    sdRemark: sdRemarkColIdx > -1 ? String(r[sdRemarkColIdx] || '').trim() : ''
-                };
+                for (const [code, ci] of Object.entries(sdColMap)) { sdData[hospName][code] = String(r[ci] ?? '0').trim(); }
+                sdHospMeta[hospName] = { sp: spIdx > -1 ? String(r[spIdx] || '').trim() : '', prov: provIdx > -1 ? String(r[provIdx] || '').trim() : '', sap: sapIdx > -1 ? String(r[sapIdx] || '').trim() : '', remark: sdRemarkIdx > -1 ? String(r[sdRemarkIdx] || '').trim() : '', sdRemark: sdRemarkColIdx > -1 ? String(r[sdRemarkColIdx] || '').trim() : '' };
             });
         }
 
         return { idx, rowByCode, sortedProvinces, statsByProv, hospByProv, eqData, spList, yearList, allHospList, meqmophList, mspListSource, sdMethodMap, sdItemsByBranch, sdAllBranches, sdCriteria, sdCriteriaOptions, sdData, sdHospMeta, sdColMap };
     }
+
+    // 🟢 2. ฟังก์ชันเรนเดอร์ตารางสรุป
+    function renderProvSummaryTable(filter) {
+        if (!MODEL || !MODEL.statsByProv) return;
+        const tbody = document.getElementById('provSummaryTbody');
+        if (!tbody) return;
+
+        const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+        const stats = MODEL.statsByProv;
+
+        let html = '';
+        let sumCenter = 0, sumComm = 0, sumOther = 0, sumSubMoph = 0, sumSubPao = 0, sumPrivate = 0, sumTotal = 0;
+
+        list.forEach(p => {
+            const s = stats[p].types;
+            const total = (s.hospCenter || 0) + (s.hospComm || 0) + (s.hospOther || 0) + (s.hospSubMoph || 0) + (s.hospSubPao || 0) + (s.hospPrivate || 0);
+
+            sumCenter += (s.hospCenter || 0);
+            sumComm += (s.hospComm || 0);
+            sumOther += (s.hospOther || 0);
+            sumSubMoph += (s.hospSubMoph || 0);
+            sumSubPao += (s.hospSubPao || 0);
+            sumPrivate += (s.hospPrivate || 0);
+            sumTotal += total;
+
+            // ลำดับข้อมูลต้องเรียงตามหัวตาราง: รพศ. -> รพช. -> อื่นๆ -> สป.สธ. -> อปท. -> เอกชน
+            html += `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                <td class="py-3 px-4 font-bold text-slate-700 text-center">${escapeHtml(p)}</td>
+                <td class="py-3 px-4 text-center ${s.hospCenter ? 'text-slate-800' : 'text-slate-300'}">${(s.hospCenter || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospComm ? 'text-slate-800' : 'text-slate-300'}">${(s.hospComm || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospOther ? 'text-slate-800' : 'text-slate-300'}">${(s.hospOther || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospSubMoph ? 'text-slate-800' : 'text-slate-300'}">${(s.hospSubMoph || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospSubPao ? 'text-slate-800' : 'text-slate-300'}">${(s.hospSubPao || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospPrivate ? 'text-slate-800' : 'text-slate-300'}">${(s.hospPrivate || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center font-black text-teal-600 bg-teal-50/30">${total.toLocaleString()}</td>
+            </tr>`;
+        });
+
+        if (filter === 'ALL' && list.length > 1) {
+            html += `<tr class="bg-slate-100 border-t-2 border-slate-300">
+                <td class="py-4 px-4 font-black text-slate-800 text-center">รวมเขตสุขภาพที่ 8</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumCenter.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumComm.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumOther.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumSubMoph.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumSubPao.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumPrivate.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-black text-teal-700 bg-teal-100/50">${sumTotal.toLocaleString()}</td>
+            </tr>`;
+        }
+
+        tbody.innerHTML = html;
+    }
+
+    // 🟢 3. ฟังก์ชันควบคุมการ Render (อัปเดตให้รองรับตารางใหม่)
+    function processAndRender(forceRebuild = false) {
+        if (!MODEL) return;
+        const filterEl = document.getElementById('provinceFilter');
+        const filter = filterEl ? filterEl.value : 'ALL';
+        const mode = (filter === 'ALL') ? 'ALL' : 'PROV';
+        const modeChanged = (mode !== lastTableMode);
+
+        updateTopStatsAndCards(filter);
+        renderProvSummaryTable(filter);
+        updateProvDrilldownCards(filter);
+        renderTables(filter, modeChanged || forceRebuild);
+        drawCharts(filter);
+
+        const main = document.getElementById('mainContent');
+        if (main) main.style.opacity = '1';
+        lastTableMode = mode;
+    }
+    // End Function buildModelOnce
 
     function loadData({ force = false } = {}) {
         return new Promise((resolve, reject) => {
@@ -913,46 +983,117 @@
     }
     function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
 
+    // 🟢 อัปเดตตัวเลข KPI ด้านบน และ การ์ด Zone 8.1, 8.2, 8.3
     function updateTopStatsAndCards(filter) {
-        const stats = MODEL.statsByProv;
-        const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
-        const totalHosp = list.reduce((s, p) => s + (stats[p]?.count || 0), 0);
-        const totalPop = Math.round(list.reduce((s, p) => s + (stats[p]?.pop || 0), 0));
-        const totalCoreDocs = Math.round(list.reduce((sum, p) => sum + KEYS.DOC.reduce((s, k) => s + (stats[p]?.docs?.[k] || 0), 0), 0));
-        const totalRealBeds = Math.round(list.reduce((s, p) => s + (stats[p]?.beds?.["เตียงจริง"] || 0), 0));
+        if (!MODEL || !MODEL.statsByProv) return;
 
-        if (document.getElementById('totalHospitals')) document.getElementById('totalHospitals').innerText = totalHosp.toLocaleString();
-        if (document.getElementById('totalPopulation')) document.getElementById('totalPopulation').innerText = totalPop.toLocaleString();
-        if (document.getElementById('totalCoreDoctors')) document.getElementById('totalCoreDoctors').innerText = totalCoreDocs.toLocaleString();
-        if (document.getElementById('totalRealBeds')) document.getElementById('totalRealBeds').innerText = totalRealBeds.toLocaleString();
+        const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+        const stats = MODEL.statsByProv;
+
+        // 1. คำนวณ KPI รวมด้านบน
+        let sumHosp = 0, sumPop = 0, sumDoc = 0, sumBed = 0;
+
+        list.forEach(p => {
+            const s = stats[p];
+            // 🟢 ลอจิกใหม่: นับเฉพาะ รพศ./รพท. (hospCenter) และ รพช. (hospComm) เท่านั้น
+            sumHosp += (s.types.hospCenter || 0) + (s.types.hospComm || 0);
+            
+            // คำนวณ pop, doc, bed ของเดิม (ไม่ให้กระทบการ์ดอื่น)
+            sumPop += (s.pop || 0);
+            if(s.docs) Object.values(s.docs).forEach(v => sumDoc += (v || 0));
+            if(MODEL.hospByProv[p]) {
+                MODEL.hospByProv[p].forEach(h => {
+                    sumBed += (h.bedReal || 0);
+                });
+            }
+        });
+
+        // 🟢 อัปเดตตัวเลขการ์ดสีเขียว "โรงพยาบาลรวม" พร้อมคำอธิบาย
+        const elHosp = document.getElementById('totalHospitals');
+        if(elHosp) {
+            elHosp.innerText = sumHosp.toLocaleString();
+            const titleEl = elHosp.parentElement.previousElementSibling;
+            if(titleEl && !titleEl.innerHTML.includes('รพศ.')) {
+                titleEl.innerHTML = 'โรงพยาบาลรวม <br><span class="text-[11px] font-normal text-white/80 leading-tight">(นับเฉพาะ รพศ./รพท./รพช.)</span>';
+            }
+        }
+        
+        // อัปเดตการ์ดอื่นๆ ตามปกติ
+        const elPop = document.getElementById('totalPopulation');
+        if(elPop) elPop.innerText = sumPop.toLocaleString();
+        const elDoc = document.getElementById('totalCoreDoctors');
+        if(elDoc) elDoc.innerText = sumDoc.toLocaleString();
+        const elBed = document.getElementById('totalRealBeds');
+        if(elBed) elBed.innerText = sumBed.toLocaleString();
+
+        // ==========================================
+        // 🟢 2. จัดการวาดการ์ด Zone 8.1, 8.2, 8.3
+        // ==========================================
+        const cardsContainer = document.getElementById('hospitalCards');
+        if (!cardsContainer) return;
+
+        // ซ่อนการ์ด Zone ทันทีเมื่อมีการ Filter ดูทีละจังหวัด
+        if (filter !== 'ALL') {
+            cardsContainer.innerHTML = '';
+            cardsContainer.style.display = 'none';
+            return;
+        }
+        
+        cardsContainer.style.display = 'grid'; // เปิดการแสดงผลแบบตารางกริด
+
+        // กำหนดกลุ่มจังหวัดตาม Zone
+        const zones = [
+            { id: '8.1', name: 'Zone 8.1', provs: ['อุดรธานี', 'หนองบัวลำภู', 'เลย'], color: 'from-blue-600 to-blue-800' },
+            { id: '8.2', name: 'Zone 8.2', provs: ['สกลนคร', 'นครพนม'], color: 'from-emerald-600 to-emerald-800' },
+            { id: '8.3', name: 'Zone 8.3', provs: ['หนองคาย', 'บึงกาฬ'], color: 'from-amber-500 to-amber-700' }
+        ];
 
         let html = '';
-        for (const [zoneName, provs] of Object.entries(ZONES)) {
-            let zoneSum = 0;
-            provs.forEach(p => zoneSum += (stats[p]?.count || 0));
-
-            html += `<div class="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 flex flex-col items-center">
-                <div class="mb-4 flex items-center gap-2">
-                    <span class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">${zoneName}</span>
-                    <span class="text-xs font-black text-moph-700">รวม ${zoneSum} แห่ง</span>
-                </div>
-                <div class="flex flex-wrap justify-center gap-6 w-full">`;
-
-            provs.forEach(p => {
-                const isDim = filter !== 'ALL' && filter !== p;
-                const count = stats[p]?.count ?? 0;
-                html += `<div class="flex flex-col items-center transition-all ${isDim ? 'opacity-20 grayscale' : ''}">
-                    <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:${PROV_COLORS[p] || '#94a3b8'}">
-                        <path stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
-                    </svg>
-                    <span class="text-[13px] font-bold text-slate-700">${escapeHtml(p)}</span>
-                    <span class="text-xl font-black text-slate-800">${count}</span>
-                    <span class="text-[10px] font-bold text-slate-400 mt-1">แห่ง</span>
-                </div>`;
+        zones.forEach(z => {
+            let zoneHosp = 0;
+            let provDetails = '';
+            
+            z.provs.forEach(p => {
+                const s = stats[p];
+                if (s) {
+                    // ดึงมาเฉพาะ รพศ/รพท และ รพช.
+                    const provTotal = (s.types.hospCenter || 0) + (s.types.hospComm || 0);
+                    zoneHosp += provTotal;
+                    provDetails += `
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/10 last:border-0">
+                            <span class="text-sm text-white/90">${p}</span>
+                            <span class="text-sm font-bold text-white">${provTotal} แห่ง</span>
+                        </div>`;
+                }
             });
-            html += `</div></div>`;
-        }
-        if (document.getElementById('hospitalCards')) document.getElementById('hospitalCards').innerHTML = html;
+
+            html += `
+            <div class="rounded-3xl shadow-lg p-6 bg-gradient-to-br ${z.color} text-white relative overflow-hidden group border border-white/10">
+                <div class="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-bl-full -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-125 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white/40 transform translate-x-2 -translate-y-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4m0 10V4m-4 11h.01" />
+                    </svg>
+                </div>
+                
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold tracking-wide">${z.name}</h3>
+                    </div>
+                    <p class="text-[11px] text-white/70 mb-4 font-medium tracking-wide uppercase">นับเฉพาะ รพศ. / รพท. / รพช.</p>
+                    
+                    <div class="flex items-end gap-2 mb-5">
+                        <span class="text-4xl font-black leading-none drop-shadow-sm">${zoneHosp}</span>
+                        <span class="text-sm font-medium text-white/80 mb-1">แห่ง</span>
+                    </div>
+                    
+                    <div class="bg-black/15 rounded-2xl p-3 backdrop-blur-sm border border-white/5">
+                        ${provDetails}
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        cardsContainer.innerHTML = html;
     }
 
     function updateProvDrilldownCards(filter) {
@@ -3195,6 +3336,61 @@
         });
     }
 
+    // ==========================================
+    // ตารางสรุปจำนวนโรงพยาบาล แยกรายจังหวัด
+    // ==========================================
+    function renderProvSummaryTable(filter) {
+        if (!MODEL || !MODEL.statsByProv) return;
+        const tbody = document.getElementById('provSummaryTbody');
+        if (!tbody) return;
+
+        const list = (filter === 'ALL') ? MODEL.sortedProvinces : [filter];
+        const stats = MODEL.statsByProv;
+
+        let html = '';
+        let sumCenter = 0, sumComm = 0, sumOther = 0, sumSubMoph = 0, sumSubPao = 0, sumPrivate = 0, sumTotal = 0;
+
+        list.forEach(p => {
+            const s = stats[p].types;
+            const total = (s.hospCenter || 0) + (s.hospComm || 0) + (s.hospOther || 0) + (s.hospSubMoph || 0) + (s.hospSubPao || 0) + (s.hospPrivate || 0);
+
+            sumCenter += (s.hospCenter || 0);
+            sumComm += (s.hospComm || 0);
+            sumOther += (s.hospOther || 0);
+            sumSubMoph += (s.hospSubMoph || 0);
+            sumSubPao += (s.hospSubPao || 0);
+            sumPrivate += (s.hospPrivate || 0);
+            sumTotal += total;
+
+            // ⚠️ การวางลำดับตัวแปรตรงนี้ ต้องตรงกับ <th> ในไฟล์ Index.html
+            html += `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                <td class="py-3 px-4 font-bold text-slate-700 text-center">${escapeHtml(p)}</td>
+                <td class="py-3 px-4 text-center ${s.hospCenter ? 'text-slate-800' : 'text-slate-300'}">${(s.hospCenter || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospComm ? 'text-slate-800' : 'text-slate-300'}">${(s.hospComm || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospOther ? 'text-slate-800' : 'text-slate-300'}">${(s.hospOther || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospSubMoph ? 'text-slate-800' : 'text-slate-300'}">${(s.hospSubMoph || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospSubPao ? 'text-slate-800' : 'text-slate-300'}">${(s.hospSubPao || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center ${s.hospPrivate ? 'text-slate-800' : 'text-slate-300'}">${(s.hospPrivate || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center font-black text-teal-600 bg-teal-50/30">${total.toLocaleString()}</td>
+            </tr>`;
+        });
+
+        if (filter === 'ALL' && list.length > 1) {
+            html += `<tr class="bg-slate-100 border-t-2 border-slate-300">
+                <td class="py-4 px-4 font-black text-slate-800 text-center">รวมเขตสุขภาพที่ 8</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumCenter.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumComm.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumOther.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumSubMoph.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumSubPao.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-bold text-slate-800">${sumPrivate.toLocaleString()}</td>
+                <td class="py-4 px-4 text-center font-black text-teal-700 bg-teal-100/50">${sumTotal.toLocaleString()}</td>
+            </tr>`;
+        }
+
+        tbody.innerHTML = html;
+    }
+
     // ฟังก์ชันสั่งสตาร์ทระบบ (ที่เคยหล่นหายไป)
     function processAndRender(forceRebuild = false) {
         if (!MODEL) return;
@@ -3204,6 +3400,7 @@
         const modeChanged = (mode !== lastTableMode);
 
         updateTopStatsAndCards(filter);
+        renderProvSummaryTable(filter); // <--- สั่ง Render ตารางสรุปโรงพยาบาล
         updateProvDrilldownCards(filter);
         renderTables(filter, modeChanged || forceRebuild);
         drawCharts(filter);
@@ -3257,4 +3454,369 @@
             event.currentTarget.classList.add('active');
         }
     }
+
+    // ==========================================
+    // 🟢 ฟังก์ชันควบคุมแบบประเมิน SAP (Role-Based Access)
+    // ==========================================
+    
+    // 1. เมื่อผู้ใช้คลิกเมนูแบบประเมิน SAP
+    function onSapFormMenuClick() {
+        let userSession = sessionStorage.getItem('user');
+        let userObj = null;
+        
+        try {
+            if(userSession) userObj = JSON.parse(userSession);
+        } catch(e) { console.error("Session parse error", e); }
+
+        // ถ้าไม่มี Session ให้เด้งเตือนและดีดกลับ
+        if (!userObj) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ถูกจำกัดสิทธิ์',
+                text: 'กรุณาเข้าสู่ระบบก่อนเข้าใช้งานแบบประเมินนี้',
+                confirmButtonColor: '#0d9488'
+            });
+            return;
+        }
+
+        // สลับไปหน้าประเมิน SAP
+        switchTab('sap_level');
+
+        const hospInput = document.getElementById('hospNameDisplay');
+        if (!hospInput) return;
+
+        // 🟢 เช็คสิทธิ์: ถ้าเป็น Admin
+        if (userObj.role === 'admin') {
+            hospInput.value = ''; // เว้นว่างให้ Admin เลือกกรอกเอง
+            hospInput.readOnly = false; // ปลดล็อคให้พิมพ์ได้
+            hospInput.placeholder = "พิมพ์ชื่อหน่วยบริการที่ต้องการประเมิน...";
+            hospInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500'); // เอาสีเทาออก
+        } 
+        // 🟢 เช็คสิทธิ์: ถ้าเป็น User ธรรมดา (ดึงชื่อ รพ. จากฐานข้อมูลมาล็อคไว้)
+        else if (userObj.hospital) {
+            hospInput.value = userObj.hospital; 
+            hospInput.readOnly = true; 
+            hospInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500'); 
+        }
+    }
+
+    // 2. ฟังก์ชันปลดล็อคเมนู (ใส่ไว้ในฟังก์ชัน Login Success)
+    function unlockMenusBasedOnRole() {
+        let userSession = sessionStorage.getItem('user');
+        if(!userSession) return;
+        let userObj = JSON.parse(userSession);
+
+        // 🟢 ไม่ว่าเป็น User หรือ Admin ถ้า Login ผ่าน ให้ปลดล็อคเมนูประเมินก่อน
+        const sapBtn = document.getElementById('tabSapLevelBtn');
+        const sapText = document.getElementById('sapLevelBtnText');
+        
+        if (sapBtn) {
+            sapBtn.disabled = false;
+            sapBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            sapBtn.classList.add('hover:bg-white/10', 'hover:text-white');
+            sapBtn.title = "";
+        }
+        if (sapText) sapText.innerText = "แบบประเมิน SAP"; 
+
+        // 🟢 ถ้ามีเมนูอื่นๆ ที่จำกัดเฉพาะ Admin สามารถเขียนเช็คตรงนี้ได้เลยครับ
+        if (userObj.role === 'admin') {
+            // ตัวอย่าง: ปลดล็อคเมนูจัดการผู้ใช้งาน (สมมติว่าคุณมี)
+            // const adminMenu = document.getElementById('tabAdminMenuBtn');
+            // if(adminMenu) adminMenu.style.display = 'block'; 
+        }
+    }
+
+    // 3. ฟังก์ชันสำหรับล็อคเมนู (ใส่ไว้ในฟังก์ชัน Logout)
+    function lockAllSecureMenus() {
+        const sapBtn = document.getElementById('tabSapLevelBtn');
+        const sapText = document.getElementById('sapLevelBtnText');
+        
+        if (sapBtn) {
+            sapBtn.disabled = true;
+            sapBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            sapBtn.classList.remove('hover:bg-white/10', 'hover:text-white');
+            sapBtn.title = "กรุณาเข้าสู่ระบบก่อนใช้งานแบบประเมิน";
+        }
+        if (sapText) sapText.innerText = "🔒 แบบประเมิน SAP"; 
+
+        // 🟢 ซ่อนเมนู Admin อื่นๆ เมื่อ Logout
+        // const adminMenu = document.getElementById('tabAdminMenuBtn');
+        // if(adminMenu) adminMenu.style.display = 'none';
+    }
+
+    // ==========================================
+    // 🟢 ระบบ Custom Login & Authorization
+    // ==========================================
+
+    // ตรวจสอบสถานะทันทีที่โหลดหน้าเว็บ
+    document.addEventListener("DOMContentLoaded", () => {
+        checkSession();
+    });
+
+    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+    function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+
+    function submitLogin() {
+        const email = document.getElementById('loginEmail').value.trim();
+        if (!email) return Swal.fire('แจ้งเตือน', 'กรุณาระบุอีเมล', 'warning');
+
+        const btn = document.getElementById('btnSubmitLogin');
+        btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังตรวจสอบ...`;
+        btn.disabled = true;
+
+        google.script.run.withSuccessHandler(res => {
+            btn.innerHTML = `เข้าสู่ระบบ`; btn.disabled = false;
+            if (res.success) {
+                sessionStorage.setItem('r8_user', JSON.stringify(res.user));
+                closeLoginModal();
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', text: `ยินดีต้อนรับคุณ ${res.user.first_name}`, timer: 1500, showConfirmButton: false });
+                checkSession();
+            } else {
+                Swal.fire('ข้อผิดพลาด', res.message, 'error');
+            }
+        }).verifyUserLogin(email);
+    }
+
+    function logout() {
+        const user = JSON.parse(sessionStorage.getItem('r8_user'));
+        if (user) google.script.run.handleUserLogout(user.email, user.full_name); // สั่งบันทึก Log
+        
+        sessionStorage.removeItem('r8_user');
+        checkSession();
+        switchTab('dashboard'); // เด้งกลับหน้าแรก
+    }
+
+    function checkSession() {
+        const userSession = sessionStorage.getItem('r8_user');
+        const unauthView = document.getElementById('unauthView');
+        const authView = document.getElementById('authView');
+        
+        if (userSession) {
+            const user = JSON.parse(userSession);
+            unauthView.classList.add('hidden');
+            authView.classList.remove('hidden');
+            
+            // อัปเดตข้อมูล UI
+            document.getElementById('userName').innerText = user.full_name;
+            document.getElementById('userHosp').innerText = user.hospital;
+            document.getElementById('userInitial').innerText = user.first_name.charAt(0);
+            
+            const badge = document.getElementById('adminBadge');
+            if(user.role === 'admin') badge.classList.remove('hidden'); else badge.classList.add('hidden');
+            
+            // ✅ ต้องมีคำสั่งนี้ เพื่อปลดล็อกเมนูเมื่อมีเซสชัน
+            unlockSecureMenus(); 
+        } else {
+            unauthView.classList.remove('hidden');
+            authView.classList.add('hidden');
+            
+            // ✅ ล็อกเมนูเมื่อไม่มีเซสชัน
+            lockSecureMenus();
+        }
+    }
+
+    // 🟢 ระบบปลดล็อคเมนูและแสดงเมนู Admin
+    function unlockSecureMenus() {
+        // อัปเดตให้ตรงกับ ID ปุ่มใน HTML ของคุณ
+        const menus = [
+            { btn: 'tabSapLevelBtn', textSpan: 'sapLevelBtnText' },
+            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' } // ตรวจสอบให้แน่ใจว่า ID นี้ตรงกับใน HTML
+        ]; 
+        
+        menus.forEach(item => {
+            const btnEl = document.getElementById(item.btn);
+            const textEl = document.getElementById(item.textSpan);
+            
+            if(btnEl) {
+                // เอา attribute disabled ออก
+                btnEl.removeAttribute('disabled');
+                btnEl.disabled = false;
+                
+                // ลบคลาสที่ทำให้ปุ่มดูจางและกดไม่ได้
+                btnEl.classList.remove('opacity-40', 'cursor-not-allowed');
+                
+                // ลบ title ที่แจ้งเตือน
+                btnEl.title = "";
+                
+                console.log(`Unlocked menu: ${item.btn}`); // เพิ่ม log เพื่อตรวจสอบ
+            } else {
+                console.warn(`Menu button not found: ${item.btn}`); // แจ้งเตือนถ้าหาปุ่มไม่เจอ
+            }
+            
+            // เอาแม่กุญแจ 🔒 ออก
+            if(textEl && textEl.innerText.includes('🔒')) {
+                textEl.innerText = textEl.innerText.replace('🔒 ', '');
+            }
+        });
+
+        // 🟢 แสดงเมนู Admin ถ้ามีสิทธิ์
+        const userSession = sessionStorage.getItem('r8_user');
+        if(userSession) {
+            const user = JSON.parse(userSession);
+            const adminMenu = document.getElementById('adminMenuSection');
+            if (user.role === 'admin' && adminMenu) {
+                adminMenu.classList.remove('hidden');
+            }
+        }
+    }
+
+    // 🟢 ระบบล็อคเมนูกลับเมื่อ Logout
+    function lockSecureMenus() {
+        const menus = [
+            { btn: 'tabSapLevelBtn', textSpan: 'sapLevelBtnText' },
+            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' }
+        ]; 
+        
+        menus.forEach(item => {
+            const btnEl = document.getElementById(item.btn);
+            const textEl = document.getElementById(item.textSpan);
+            
+            if(btnEl) {
+                // ใส่ attribute disabled กลับไป
+                btnEl.setAttribute('disabled', 'true');
+                btnEl.disabled = true;
+                
+                // เพิ่มคลาสที่ทำให้ปุ่มดูจางและกดไม่ได้
+                btnEl.classList.add('opacity-40', 'cursor-not-allowed');
+                
+                // เพิ่ม title แจ้งเตือน
+                btnEl.title = "กรุณาเข้าสู่ระบบก่อนใช้งานแบบประเมิน";
+            }
+            
+            // ใส่แม่กุญแจ 🔒 กลับไป
+            if(textEl && !textEl.innerText.includes('🔒')) {
+                textEl.innerText = '🔒 ' + textEl.innerText;
+            }
+        });
+
+        // ซ่อนเมนู Admin
+        const adminMenu = document.getElementById('adminMenuSection');
+        if(adminMenu) adminMenu.classList.add('hidden');
+    }
+
+    // 🟢 เมื่อคลิกเมนูแบบประเมิน SAP
+    function onSapFormMenuClick() {
+        const userSession = sessionStorage.getItem('r8_user');
+        if (!userSession) return Swal.fire('แจ้งเตือน', 'กรุณาเข้าสู่ระบบก่อน', 'warning');
+        
+        const user = JSON.parse(userSession);
+        switchTab('sap_level'); // เปลี่ยนหน้า
+
+        // 🟢 ตรวจสอบสถานะและจัดการช่อง <input id="hospNameDisplay">
+        const wrapper = document.getElementById('hospNameDisplay').parentElement;
+        
+        if (user.role === 'admin') {
+            // ดึงชื่อ รพ. ทั้งหมดจาก MODEL (เฉพาะ รพศ, รพท, รพช)
+            let options = '<option value="">-- ผู้ดูแลระบบ: เลือกหน่วยบริการ --</option>';
+            if(MODEL && MODEL.hospByProv) {
+                Object.values(MODEL.hospByProv).forEach(list => {
+                    list.forEach(h => {
+                        if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
+                            options += `<option value="${h.name}">${h.name}</option>`;
+                        }
+                    });
+                });
+            }
+            // แปลงร่างเป็น Dropdown
+            wrapper.innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน (โหมด ADMIN)</label>
+                <select id="hospNameDisplay" class="w-full px-3 py-2 border border-amber-400 focus:ring-2 focus:ring-amber-500 rounded-md bg-white text-slate-800 font-bold shadow-sm outline-none">
+                    ${options}
+                </select>`;
+        } else {
+            // แปลงร่างเป็น Input ล็อคตายตัวสำหรับ User
+            wrapper.innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                <input type="text" id="hospNameDisplay" value="${user.hospital}" class="w-full px-3 py-2 border border-slate-200 bg-slate-100 text-slate-500 font-semibold rounded-md cursor-not-allowed" readonly>`;
+        }
+    }
+
+    // 🟢 1. ระบบพราง Email และ Login ด้วย Enter
+    function toggleEmailMask() {
+        const input = document.getElementById('loginEmail');
+        const icon = document.getElementById('eyeIcon');
+        if (input.type === 'password') {
+            input.type = 'email';
+            icon.classList.add('text-teal-600');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('text-teal-600');
+        }
+    }
+
+    function handleLoginKeyPress(e) {
+        if (e.key === 'Enter') submitLogin();
+    }
+
+    // 🟢 2. ระบบ Sidebar Accordion (ยุบเมนูอื่นอัตโนมัติ)
+    function toggleSubmenu(id) {
+        const target = document.getElementById(id);
+        const arrow = document.getElementById('arrow-' + id);
+        const isHidden = target.classList.contains('hidden');
+
+        // ยุบเมนูย่อยอื่นๆ ทั้งหมดก่อน
+        document.querySelectorAll('.submenu-container > div[id]').forEach(menu => {
+            if (menu.id !== id) {
+                menu.classList.add('hidden');
+                const otherArrow = document.getElementById('arrow-' + menu.id);
+                if (otherArrow) otherArrow.classList.remove('rotate-180');
+            }
+        });
+
+        // สลับเปิด/ปิดเมนูที่คลิก
+        if (isHidden) {
+            target.classList.remove('hidden');
+            if (arrow) arrow.classList.add('rotate-180');
+        } else {
+            target.classList.add('hidden');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+    }
+
+    // แก้ไขฟังก์ชัน switchTab เดิม ให้ยุบเมนูย่อยทั้งหมดเมื่อคลิกเมนูหลัก
+    const originalSwitchTab = switchTab;
+    switchTab = function(tabId) {
+        // ยุบเมนูย่อยทั้งหมด
+        document.querySelectorAll('.submenu-container > div[id]').forEach(menu => {
+            menu.classList.add('hidden');
+            const arrow = document.getElementById('arrow-' + menu.id);
+            if (arrow) arrow.classList.remove('rotate-180');
+        });
+        originalSwitchTab(tabId);
+    };
+
+    // 🟢 3. ระบบคุมสิทธิ์หน้า SAP (Admin เลือกได้ / User ล็อค)
+    function onSapFormMenuClick() {
+        const userSession = sessionStorage.getItem('r8_user');
+        if (!userSession) return;
+        
+        const user = JSON.parse(userSession);
+        switchTab('sap_level');
+
+        const wrapper = document.getElementById('hospNameDisplay').parentElement;
+        
+        if (user.role === 'admin') {
+            let options = '<option value="">-- เลือกหน่วยบริการ (สิทธิ์ Admin) --</option>';
+            if(MODEL && MODEL.hospByProv) {
+                // ดึงรายชื่อ รพ. จาก Model มาทำ Dropdown
+                Object.values(MODEL.hospByProv).forEach(list => {
+                    list.forEach(h => {
+                        if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
+                            options += `<option value="${h.name}">${h.name}</option>`;
+                        }
+                    });
+                });
+            }
+            wrapper.innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน (Admin)</label>
+                <select id="hospNameDisplay" class="w-full px-3 py-2 border-2 border-amber-400 rounded-xl bg-white focus:ring-2 focus:ring-amber-500 outline-none font-bold">
+                    ${options}
+                </select>`;
+        } else {
+            wrapper.innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                <input type="text" id="hospNameDisplay" value="${user.hospital}" class="w-full px-3 py-2 border border-slate-200 bg-slate-100 text-slate-500 font-semibold rounded-xl cursor-not-allowed" readonly>`;
+        }
+    }
+
 </script>
