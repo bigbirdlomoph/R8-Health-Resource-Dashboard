@@ -330,4 +330,27 @@
     .province-label::before {
         display: none;
     }
+
+    /* ปรับแต่งหน้าตา Select2 ให้เข้ากับ Tailwind */
+    .select2-container--default .select2-selection--single {
+        background-color: #fff;
+        border: 2px solid #fbbf24; /* สีขอบ amber-400 (สำหรับ Admin) */
+        border-radius: 0.75rem; /* โค้งมนแบบ rounded-xl */
+        height: 42px;
+        display: flex;
+        align-items: center;
+        font-weight: 700;
+    }
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #f59e0b; /* สีขอบตอนกด amber-500 */
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #1e293b; /* สีข้อความ slate-800 */
+        padding-left: 12px;
+    }
 </style>
