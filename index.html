@@ -57,7 +57,7 @@
                 <div class="relative mb-6">
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">อีเมล (Registered Email)</label>
                     <div class="relative">
-                        <input type="password" id="loginEmail" onkeypress="handleLoginKeyPress(event)"
+                        <input type="password" id="loginEmail" onkeypress="handleLoginKeyPress(event)" oninput="validateEmailInput(this)"
                             class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none transition-all font-medium"
                             placeholder="••••••••••••••••">
                         <button onclick="toggleEmailMask()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors">
@@ -67,6 +67,13 @@
                             </svg>
                         </button>
                     </div>
+                    <p id="emailLangWarning" class="text-[11px] font-bold text-red-500 mt-2 hidden flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        กรุณาเปลี่ยนแป้นพิมพ์เป็นภาษาอังกฤษ
+                    </p>
+                </div>
                 </div>
                 
                 <button id="btnSubmitLogin" onclick="submitLogin()" 
