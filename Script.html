@@ -234,9 +234,35 @@
         openAddEqModal();
     }
 
+    // 🟢 เมื่อคลิกเมนูแบบประเมิน SD
     function onSdFormMenuClick() {
-        if (!IS_LOGGED_IN) { Swal.fire({ icon: 'info', title: 'กรุณาเข้าสู่ระบบก่อน', text: 'กดปุ่ม "เข้าสู่ระบบ" ที่แถบด้านซ้าย', confirmButtonText: 'ตกลง', confirmButtonColor: '#059669' }); return; }
-        switchTab('sd_form');
+        const userSession = sessionStorage.getItem('r8_user');
+        if (!userSession) {
+            Swal.fire({
+                icon: 'info',
+                title: 'กรุณาเข้าสู่ระบบก่อน',
+                text: 'กดปุ่ม "เข้าสู่ระบบ" ที่แถบด้านซ้าย',
+                confirmButtonColor: '#0d9488'
+            });
+            return;
+        }
+
+        const user = JSON.parse(userSession);
+        switchTab('sd_form'); // ⚠️ ตรวจสอบว่า tabId ในฟังก์ชัน switchTab ของคุณตรงกับชื่อนี้หรือไม่ (เช่น 'sd_form' หรือ 'sd_assess')
+
+        const hospDropdown = document.getElementById('sdFormHospFilter');
+        
+        if (hospDropdown) {
+            if (user.role === 'admin') {
+                // Admin: ปลดล็อค และให้เลือก รพ. ได้อิสระ (Select2 จะถูก Initialize อยู่แล้วในฟังก์ชัน populateDropdowns ตอนโหลดหน้า)
+                hospDropdown.disabled = false;
+                $(hospDropdown).val('').trigger('change'); // รีเซ็ตค่าให้ว่าง
+            } else {
+                // User: ล็อคชื่อ รพ. ให้ตรงกับสังกัด
+                $(hospDropdown).val(user.hospital).trigger('change');
+                hospDropdown.disabled = true; // ล็อคไม่ให้กดเลือก
+            }
+        }
     }
 
     // ========================================
@@ -3459,46 +3485,7 @@
     // 🟢 ฟังก์ชันควบคุมแบบประเมิน SAP (Role-Based Access)
     // ==========================================
     
-    // 1. เมื่อผู้ใช้คลิกเมนูแบบประเมิน SAP
-    function onSapFormMenuClick() {
-        let userSession = sessionStorage.getItem('user');
-        let userObj = null;
-        
-        try {
-            if(userSession) userObj = JSON.parse(userSession);
-        } catch(e) { console.error("Session parse error", e); }
-
-        // ถ้าไม่มี Session ให้เด้งเตือนและดีดกลับ
-        if (!userObj) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'ถูกจำกัดสิทธิ์',
-                text: 'กรุณาเข้าสู่ระบบก่อนเข้าใช้งานแบบประเมินนี้',
-                confirmButtonColor: '#0d9488'
-            });
-            return;
-        }
-
-        // สลับไปหน้าประเมิน SAP
-        switchTab('sap_level');
-
-        const hospInput = document.getElementById('hospNameDisplay');
-        if (!hospInput) return;
-
-        // 🟢 เช็คสิทธิ์: ถ้าเป็น Admin
-        if (userObj.role === 'admin') {
-            hospInput.value = ''; // เว้นว่างให้ Admin เลือกกรอกเอง
-            hospInput.readOnly = false; // ปลดล็อคให้พิมพ์ได้
-            hospInput.placeholder = "พิมพ์ชื่อหน่วยบริการที่ต้องการประเมิน...";
-            hospInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500'); // เอาสีเทาออก
-        } 
-        // 🟢 เช็คสิทธิ์: ถ้าเป็น User ธรรมดา (ดึงชื่อ รพ. จากฐานข้อมูลมาล็อคไว้)
-        else if (userObj.hospital) {
-            hospInput.value = userObj.hospital; 
-            hospInput.readOnly = true; 
-            hospInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500'); 
-        }
-    }
+    
 
     // 2. ฟังก์ชันปลดล็อคเมนู (ใส่ไว้ในฟังก์ชัน Login Success)
     function unlockMenusBasedOnRole() {
@@ -3556,6 +3543,28 @@
     function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
     function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 
+    // ==========================================
+    // 🟢 ระบบดักจับภาษาไทยในช่องกรอก Email
+    // ==========================================
+    function validateEmailInput(input) {
+        const warningEl = document.getElementById('emailLangWarning');
+        // Regex จับอักขระภาษาไทยทั้งหมด (ก-๙)
+        const thaiRegex = /[\u0E00-\u0E7F]/g;
+        
+        if (thaiRegex.test(input.value)) {
+            // ลบตัวอักษรภาษาไทยออกทันที (พิมพ์ไม่ติด)
+            input.value = input.value.replace(thaiRegex, '');
+            // แสดงข้อความเตือน
+            warningEl.classList.remove('hidden');
+        } else {
+            // ซ่อนข้อความเตือนเมื่อผู้ใช้พิมพ์ภาษาอังกฤษ/ตัวเลขปกติ
+            warningEl.classList.add('hidden');
+        }
+    }
+
+    // ==========================================
+    // 🟢 แจ้งเตือน Login พร้อมชื่อ-นามสกุลจริง
+    // ==========================================
     function submitLogin() {
         const email = document.getElementById('loginEmail').value.trim();
         if (!email) return Swal.fire('แจ้งเตือน', 'กรุณาระบุอีเมล', 'warning');
@@ -3569,7 +3578,17 @@
             if (res.success) {
                 sessionStorage.setItem('r8_user', JSON.stringify(res.user));
                 closeLoginModal();
-                Swal.fire({ icon: 'success', title: 'สำเร็จ', text: `ยินดีต้อนรับคุณ ${res.user.first_name}`, timer: 1500, showConfirmButton: false });
+                
+                // 🟢 ดึงชื่อและนามสกุลเต็มยศจากฐานข้อมูลมาแสดง
+                const welcomeName = `${res.user.first_name} ${res.user.last_name}`;
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'เข้าสู่ระบบสำเร็จ', 
+                    text: `ยินดีต้อนรับคุณ ${welcomeName}`, 
+                    timer: 2000, 
+                    showConfirmButton: false 
+                });
+                
                 checkSession();
             } else {
                 Swal.fire('ข้อผิดพลาด', res.message, 'error');
@@ -3577,13 +3596,96 @@
         }).verifyUserLogin(email);
     }
 
+    // ==========================================
+    // 🟢 ระบบ Logout ดีดกลับหน้า "ภาพรวมทรัพยากร"
+    // ==========================================
     function logout() {
-        const user = JSON.parse(sessionStorage.getItem('r8_user'));
-        if (user) google.script.run.handleUserLogout(user.email, user.full_name); // สั่งบันทึก Log
+        const userSession = sessionStorage.getItem('r8_user');
+        if (userSession) {
+            const user = JSON.parse(userSession);
+            google.script.run.handleUserLogout(user.email, user.full_name); 
+        }
         
         sessionStorage.removeItem('r8_user');
         checkSession();
-        switchTab('dashboard'); // เด้งกลับหน้าแรก
+        
+        // 🟢 ดีดกลับไปที่ Tab ภาพรวม (ID 'main') แบบอัตโนมัติ
+        switchTab('main'); 
+    }
+    function doLogout() { logout(); }
+
+    // ==========================================
+    // 🟢 ระบบฟอร์ม SAP (Admin เลือกจังหวัด->รพ. / User ล็อคสังกัด)
+    // ==========================================
+    function onSapFormMenuClick() {
+        const userSession = sessionStorage.getItem('r8_user');
+        if (!userSession) return;
+        
+        const user = JSON.parse(userSession);
+        switchTab('sap_level');
+
+        const wrapper = document.getElementById('hospNameDisplay').parentElement;
+        
+        if (user.role === 'admin') {
+            // 🟢 โหมด Admin: สร้าง Dropdown 2 ชั้น (จังหวัด -> โรงพยาบาล)
+            let provOptions = '<option value="">-- เลือกจังหวัด --</option>';
+            if(MODEL && MODEL.sortedProvinces) {
+                MODEL.sortedProvinces.forEach(p => {
+                    provOptions += `<option value="${p}">${p}</option>`;
+                });
+            }
+
+            // แปลงร่าง HTML เป็น Grid 2 ช่อง
+            wrapper.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">เลือกจังหวัด (Admin)</label>
+                        <select id="sapProvSelect" class="w-full">
+                            ${provOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                        <select id="hospNameDisplay" name="hospNameDisplay" class="w-full">
+                            <option value="">-- กรุณาเลือกจังหวัดก่อน --</option>
+                        </select>
+                    </div>
+                </div>`;
+            
+            // 🟢 เรียกใช้ Select2 และผูกลอจิก จังหวัด -> โรงพยาบาล
+            setTimeout(() => {
+                $('#sapProvSelect').select2({ placeholder: "-- เลือกจังหวัด --", width: '100%' });
+                $('#hospNameDisplay').select2({ placeholder: "-- เลือกหน่วยบริการ --", width: '100%' });
+
+                // เมื่อ Admin กดเปลี่ยนจังหวัด
+                $('#sapProvSelect').on('change', function() {
+                    const prov = $(this).val();
+                    const hospSelect = $('#hospNameDisplay');
+                    
+                    // ล้างค่าเก่าทิ้งก่อน
+                    hospSelect.empty().append('<option value="">-- เลือกหน่วยบริการ --</option>');
+                    
+                    if(prov && MODEL && MODEL.hospByProv && MODEL.hospByProv[prov]) {
+                        // กรองเฉพาะ รพศ. / รพท. / รพช.
+                        MODEL.hospByProv[prov].forEach(h => {
+                            if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
+                                hospSelect.append(new Option(h.name, h.name, false, false));
+                            }
+                        });
+                    }
+                    // อัปเดต Select2 ให้แสดงผลตัวเลือกใหม่
+                    hospSelect.trigger('change');
+                });
+            }, 50);
+
+        } else {
+            // 🟢 โหมด User: ล็อคชื่อโรงพยาบาลจากฐานข้อมูล
+            wrapper.innerHTML = `
+                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                <input type="text" id="hospNameDisplay" name="hospNameDisplay" value="${user.hospital}" 
+                    class="w-full px-4 py-2 border border-slate-200 bg-slate-100 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-inner" 
+                    readonly title="ล็อคตามสังกัดผู้ใช้งาน">`;
+        }
     }
 
     function checkSession() {
@@ -3593,141 +3695,181 @@
         
         if (userSession) {
             const user = JSON.parse(userSession);
-            unauthView.classList.add('hidden');
-            authView.classList.remove('hidden');
+            if(unauthView) unauthView.classList.add('hidden');
+            if(authView) authView.classList.remove('hidden');
             
-            // อัปเดตข้อมูล UI
-            document.getElementById('userName').innerText = user.full_name;
-            document.getElementById('userHosp').innerText = user.hospital;
-            document.getElementById('userInitial').innerText = user.first_name.charAt(0);
+            // 1. อัปเดตข้อมูล UI
+            if(document.getElementById('userName')) document.getElementById('userName').innerText = user.full_name;
+            if(document.getElementById('userHosp')) document.getElementById('userHosp').innerText = user.hospital;
             
+            // 🟢 จุดที่แก้ไข: ใช้ full_name แทน first_name เพื่อดึงตัวอักษรตัวแรก
+            if(document.getElementById('userInitial')) {
+                document.getElementById('userInitial').innerText = user.full_name ? user.full_name.charAt(0) : '?';
+            }
+            
+            // 2. จัดการป้าย Admin
             const badge = document.getElementById('adminBadge');
-            if(user.role === 'admin') badge.classList.remove('hidden'); else badge.classList.add('hidden');
+            if(badge) {
+                if(user.role === 'admin') badge.classList.remove('hidden'); 
+                else badge.classList.add('hidden');
+            }
             
-            // ✅ ต้องมีคำสั่งนี้ เพื่อปลดล็อกเมนูเมื่อมีเซสชัน
+            // 3. ปลดล็อคเมนู (คราวนี้คำสั่งนี้จะทำงานแล้วครับ!)
             unlockSecureMenus(); 
-        } else {
-            unauthView.classList.remove('hidden');
-            authView.classList.add('hidden');
             
-            // ✅ ล็อกเมนูเมื่อไม่มีเซสชัน
+        } else {
+            if(unauthView) unauthView.classList.remove('hidden');
+            if(authView) authView.classList.add('hidden');
             lockSecureMenus();
         }
     }
 
-    // 🟢 ระบบปลดล็อคเมนูและแสดงเมนู Admin
+    // 🟢 ระบบปลดล็อคเมนูและแสดงเมนู Admin (เวอร์ชันกวาดทุก Sidebar)
     function unlockSecureMenus() {
-        // อัปเดตให้ตรงกับ ID ปุ่มใน HTML ของคุณ
         const menus = [
             { btn: 'tabSapLevelBtn', textSpan: 'sapLevelBtnText' },
-            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' } // ตรวจสอบให้แน่ใจว่า ID นี้ตรงกับใน HTML
+            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' } 
         ]; 
         
         menus.forEach(item => {
-            const btnEl = document.getElementById(item.btn);
-            const textEl = document.getElementById(item.textSpan);
+            // ใช้ querySelectorAll เพื่อหาปุ่มจากทั้งฝั่ง Mobile และ Desktop
+            const btnElements = document.querySelectorAll(`[id="${item.btn}"]`);
+            const textElements = document.querySelectorAll(`[id="${item.textSpan}"]`);
             
-            if(btnEl) {
-                // เอา attribute disabled ออก
+            btnElements.forEach(btnEl => {
                 btnEl.removeAttribute('disabled');
                 btnEl.disabled = false;
                 
-                // ลบคลาสที่ทำให้ปุ่มดูจางและกดไม่ได้
+                // ลบคลาสที่ทำให้ปุ่มดูจาง
                 btnEl.classList.remove('opacity-40', 'cursor-not-allowed');
-                
-                // ลบ title ที่แจ้งเตือน
+                // คืนค่า Effect ตอนเอาเมาส์ชี้ให้กลับมา
+                btnEl.classList.add('hover:bg-white/10', 'hover:text-white');
                 btnEl.title = "";
-                
-                console.log(`Unlocked menu: ${item.btn}`); // เพิ่ม log เพื่อตรวจสอบ
-            } else {
-                console.warn(`Menu button not found: ${item.btn}`); // แจ้งเตือนถ้าหาปุ่มไม่เจอ
-            }
+            });
             
-            // เอาแม่กุญแจ 🔒 ออก
-            if(textEl && textEl.innerText.includes('🔒')) {
-                textEl.innerText = textEl.innerText.replace('🔒 ', '');
-            }
+            textElements.forEach(textEl => {
+                // ใช้ Regex ตัดไอคอน 🔒 ออก (แก้ปัญหาช่องว่างเกิน)
+                if(textEl.innerText.includes('🔒')) {
+                    textEl.innerText = textEl.innerText.replace(/🔒\s*/g, '');
+                }
+            });
         });
 
         // 🟢 แสดงเมนู Admin ถ้ามีสิทธิ์
         const userSession = sessionStorage.getItem('r8_user');
         if(userSession) {
             const user = JSON.parse(userSession);
-            const adminMenu = document.getElementById('adminMenuSection');
-            if (user.role === 'admin' && adminMenu) {
-                adminMenu.classList.remove('hidden');
-            }
+            // หาเมนู Admin ทุกจุดในระบบ
+            const adminMenus = document.querySelectorAll('[id="adminMenuSection"]');
+            adminMenus.forEach(adminMenu => {
+                if (user.role === 'admin') {
+                    adminMenu.classList.remove('hidden');
+                }
+            });
         }
     }
 
-    // 🟢 ระบบล็อคเมนูกลับเมื่อ Logout
+    // 🟢 ระบบล็อคเมนูกลับเมื่อ Logout (เวอร์ชันกวาดทุก Sidebar)
     function lockSecureMenus() {
         const menus = [
             { btn: 'tabSapLevelBtn', textSpan: 'sapLevelBtnText' },
-            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' }
+            { btn: 'tabSdFormBtn', textSpan: 'sdFormBtnText' } 
         ]; 
         
         menus.forEach(item => {
-            const btnEl = document.getElementById(item.btn);
-            const textEl = document.getElementById(item.textSpan);
+            const btnElements = document.querySelectorAll(`[id="${item.btn}"]`);
+            const textElements = document.querySelectorAll(`[id="${item.textSpan}"]`);
             
-            if(btnEl) {
-                // ใส่ attribute disabled กลับไป
+            btnElements.forEach(btnEl => {
                 btnEl.setAttribute('disabled', 'true');
                 btnEl.disabled = true;
-                
-                // เพิ่มคลาสที่ทำให้ปุ่มดูจางและกดไม่ได้
                 btnEl.classList.add('opacity-40', 'cursor-not-allowed');
-                
-                // เพิ่ม title แจ้งเตือน
+                btnEl.classList.remove('hover:bg-white/10', 'hover:text-white');
                 btnEl.title = "กรุณาเข้าสู่ระบบก่อนใช้งานแบบประเมิน";
-            }
+            });
             
-            // ใส่แม่กุญแจ 🔒 กลับไป
-            if(textEl && !textEl.innerText.includes('🔒')) {
-                textEl.innerText = '🔒 ' + textEl.innerText;
-            }
+            textElements.forEach(textEl => {
+                if(!textEl.innerText.includes('🔒')) {
+                    textEl.innerText = '🔒 ' + textEl.innerText;
+                }
+            });
         });
 
         // ซ่อนเมนู Admin
-        const adminMenu = document.getElementById('adminMenuSection');
-        if(adminMenu) adminMenu.classList.add('hidden');
+        const adminMenus = document.querySelectorAll('[id="adminMenuSection"]');
+        adminMenus.forEach(adminMenu => adminMenu.classList.add('hidden'));
     }
 
-    // 🟢 เมื่อคลิกเมนูแบบประเมิน SAP
+    // ==========================================
+    // 🟢 3. ระบบฟอร์ม SAP (Admin เลือกจังหวัดได้ / User ล็อค รพ.)
+    // ==========================================
     function onSapFormMenuClick() {
         const userSession = sessionStorage.getItem('r8_user');
-        if (!userSession) return Swal.fire('แจ้งเตือน', 'กรุณาเข้าสู่ระบบก่อน', 'warning');
+        if (!userSession) return;
         
         const user = JSON.parse(userSession);
-        switchTab('sap_level'); // เปลี่ยนหน้า
+        switchTab('sap_level');
 
-        // 🟢 ตรวจสอบสถานะและจัดการช่อง <input id="hospNameDisplay">
         const wrapper = document.getElementById('hospNameDisplay').parentElement;
         
         if (user.role === 'admin') {
-            // ดึงชื่อ รพ. ทั้งหมดจาก MODEL (เฉพาะ รพศ, รพท, รพช)
-            let options = '<option value="">-- ผู้ดูแลระบบ: เลือกหน่วยบริการ --</option>';
-            if(MODEL && MODEL.hospByProv) {
-                Object.values(MODEL.hospByProv).forEach(list => {
-                    list.forEach(h => {
-                        if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
-                            options += `<option value="${h.name}">${h.name}</option>`;
-                        }
-                    });
+            // 🟢 โหมด Admin: สร้าง Dropdown 2 ชั้น (จังหวัด -> โรงพยาบาล)
+            let provOptions = '<option value="">-- เลือกจังหวัด --</option>';
+            if(MODEL && MODEL.sortedProvinces) {
+                MODEL.sortedProvinces.forEach(p => {
+                    provOptions += `<option value="${p}">${p}</option>`;
                 });
             }
-            // แปลงร่างเป็น Dropdown
+
             wrapper.innerHTML = `
-                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน (โหมด ADMIN)</label>
-                <select id="hospNameDisplay" class="w-full px-3 py-2 border border-amber-400 focus:ring-2 focus:ring-amber-500 rounded-md bg-white text-slate-800 font-bold shadow-sm outline-none">
-                    ${options}
-                </select>`;
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">เลือกจังหวัด (Admin)</label>
+                        <select id="sapProvSelect" class="w-full">
+                            ${provOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                        <select id="hospNameDisplay" class="w-full">
+                            <option value="">-- กรุณาเลือกจังหวัดก่อน --</option>
+                        </select>
+                    </div>
+                </div>`;
+            
+            // เรียกใช้ Select2 และเขียน Event ผูกความสัมพันธ์ (Cascading)
+            setTimeout(() => {
+                $('#sapProvSelect').select2({ placeholder: "-- เลือกจังหวัด --", width: '100%' });
+                $('#hospNameDisplay').select2({ placeholder: "-- เลือกหน่วยบริการ --", width: '100%' });
+
+                // เมื่อ Admin เลือกจังหวัด ให้ดึงข้อมูล รพ. ในจังหวัดนั้นมาใส่
+                $('#sapProvSelect').on('change', function() {
+                    const prov = $(this).val();
+                    const hospSelect = $('#hospNameDisplay');
+                    
+                    // ล้างค่าเก่าทิ้งก่อน
+                    hospSelect.empty().append('<option value="">-- เลือกหน่วยบริการ --</option>');
+                    
+                    if(prov && MODEL && MODEL.hospByProv && MODEL.hospByProv[prov]) {
+                        // กรองเฉพาะ รพศ. / รพท. / รพช.
+                        MODEL.hospByProv[prov].forEach(h => {
+                            if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
+                                const newOption = new Option(h.name, h.name, false, false);
+                                hospSelect.append(newOption);
+                            }
+                        });
+                    }
+                    hospSelect.trigger('change');
+                });
+            }, 50);
+
         } else {
-            // แปลงร่างเป็น Input ล็อคตายตัวสำหรับ User
+            // 🟢 โหมด User: ล็อคชื่อโรงพยาบาลจาก Session
             wrapper.innerHTML = `
                 <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
-                <input type="text" id="hospNameDisplay" value="${user.hospital}" class="w-full px-3 py-2 border border-slate-200 bg-slate-100 text-slate-500 font-semibold rounded-md cursor-not-allowed" readonly>`;
+                <input type="text" id="hospNameDisplay" value="${user.hospital}" 
+                    class="w-full px-4 py-2 border border-slate-200 bg-slate-100 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-inner" 
+                    readonly title="ล็อคตามสังกัดผู้ใช้งาน">`;
         }
     }
 
