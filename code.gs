@@ -909,12 +909,15 @@ function verifyUserLogin(email) {
     const data = sheet.getDataRange().getValues();
     
     for (let i = 1; i < data.length; i++) {
-      const row = data[i]; // A=0:email, B=1:fname, C=2:lname, D=3:pos, E=4:hosp, F=5:role, G=6:status
+      const row = data[i]; // A=email, B=fname, C=lname, D=pos, E=hosp, F=role, G=status
       if (String(row[0]).trim().toLowerCase() === email.trim().toLowerCase()) {
         if (String(row[6]).trim().toLowerCase() === 'active') {
+          // 🟢 เพิ่มตัวแปร first_name และ last_name ให้ครบ
           const userObj = {
             email: row[0],
-            full_name: row[1] + " " + row[2],
+            first_name: String(row[1]).trim(),
+            last_name: String(row[2]).trim(),
+            full_name: String(row[1]).trim() + " " + String(row[2]).trim(),
             hospital: row[4],
             role: String(row[5]).trim().toLowerCase()
           };
