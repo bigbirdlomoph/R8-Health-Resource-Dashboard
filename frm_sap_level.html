@@ -52,35 +52,42 @@
 </div>
 
 <div id="sapFormContainer" class="hidden space-y-6 animate-fade-in relative pb-10">
-    <button onclick="backToSelector()" class="text-gray-500 font-medium mb-4 hover:text-sky-600 transition-colors">
-        <i class="bi bi-arrow-left"></i> กลับไปหน้าเลือกระดับ
+    
+    <button onclick="backToSelector()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-800 font-bold rounded-xl transition-all shadow-sm mb-2 group">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform group-hover:-translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        กลับไปหน้าเลือกระดับ
     </button>
     
     <div class="mb-6">
         <h2 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-moph-primary pl-3">
             แบบประเมินการปรับระดับโรงพยาบาล ระดับ <span id="targetLevelDisplayText" class="text-moph-primary"></span>
         </h2>
-        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
-                <input type="text" id="hospNameDisplay" class="sap-input bg-slate-50 text-slate-500 font-semibold cursor-not-allowed" readonly>
-            </div>
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">ปีงบประมาณที่ประเมิน</label>
-                <select id="evalYear" class="sap-input bg-white font-medium text-slate-700 border-slate-300">
-                    <option value="2569">2569</option>
-                    <option value="2570">2570</option>
-                    <option value="2571">2571</option>
-                    <option value="2572">2572</option>
-                    <option value="2573">2573</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">รอบการประเมิน</label>
-                <select id="evalRound" class="sap-input bg-white font-medium text-slate-700 border-slate-300">
-                    <option value="1">รอบที่ 1</option>
-                    <option value="2">รอบที่ 2</option>
-                </select>
+        
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                
+                <div id="sapHospSelectorContainer" class="md:col-span-6 lg:col-span-8">
+                    </div>
+                
+                <div class="md:col-span-3 lg:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ปีงบประมาณ</label>
+                    <select id="evalYear" class="sap-input bg-slate-50 font-bold text-slate-700 border-slate-300">
+                        <option value="2569">2569</option>
+                        <option value="2570">2570</option>
+                        <option value="2571">2571</option>
+                        <option value="2572">2572</option>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-3 lg:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">รอบประเมิน</label>
+                    <select id="evalRound" class="sap-input bg-slate-50 font-bold text-slate-700 border-slate-300">
+                        <option value="1">รอบที่ 1</option>
+                        <option value="2">รอบที่ 2</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -736,9 +743,80 @@
         }
     }, 1000);
 
+    // ==========================================
+    // 🟢 ฟังก์ชันวาดกล่องเลือกโรงพยาบาล (Admin/User)
+    // ==========================================
+    function buildSapHospSelector() {
+        const container = document.getElementById('sapHospSelectorContainer');
+        if(!container) return;
+
+        const userSession = sessionStorage.getItem('r8_user');
+        if (!userSession) return;
+        const user = JSON.parse(userSession);
+
+        if (user.role === 'admin') {
+            // 🔹 Admin: วาด Dropdown 2 ชั้น
+            let provOptions = '<option value="">-- เลือกจังหวัด --</option>';
+            if(typeof MODEL !== 'undefined' && MODEL.sortedProvinces) {
+                MODEL.sortedProvinces.forEach(p => { provOptions += `<option value="${p}">${p}</option>`; });
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">เลือกจังหวัด (Admin)</label>
+                        <select id="sapProvSelect" class="w-full">${provOptions}</select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                        <select id="hospNameDisplay" name="hospNameDisplay" class="w-full">
+                            <option value="">-- เลือกจังหวัดก่อน --</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            // หน่วงเวลาให้ HTML วาดเสร็จก่อน ค่อยแปลงร่างเป็น Select2
+            setTimeout(() => {
+                $('#sapProvSelect').select2({ placeholder: "-- เลือกจังหวัด --", width: '100%' });
+                $('#hospNameDisplay').select2({ placeholder: "-- เลือกหน่วยบริการ --", width: '100%' });
+
+                // Event: เมื่อเปลี่ยนจังหวัด ให้โหลดชื่อ รพ.
+                $('#sapProvSelect').off('change').on('change', function() {
+                    const prov = $(this).val();
+                    const hospSelect = $('#hospNameDisplay');
+                    
+                    hospSelect.empty().append('<option value="">-- เลือกหน่วยบริการ --</option>');
+                    
+                    if(prov && typeof MODEL !== 'undefined' && MODEL.hospByProv && MODEL.hospByProv[prov]) {
+                        MODEL.hospByProv[prov].forEach(h => {
+                            if(['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน'].includes(h.type)) {
+                                hospSelect.append(new Option(h.name, h.name, false, false));
+                            }
+                        });
+                    }
+                    hospSelect.trigger('change');
+                });
+            }, 150);
+
+        } else {
+            // 🔹 User: ล็อคชื่อ รพ. ตัวเอง
+            container.innerHTML = `
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อหน่วยบริการที่ประเมิน</label>
+                    <input type="text" id="hospNameDisplay" name="hospNameDisplay" value="${user.hospital}" 
+                        class="w-full px-4 py-2.5 border border-slate-200 bg-slate-100 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-inner" 
+                        readonly title="ล็อคตามสังกัดผู้ใช้งาน">
+                </div>
+            `;
+        }
+    }
+
+    // ==========================================
+    // 🟢 ฟังก์ชันเมื่อกดเลือกระดับ (S, S+, A...)
+    // ==========================================
     function selectSapLevel(level) {
         currentTargetLevel = level;
-        // แก้ไขบัคตรงนี้: ลบบรรทัดที่ทำให้เกิด Error ออกไปแล้ว ใช้แค่ Text
         const titleText = document.getElementById('targetLevelDisplayText');
         if(titleText) titleText.innerText = level;
         
@@ -751,8 +829,11 @@
         const targetForm = document.getElementById(targetId);
         if(targetForm) targetForm.classList.remove('hidden');
 
+        // 🟢 เรียกใช้วาด Dropdown ตรงนี้! (แก้ปัญหา Select2 บอด)
+        buildSapHospSelector();
+
         calculateCurrentLevel();
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // เพิ่มลูกเล่นเลื่อนหน้าขึ้นบนสุด
+        window.scrollTo({ top: 0, behavior: 'smooth' }); 
     }
 
     function backToSelector() {
